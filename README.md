@@ -1,4 +1,4 @@
-## Amazon Kinesis Video Streams Prodcuer SDK Java
+## Amazon Kinesis Video Streams Producer SDK Java
 
 ## License
 
