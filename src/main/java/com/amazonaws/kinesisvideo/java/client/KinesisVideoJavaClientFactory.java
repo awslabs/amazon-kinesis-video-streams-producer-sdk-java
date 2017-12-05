@@ -26,8 +26,8 @@ public final class KinesisVideoJavaClientFactory {
     private static final int TEN_STREAMS = 10;
     private static final int SPILL_RATIO_90_PERCENT = 90;
     private static final int STORAGE_SIZE_64_MEGS = 1024 * 1024 * 1024;
-    private static final String DEVICE_NAME = "android-demo-application";
-    private static final String STORAGE_PATH = "/sdcard";
+    private static final String DEVICE_NAME = "java-demo-application";
+    private static final String STORAGE_PATH = "/tmp";
     private static final int NUMBER_OF_THREADS_IN_POOL = 2;
 
     private KinesisVideoJavaClientFactory() {
