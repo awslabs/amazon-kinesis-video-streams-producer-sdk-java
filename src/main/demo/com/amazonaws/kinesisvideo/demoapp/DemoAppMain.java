@@ -15,7 +15,7 @@ import com.amazonaws.regions.Regions;
 public final class DemoAppMain {
     private static final String STREAM_NAME = "my-stream";
     private static final int FPS_25 = 25;
-    private static final String IMAGE_DIR = "data/h264/";
+    private static final String IMAGE_DIR = "src/main/resources/data/h264/";
     private static final String IMAGE_FILENAME_FORMAT = "frame-%03d.h264";
     private static final int START_FILE_INDEX = 1;
     private static final int END_FILE_INDEX = 299;
