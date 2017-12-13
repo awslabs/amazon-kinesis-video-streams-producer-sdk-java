@@ -63,7 +63,7 @@ public class PutMediaDemo {
     private static final String STREAM_NAME = "my-stream";
 
     /* sample MKV file */
-    private static final String MKV_FILE_PATH = "src/main/resources/data/mkv/sample-30s-h264-1080p-30fps-15Mbps.mkv";
+    private static final String MKV_FILE_PATH = "src/main/resources/data/mkv/clusters.mkv";
 
     /* max upload bandwidth */
     private static final long MAX_BANDWIDTH_KBPS = 15 * 1024L;
