@@ -1,13 +1,20 @@
 package com.amazonaws.kinesisvideo.demoapp;
 
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
+import com.amazonaws.kinesisvideo.client.mediasource.CameraMediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSource;
+import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceState;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
 import com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory;
+import com.amazonaws.kinesisvideo.java.logging.SysOutLogChannel;
+import com.amazonaws.kinesisvideo.java.mediasource.camera.CameraMediaSource;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSource;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSourceConfiguration;
+import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.regions.Regions;
+import com.github.sarxos.webcam.Webcam;
 
 /**
  * Demo Java Producer.
@@ -27,14 +34,12 @@ public final class DemoAppMain {
     public static void main(final String[] args) {
         try {
             // create Kinesis Video high level client
-            final KinesisVideoClient kinesisVideoClient = KinesisVideoJavaClientFactory
-                    .createKinesisVideoClient(
-                            Regions.US_WEST_2,
-                            AuthHelper.getSystemPropertiesCredentialsProvider());
+        	final KinesisVideoClient kinesisVideoClient = KinesisVideoJavaClientFactory
+                    .createKinesisVideoClient(new ProfileCredentialsProvider("default"));
 
             // create a media source. this class produces the data and pushes it into
             // Kinesis Video Producer lower level components
-            final MediaSource bytesMediaSource = createImageFileMediaSource();
+            final MediaSource bytesMediaSource = createCameraMediaSource();
 
             // register media source with Kinesis Video Client
             kinesisVideoClient.registerMediaSource(STREAM_NAME, bytesMediaSource);
@@ -64,5 +69,26 @@ public final class DemoAppMain {
         mediaSource.configure(configuration);
 
         return mediaSource;
+    }
+    
+    private static MediaSource createCameraMediaSource() {
+    	
+    	Webcam webcam = Webcam.getDefault();
+    	
+    	final CameraMediaSourceConfiguration configuration =
+    			new CameraMediaSourceConfiguration.Builder()
+    			.withFrameRate((int) webcam.getFPS())
+    			.withCameraFacing(1)
+    			.withCameraId("/dev/video0")
+    			.withIsEncoderHardwareAccelerated(false)
+    			.withRetentionPeriodInHours(1)
+    			.withEncodingMimeType("video/avc")
+    			.withNalAdaptationFlags(StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE)
+    			.build();
+    	
+    	final CameraMediaSource mediaSource = new CameraMediaSource();
+    	mediaSource.setupWebCam(webcam);
+    	mediaSource.configure(configuration);
+    	return mediaSource;    	
     }
 }
