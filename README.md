@@ -25,6 +25,11 @@ Demo app will start running and putting sample video frames in a loop into Kines
 
 ## Release Notes
 
+### Release 1.1.0 (December 2017)
+
+* Updated JNI code to expose ACKs as callbacks so developer can get more information about how the streaming is going.
+* The version of JNI is bumped to 1.2, this will require corresponding ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp) with same version.
+
 ### Release 1.0.0 (November 2017)
 
-First release of the Amazon Kinesis Video Producer SDK Java.
+* First release of the Amazon Kinesis Video Producer SDK Java.

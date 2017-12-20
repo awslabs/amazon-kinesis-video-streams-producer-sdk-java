@@ -35,7 +35,17 @@ public class KinesisVideoFragmentAck {
      */
     private final int mResult;
 
-    public KinesisVideoFragmentAck(@Nonnull final FragmentAckType ackType, long timestamp, @Nonnull final String sequenceNumber, int result) {
+    public KinesisVideoFragmentAck(int ackType,
+                                   long timestamp,
+                                   @Nonnull final String sequenceNumber,
+                                   int result) {
+        this(new FragmentAckType(ackType), timestamp, sequenceNumber, result);
+    }
+
+    public KinesisVideoFragmentAck(@Nonnull final FragmentAckType ackType,
+                                   long timestamp,
+                                   @Nonnull final String sequenceNumber,
+                                   int result) {
         mAckType = ackType;
         mTimestamp = timestamp;
         mSequenceNumber = sequenceNumber;

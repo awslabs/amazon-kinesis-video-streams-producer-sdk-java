@@ -1,36 +1,22 @@
 package com.amazonaws.kinesisvideo.demoapp;
 
 
-import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
-import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
-import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.client.PutMediaClient;
 import com.amazonaws.kinesisvideo.client.signing.AWSKinesisVideoV4Signer;
-import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.config.ClientConfiguration;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
-import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsProviderImpl;
-import com.amazonaws.kinesisvideo.java.client.JavaKinesisVideoClient;
-import com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory;
-import com.amazonaws.kinesisvideo.java.service.JavaKinesisVideoServiceClient;
-import com.amazonaws.kinesisvideo.producer.client.KinesisVideoServiceClient;
-import com.amazonaws.kinesisvideo.service.DefaultServiceCallbacksImpl;
 import com.amazonaws.kinesisvideo.signing.KinesisVideoSigner;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoAsyncClient;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 
-import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import static org.apache.commons.codec.CharEncoding.UTF_8;
 
@@ -43,7 +29,8 @@ import static org.apache.commons.codec.CharEncoding.UTF_8;
  * 1. Install ffmpeg if not yet done so already:
  *
  *      Mac OS X:
- *          brew install ffmpeg --with-opus --with-fdk-aac --with-tools --with-freetype --with-libass --with-libvorbis --with-libvpx --with-x265 --with-libopus
+ *          brew install ffmpeg --with-opus --with-fdk-aac --with-tools --with-freetype --with-libass --with-libvorbis
+ *          --with-libvpx --with-x265 --with-libopus
  *
  *      Others:
  *          git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
@@ -54,7 +41,7 @@ import static org.apache.commons.codec.CharEncoding.UTF_8;
  *  2. Convert MP4 to MKV
  *      ffmpeg -i input.mp4 -b:v 10M -minrate 10M -maxrate 10M -bufsize 10M -bf 0 input.mkv
  */
-public class PutMediaDemo {
+public final class PutMediaDemo {
     private static final String DEFAULT_REGION = "us-west-2";
     private static final String KINESISVIDEO_SERVICE_NAME = "kinesisvideo";
     private static final String PUT_MEDIA_API = "/putMedia";
@@ -74,6 +61,7 @@ public class PutMediaDemo {
     /* connect timeout */
     private static final int CONNECTION_TIMEOUT_IN_MILLIS = 10_000;
 
+    private PutMediaDemo() { }
     public static void main(final String[] args) throws Exception {
         final AmazonKinesisVideo frontendClient = AmazonKinesisVideoAsyncClient.builder()
                 .withCredentials(AuthHelper.getSystemPropertiesCredentialsProvider())
