@@ -1,5 +1,7 @@
 package com.amazonaws.kinesisvideo.producer;
 
+import javax.annotation.Nonnull;
+
 /**
  *
  * Interface to the Kinesis Video Producer Stream Callbacks functionality.
@@ -28,7 +30,14 @@ public interface StreamCallbacks
      * @param lastAckDuration The duration of time window when the last "buffering" ACK is received in 100ns.
      * @throws ProducerException
      */
-    void streamConnectionStale(long duration) throws ProducerException;
+    void streamConnectionStale(long lastAckDuration) throws ProducerException;
+
+    /**
+     * Reports the received ACK.
+     * @param fragmentAck The received fragment ACK.
+     * @throws ProducerException
+     */
+    void fragmentAckReceived(@Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException;
 
     /**
      * Reports a dropped frame for the stream.

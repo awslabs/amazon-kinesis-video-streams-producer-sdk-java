@@ -43,7 +43,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * The expected library version.
      */
-    private static final String EXPECTED_LIBRARY_VERSION = "1.1";
+    private static final String EXPECTED_LIBRARY_VERSION = "1.2";
 
     /**
      * The manifest handle will be set after call to parse()
@@ -593,6 +593,22 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
 
             final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
             kinesisVideoProducerStream.streamConnectionStale(lastAckDuration);
+        }
+    }
+
+    /**
+     * Reports received fragment ACK
+     */
+    private void fragmentAckReceived(long streamHandle, @Nonnull final KinesisVideoFragmentAck fragmentAck)
+            throws ProducerException
+    {
+        synchronized (mCallbackSyncObject) {
+            if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
+                throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
+            }
+
+            final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+            kinesisVideoProducerStream.fragmentAckReceived(fragmentAck);
         }
     }
 

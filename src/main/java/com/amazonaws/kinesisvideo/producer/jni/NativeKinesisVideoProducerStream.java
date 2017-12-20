@@ -292,6 +292,14 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     }
 
     @Override
+    public void fragmentAckReceived(@Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException
+    {
+        if (mStreamCallbacks != null) {
+            mStreamCallbacks.fragmentAckReceived(fragmentAck);
+        }
+    }
+
+    @Override
     public void droppedFrameReport(long frameTimecode) throws ProducerException
     {
         if (mStreamCallbacks != null) {
