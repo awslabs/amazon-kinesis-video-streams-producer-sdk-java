@@ -1,7 +1,10 @@
 package com.amazonaws.kinesisvideo.streaming;
 
+import com.amazonaws.kinesisvideo.producer.KinesisVideoFragmentAck;
 import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
+
+import javax.annotation.Nonnull;
 
 public class DefaultStreamCallbacks implements StreamCallbacks {
     @Override
@@ -15,7 +18,12 @@ public class DefaultStreamCallbacks implements StreamCallbacks {
     }
 
     @Override
-    public void streamConnectionStale(final long duration) throws ProducerException {
+    public void streamConnectionStale(final long lastAckDuration) throws ProducerException {
+        // no-op
+    }
+
+    @Override
+    public void fragmentAckReceived(@Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException {
         // no-op
     }
 

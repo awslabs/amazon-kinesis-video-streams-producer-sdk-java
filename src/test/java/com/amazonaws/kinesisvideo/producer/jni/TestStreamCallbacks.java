@@ -1,5 +1,6 @@
 package com.amazonaws.kinesisvideo.producer.jni;
 
+import com.amazonaws.kinesisvideo.producer.KinesisVideoFragmentAck;
 import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
@@ -27,7 +28,12 @@ public class TestStreamCallbacks implements StreamCallbacks {
     }
 
     @Override
-    public void streamConnectionStale(long duration) throws ProducerException {
+    public void streamConnectionStale(long lastAckDuration) throws ProducerException {
+
+    }
+
+    @Override
+    public void fragmentAckReceived(@Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException {
 
     }
 
