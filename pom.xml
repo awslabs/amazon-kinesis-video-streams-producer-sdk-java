@@ -21,6 +21,10 @@
             <id>lib</id>
             <url>file://${project.basedir}/lib</url>
         </repository>
+	        <repository>
+		    <id>xuggle repo</id>
+		    <url>https://files.liferay.com/mirrors/xuggle.googlecode.com/svn/trunk/repo/share/java/</url>
+		    </repository>
     </repositories>
 
     <dependencies>
@@ -115,6 +119,19 @@
 			<artifactId>webcam-capture</artifactId>
 			<version>0.3.11</version>
 		</dependency>
+		
+<dependency>
+    <groupId>xuggle</groupId>
+    <artifactId>xuggle-xuggler</artifactId>
+    <version>5.4</version>
+  </dependency>
+  
+<dependency>
+    <groupId>org.jboss.netty</groupId>
+    <artifactId>netty</artifactId>
+    <version>3.2.0.Final</version>
+</dependency>
+  
 		<dependency>
 			<groupId>org.openimaj</groupId>
 			<artifactId>faces</artifactId>
