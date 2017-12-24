@@ -6,12 +6,15 @@ import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceSink;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceState;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.kinesisvideo.java.logging.SysOutLogChannel;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFrameSource;
 import com.amazonaws.kinesisvideo.mediasource.OnFrameDataAvailable;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.github.sarxos.webcam.Webcam;
+import com.github.sarxos.webcam.WebcamResolution;
 
+import java.awt.Dimension;
 import java.nio.ByteBuffer;
 
 import org.openimaj.image.ImageUtilities;
@@ -33,9 +36,12 @@ public class CameraMediaSource implements MediaSource {
     private int frameIndex;
     Webcam webcam = null;
     
+    
     public void setupWebCam(Webcam webcam) {
     	this.webcam = webcam;
-    	webcam.open(true);
+    	Dimension size = WebcamResolution.VGA.getSize();
+        webcam.setViewSize(size);
+        webcam.open(true);
     }
 
 	@Override
@@ -85,21 +91,27 @@ public class CameraMediaSource implements MediaSource {
             public void onFrameDataAvailable(final ByteBuffer data) {
                 final long currentTimeMs = System.currentTimeMillis();
 
-                final int flags = FRAME_FLAG_NONE;
+                final int flags = FRAME_FLAG_KEY_FRAME;
 
-                final KinesisVideoFrame frame = new KinesisVideoFrame(
-                        frameIndex++,
-                        flags,
-                        currentTimeMs * HUNDREDS_OF_NANOS_IN_MS,
-                        currentTimeMs * HUNDREDS_OF_NANOS_IN_MS,
-                        FRAME_DURATION_20_MS * HUNDREDS_OF_NANOS_IN_MS,
-                        data);
+                if (data != null) {
+                    final KinesisVideoFrame frame = new KinesisVideoFrame(
+                            frameIndex++,
+                            flags,
+                            currentTimeMs * HUNDREDS_OF_NANOS_IN_MS,
+                            currentTimeMs * HUNDREDS_OF_NANOS_IN_MS,
+                            FRAME_DURATION_20_MS * HUNDREDS_OF_NANOS_IN_MS,
+                            data);
 
-                if (frame.getSize() == 0) {
-                    return;
+                    if (frame.getSize() == 0) {
+                        return;
+                    }
+
+                    putFrame(frame);
+                    
+                } else {
+                	System.out.println("Data not received from frame");
                 }
 
-                putFrame(frame);
             }
         };
 	}
@@ -112,9 +124,20 @@ public class CameraMediaSource implements MediaSource {
         }
     }
 
+    
+    private boolean isKeyFrame() {
+        return frameIndex % 22 == 0;
+    }
+    
 	@Override
 	public void stop() throws KinesisVideoException {
 		// TODO Auto-generated method stub
+        if (cameraFrameSource != null) {
+        	cameraFrameSource.stop();
+        }
+
+        mediaSourceState = MediaSourceState.STOPPED;
+        webcam.close();
 		
 	}
 

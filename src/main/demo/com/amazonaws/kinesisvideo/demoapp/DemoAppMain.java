@@ -1,5 +1,7 @@
 package com.amazonaws.kinesisvideo.demoapp;
 
+import java.awt.Dimension;
+
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.client.mediasource.CameraMediaSourceConfiguration;
@@ -15,13 +17,17 @@ import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSourceConf
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.regions.Regions;
 import com.github.sarxos.webcam.Webcam;
+import com.github.sarxos.webcam.WebcamResolution;
+import com.github.sarxos.webcam.util.ImageUtils;
 
 /**
  * Demo Java Producer.
  */
 public final class DemoAppMain {
     private static final String STREAM_NAME = "my-stream";
-    private static final int FPS_25 = 25;
+    private static final int FPS_22 = 22;
+    private static final int FPS_24 = 24;
+    private static final int FPS_30 = 30;
     private static final String IMAGE_DIR = "src/main/resources/data/h264/";
     private static final String IMAGE_FILENAME_FORMAT = "frame-%03d.h264";
     private static final int START_FILE_INDEX = 1;
@@ -43,6 +49,8 @@ public final class DemoAppMain {
 
             // register media source with Kinesis Video Client
             kinesisVideoClient.registerMediaSource(STREAM_NAME, bytesMediaSource);
+            
+            
 
             // start streaming
             bytesMediaSource.start();
@@ -59,7 +67,7 @@ public final class DemoAppMain {
     private static MediaSource createImageFileMediaSource() {
         final ImageFileMediaSourceConfiguration configuration =
                 new ImageFileMediaSourceConfiguration.Builder()
-                        .fps(FPS_25)
+                        .fps(FPS_24)
                         .dir(IMAGE_DIR)
                         .filenameFormat(IMAGE_FILENAME_FORMAT)
                         .startFileIndex(START_FILE_INDEX)
@@ -77,13 +85,16 @@ public final class DemoAppMain {
     	
     	final CameraMediaSourceConfiguration configuration =
     			new CameraMediaSourceConfiguration.Builder()
-    			.withFrameRate((int) webcam.getFPS())
-    			.withCameraFacing(1)
+    			.withFrameRate(FPS_22)
+    			.withRetentionPeriodInHours(1)
     			.withCameraId("/dev/video0")
     			.withIsEncoderHardwareAccelerated(false)
-    			.withRetentionPeriodInHours(1)
     			.withEncodingMimeType("video/avc")
     			.withNalAdaptationFlags(StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE)
+    			.withIsAbsoluteTimecode(false)
+    			.withEncodingBitRate(200000)
+    			.withHorizontalResolution(640)
+    			.withVerticalResolution(480)
     			.build();
     	
     	final CameraMediaSource mediaSource = new CameraMediaSource();
