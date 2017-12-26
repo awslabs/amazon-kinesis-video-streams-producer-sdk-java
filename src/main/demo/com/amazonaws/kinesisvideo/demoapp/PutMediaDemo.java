@@ -1,24 +1,23 @@
 package com.amazonaws.kinesisvideo.demoapp;
 
-
-import com.amazonaws.kinesisvideo.client.PutMediaClient;
-import com.amazonaws.kinesisvideo.client.signing.AWSKinesisVideoV4Signer;
-import com.amazonaws.kinesisvideo.common.function.Consumer;
-import com.amazonaws.kinesisvideo.config.ClientConfiguration;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
-import com.amazonaws.kinesisvideo.signing.KinesisVideoSigner;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoAsyncClient;
+import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoPutMedia;
+import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoPutMediaClient;
+import com.amazonaws.services.kinesisvideo.PutMediaAckResponseHandler;
+import com.amazonaws.services.kinesisvideo.model.AckEvent;
+import com.amazonaws.services.kinesisvideo.model.FragmentTimecodeType;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
+import com.amazonaws.services.kinesisvideo.model.PutMediaRequest;
 
-import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
+import java.time.Instant;
+import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 
-import static org.apache.commons.codec.CharEncoding.UTF_8;
 
 /**
  * An example on how to send an MKV file to Kinesis Video Streams.
@@ -43,7 +42,6 @@ import static org.apache.commons.codec.CharEncoding.UTF_8;
  */
 public final class PutMediaDemo {
     private static final String DEFAULT_REGION = "us-west-2";
-    private static final String KINESISVIDEO_SERVICE_NAME = "kinesisvideo";
     private static final String PUT_MEDIA_API = "/putMedia";
 
     /* the name of the stream */
@@ -71,8 +69,8 @@ public final class PutMediaDemo {
         /* this is the endpoint returned by GetDataEndpoint API */
         final String dataEndpoint = frontendClient.getDataEndpoint(
                 new GetDataEndpointRequest()
-                    .withStreamName(STREAM_NAME)
-                    .withAPIName("PUT_MEDIA")).getDataEndpoint();
+                        .withStreamName(STREAM_NAME)
+                        .withAPIName("PUT_MEDIA")).getDataEndpoint();
 
         /* send the same MKV file over and over */
         while (true) {
@@ -85,79 +83,46 @@ public final class PutMediaDemo {
             /* use a latch for main thread to wait for response to complete */
             final CountDownLatch latch = new CountDownLatch(1);
 
-            /* a consumer for PutMedia ACK events */
-            final AckConsumer ackConsumer = new AckConsumer(latch);
-
-            /* client configuration used for AWS SigV4 signer */
-            final ClientConfiguration configuration = getClientConfiguration(uri);
-
             /* PutMedia client */
-            final PutMediaClient client = PutMediaClient.builder()
-                    .putMediaDestinationUri(uri)
-                    .mkvStream(inputStream)
-                    .streamName(STREAM_NAME)
-                    .timestamp(System.currentTimeMillis())
-                    .fragmentTimecodeType("RELATIVE")
-                    .signWith(getKinesisVideoSigner(configuration))
-                    .upstreamKbps(MAX_BANDWIDTH_KBPS)
-                    .receiveAcks(ackConsumer)
+            final AmazonKinesisVideoPutMedia dataClient = AmazonKinesisVideoPutMediaClient.builder()
+                    .withRegion(DEFAULT_REGION)
+                    .withEndpoint(URI.create(dataEndpoint))
+                    .withCredentials(AuthHelper.getSystemPropertiesCredentialsProvider())
+                    .withConnectionTimeoutInMillis(CONNECTION_TIMEOUT_IN_MILLIS)
                     .build();
 
+            final PutMediaAckResponseHandler responseHandler = new PutMediaAckResponseHandler()  {
+                @Override
+                public void onAckEvent(AckEvent event) {
+                    System.out.println("onAckEvent " + event);
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    latch.countDown();
+                    throw new RuntimeException(t);
+                }
+
+                @Override
+                public void onComplete() {
+                    System.out.println("onComplete");
+                    latch.countDown();
+                }
+            };
+
             /* start streaming video in a background thread */
-            client.putMediaInBackground();
+            dataClient.putMedia(new PutMediaRequest()
+                            .withStreamName(STREAM_NAME)
+                            .withFragmentTimecodeType(FragmentTimecodeType.RELATIVE)
+                            .withPayload(inputStream)
+                            .withProducerStartTimestamp(Date.from(Instant.now())),
+                    responseHandler);
 
             /* wait for request/response to complete */
             latch.await();
 
             /* close the client */
-            client.close();
-        }
-    }
-
-    private static KinesisVideoSigner getKinesisVideoSigner(final ClientConfiguration configuration) {
-        return new AWSKinesisVideoV4Signer(AuthHelper.getSystemPropertiesCredentialsProvider(),
-                configuration,
-                true);
-    }
-
-    private static ClientConfiguration getClientConfiguration(final URI uri) {
-        return ClientConfiguration.builder()
-                .apiName(PUT_MEDIA_API)
-                .streamName(STREAM_NAME)
-                .streamUri(uri)
-                .region(DEFAULT_REGION)
-                .serviceName(KINESISVIDEO_SERVICE_NAME)
-                .readTimeoutInMillis(READ_TIMEOUT_IN_MILLIS)
-                .connectionTimeoutInMillis(CONNECTION_TIMEOUT_IN_MILLIS)
-                .build();
-    }
-
-    private static class AckConsumer implements Consumer<InputStream> {
-        private static final String END_OF_CHUNKED_DATA = "0";
-        private final CountDownLatch latch;
-
-        public AckConsumer(final CountDownLatch latch) {
-            this.latch = latch;
-        }
-
-        @Override
-        public void accept(final InputStream inputStream) {
-            try {
-                final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, UTF_8));
-                String line = null;
-                while ((line = reader.readLine()) != null) {
-                    System.out.println(line);
-                    if (END_OF_CHUNKED_DATA.equals(line)) {
-                        System.out.println("Received EOF for HTTP chunked encoding data.");
-                        break;
-                    }
-                }
-            } catch (final Throwable t) {
-                System.out.println("Exception while reading output stream " + t.getMessage());
-                throw new RuntimeException(t);
-            } finally {
-                latch.countDown();
-            }
+            dataClient.close();
         }
     }
 }
