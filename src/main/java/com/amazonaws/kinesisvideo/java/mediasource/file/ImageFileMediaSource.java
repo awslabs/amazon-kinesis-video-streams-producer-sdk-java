@@ -7,6 +7,8 @@ import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceState;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.mediasource.OnFrameDataAvailable;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
@@ -21,6 +23,7 @@ public class ImageFileMediaSource implements MediaSource {
     private static final int FRAME_FLAG_NONE = 0;
     private static final long FRAME_DURATION_20_MS = 20L;
     private static final int FRAGMENT_DURATION_SECONDS = 2;
+    private final Log log = LogFactory.getLog(ImageFileMediaSource.class);
 
     private ImageFileMediaSourceConfiguration imageFileMediaSourceConfiguration;
     private MediaSourceState mediaSourceState;
@@ -115,7 +118,7 @@ public class ImageFileMediaSource implements MediaSource {
         try {
             mediaSourceSink.onFrame(kinesisVideoFrame);
         } catch (final KinesisVideoException ex) {
-            throw new RuntimeException(ex);
+            log.error("Failed to put frame with Exception", ex);
         }
     }
 }

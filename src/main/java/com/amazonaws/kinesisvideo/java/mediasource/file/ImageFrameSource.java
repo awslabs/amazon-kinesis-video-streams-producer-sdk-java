@@ -2,7 +2,8 @@ package com.amazonaws.kinesisvideo.java.mediasource.file;
 
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.mediasource.OnFrameDataAvailable;
-import com.amazonaws.kinesisvideo.stream.throttling.DiscreteTimePeriodsThrottler;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
@@ -10,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,18 +22,19 @@ import java.util.concurrent.Executors;
 public class ImageFrameSource {
     public static final int DISCRETENESS_HZ = 25;
     private final ExecutorService executor = Executors.newFixedThreadPool(1);
-    private final DiscreteTimePeriodsThrottler throttler;
+    private final int fps;
     private final ImageFileMediaSourceConfiguration configuration;
 
     private final int totalFiles;
     private OnFrameDataAvailable onFrameDataAvailable;
     private boolean isRunning = false;
     private long frameCounter;
+    private final Log log = LogFactory.getLog(ImageFrameSource.class);
 
     public ImageFrameSource(final ImageFileMediaSourceConfiguration configuration) {
         this.configuration = configuration;
         this.totalFiles = getTotalFiles(configuration.getStartFileIndex(), configuration.getEndFileIndex());
-        this.throttler = new DiscreteTimePeriodsThrottler(configuration.getFps(), DISCRETENESS_HZ);
+        this.fps = configuration.getFps();
     }
 
     private int getTotalFiles(final int startIndex, final int endIndex) {
@@ -68,14 +71,16 @@ public class ImageFrameSource {
 
     private void generateFrameAndNotifyListener() {
         while (isRunning) {
-            // TODO: Throttler is not limiting first time call when input param
-            // are the same
-            throttler.throttle();
             if (onFrameDataAvailable != null) {
                 onFrameDataAvailable.onFrameDataAvailable(createKinesisVideoFrameFromImage(frameCounter));
             }
 
             frameCounter++;
+            try {
+                Thread.sleep(Duration.ofSeconds(1L).toMillis() / fps);
+            } catch (final InterruptedException e) {
+                log.error("Frame interval wait interrupted by Exception ", e);
+            }
         }
     }
 
@@ -89,7 +94,7 @@ public class ImageFrameSource {
             final byte[] bytes = Files.readAllBytes(path);
             return ByteBuffer.wrap(bytes);
         } catch (final IOException e) {
-            e.printStackTrace();
+            log.error("Read file failed with Exception ", e);
         }
 
         return null;
