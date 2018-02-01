@@ -66,6 +66,9 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
 
         public Builder fps(final int fps) {
             this.fps = fps;
+            if (fps <= 0) {
+                throw new IllegalArgumentException("Fps should not be negative or zero.");
+            }
             return this;
         }
 
