@@ -430,6 +430,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
         final PutMediaClient.Builder putMediaClientBuilder = PutMediaClient
                 .builder()
+                .log(log)
                 .receiveTimeout(RECEIVE_TIMEOUT_1HR)
                 .timestamp(streamStartTimeInMillis)
                 .signWith(signer)

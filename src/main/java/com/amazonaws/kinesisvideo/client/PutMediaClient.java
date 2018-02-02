@@ -57,6 +57,7 @@ public final class PutMediaClient {
     public void putMediaInBackground() {
         final ParallelSimpleHttpClient.Builder clientBuilder =
                 ParallelSimpleHttpClient.builder()
+                        .log(log)
                         .uri(mBuilder.mUri)
                         .method(POST)
                         .header(STREAM_NAME_HEADER, mBuilder.mStreamName)
