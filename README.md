@@ -37,6 +37,10 @@ Demo app will start running and putting sample video frames in a loop into Kines
 
 ## Release Notes
 
+### Release 1.2.1 (February 2018)
+
+* Remove some unit tests relying on native library to avoid break mvn package build (without -skipTests=true).
+
 ### Release 1.2.0 (February 2018)
 
 * Bug fixes and performance enhancement
