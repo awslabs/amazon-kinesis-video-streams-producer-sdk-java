@@ -53,7 +53,7 @@ public class TestStreamCallbacks implements StreamCallbacks {
     }
 
     @Override
-    public void streamDataAvailable(long duration, long availableSize) throws ProducerException {
+    public void streamDataAvailable(long uploadHandle, long duration, long availableSize) throws ProducerException {
 
     }
 
@@ -63,7 +63,7 @@ public class TestStreamCallbacks implements StreamCallbacks {
     }
 
     @Override
-    public void streamClosed() throws ProducerException {
+    public void streamClosed(long uploadHandle) throws ProducerException {
 
     }
 }

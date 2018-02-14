@@ -22,27 +22,28 @@ public class NativeKinesisVideoProducerJniTestBase implements KinesisVideoProduc
     public static final byte[] TEST_STREAMING_TOKEN = new byte[] {1, 2, 3, 4, 5};
 
     private static final int CLIENT_CREATION_TIMEOUT_MILLIS = 5000;
-    private static final int STREAM_CREATION_TIMEOUT_MILLIS = 5000;
+    protected static final int STREAM_CREATION_TIMEOUT_MILLIS = 5000;
 
     /**
      * MKV struct sizes as defined in the MKV generator
      */
     protected static final int MKV_SIMPLE_BLOCK_OVERHEAD = 13;
     protected static final int MKV_CLUSTER_OVERHEAD = 18 + MKV_SIMPLE_BLOCK_OVERHEAD;
-    protected static final int MKV_HEADER_OVERHEAD = 223 + MKV_CLUSTER_OVERHEAD;
+    protected static final int MKV_HEADER_OVERHEAD = 244 + MKV_CLUSTER_OVERHEAD;
     protected static final int MKV_CODEC_PRIVATE_DATA_ELEM_SIZE = 2;
 
     protected final Log mLog = new Log(Log.SYSTEM_OUT);
     protected final AuthCallbacks mAuthCallbacks;
     protected final StorageCallbacks mStorageCallbacks;
-    protected final ServiceCallbacks mServiceCallbacks;
-    protected final StreamCallbacks mStreamCallbacks;
-    protected final NativeKinesisVideoProducerJni mProducer;
+    protected ServiceCallbacks mServiceCallbacks;
+    protected StreamCallbacks mStreamCallbacks;
+    protected NativeKinesisVideoProducerJni mProducer;
     protected final StorageInfo mStorageInfo;
     protected final DeviceInfo mDeviceInfo;
 
-    final CountDownLatch mClientReadyLatch = new CountDownLatch(1);
-    final CountDownLatch mStreamReadyLatch = new CountDownLatch(1);
+    CountDownLatch mClientReadyLatch;
+    CountDownLatch mStreamReadyLatch;
+    CountDownLatch mDataAvailableLatch;
 
     final ExecutorService mExecutor = Executors.newFixedThreadPool(2);
 
@@ -52,8 +53,7 @@ public class NativeKinesisVideoProducerJniTestBase implements KinesisVideoProduc
     public NativeKinesisVideoProducerJniTestBase() throws Exception {
         mAuthCallbacks = new TestAuthCallbacks(mLog);
         mStorageCallbacks = new TestStorageCallbacks(mLog);
-        mServiceCallbacks = new TestServiceCallbacks(this, mLog, mExecutor);
-        mStreamCallbacks = new TestStreamCallbacks(mLog, mStreamReadyLatch);
+
         mStorageInfo = new StorageInfo(StorageInfo.STORAGE_INFO_CURRENT_VERSION, StorageInfo.DeviceStorageType.DEVICE_STORAGE_TYPE_IN_MEM, 10 * 1024 * 1024, 0, "/tmp");
         mDeviceInfo = new DeviceInfo(DeviceInfo.DEVICE_INFO_CURRENT_VERSION, "TestDevice", mStorageInfo, 10, null);
 
@@ -83,6 +83,16 @@ public class NativeKinesisVideoProducerJniTestBase implements KinesisVideoProduc
                 null,
                 null,
                 StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE);
+    }
+
+    @Before
+    public void setUp() throws Exception {
+        mClientReadyLatch = new CountDownLatch(1);
+        mStreamReadyLatch = new CountDownLatch(1);
+        mDataAvailableLatch = new CountDownLatch(1);
+
+        mServiceCallbacks = new TestServiceCallbacks(this, mLog, mExecutor, mDataAvailableLatch);
+        mStreamCallbacks = new TestStreamCallbacks(mLog, mStreamReadyLatch);
 
         mProducer = new NativeKinesisVideoProducerJni(
                 mAuthCallbacks,
@@ -92,10 +102,7 @@ public class NativeKinesisVideoProducerJniTestBase implements KinesisVideoProduc
                 mClientReadyLatch);
 
         assertNotNull(mProducer);
-    }
 
-    @Before
-    public void setUp() throws Exception {
         String filePathWithoutExtension = System.getProperty("tests.additional.LD_LIBRARY_PATH");
         final Properties props = System.getProperties();
         if (filePathWithoutExtension == null || filePathWithoutExtension.isEmpty()) {
@@ -117,15 +124,7 @@ public class NativeKinesisVideoProducerJniTestBase implements KinesisVideoProduc
     protected void createTestStream() throws Exception {
         Preconditions.checkState(isReady());
 
-        mStream = mProducer.createStream(mStreamInfo, mStreamCallbacks);
-
-        try {
-            if (!mStreamReadyLatch.await(STREAM_CREATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
-                throw new Exception("Stream creation time out");
-            }
-        } catch (final InterruptedException e) {
-            throw new Exception("Stream creation  was interrupted");
-        }
+        mStream = mProducer.createStreamSync(mStreamInfo, mStreamCallbacks);
     }
 
     @After

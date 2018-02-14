@@ -13,6 +13,7 @@ import com.amazonaws.kinesisvideo.java.logging.SysOutLogChannel;
 import com.amazonaws.kinesisvideo.java.service.JavaKinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.producer.DeviceInfo;
 import com.amazonaws.kinesisvideo.producer.StorageInfo;
+import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.Tag;
 import com.amazonaws.kinesisvideo.storage.DefaultStorageCallbacks;
 import com.amazonaws.regions.Regions;
@@ -102,6 +103,35 @@ public final class KinesisVideoJavaClientFactory {
                 configuration,
                 serviceClient,
                 executor);
+
+        kinesisVideoClient.initialize(deviceInfo);
+
+        return kinesisVideoClient;
+    }
+
+    /**
+     * Create Kinesis Video client.
+     */
+    @Nonnull
+    public static KinesisVideoClient createKinesisVideoClient(
+            @Nonnull final KinesisVideoClientConfiguration configuration,
+            @Nonnull final DeviceInfo deviceInfo,
+            @Nonnull final ScheduledExecutorService executor,
+            @Nonnull final StreamCallbacks streamCallbacks)
+            throws KinesisVideoException {
+        Preconditions.checkNotNull(configuration);
+        Preconditions.checkNotNull(deviceInfo);
+        Preconditions.checkNotNull(executor);
+
+        final Log log = new Log(configuration.getLogChannel(), LogLevel.DEBUG, "KinesisVideo");
+
+        final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(log);
+
+        final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(log,
+                configuration,
+                serviceClient,
+                executor,
+                streamCallbacks);
 
         kinesisVideoClient.initialize(deviceInfo);
 

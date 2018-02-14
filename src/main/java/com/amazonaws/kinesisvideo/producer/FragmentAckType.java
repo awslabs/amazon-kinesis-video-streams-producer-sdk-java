@@ -33,7 +33,7 @@ public class FragmentAckType {
     public static final int FRAGMENT_ACK_TYPE_ERROR = 4;
 
     /**
-     * Iddle ACK to keep alive
+     * Idle ACK to keep alive
      */
     public static final int FRAGMENT_ACK_TYPE_IDLE = 5;
 

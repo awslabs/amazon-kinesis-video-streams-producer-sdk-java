@@ -6,6 +6,7 @@ import com.amazonaws.kinesisvideo.producer.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.charset.Charset;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
 import static com.amazonaws.kinesisvideo.producer.jni.NativeKinesisVideoProducerJniTestBase.TEST_STREAMING_TOKEN;
@@ -19,7 +20,8 @@ public class TestServiceCallbacks implements ServiceCallbacks {
     public static final String TEST_UPDATE_VERSION = "Test update ver";
     public static final StreamStatus TEST_STREAM_STATUS = StreamStatus.ACTIVE;
     public static final String TEST_STREAMING_ENDPOINT = "Test streaming endpoint";
-    public static final long TEST_TOKEN_EXPIRATION = Time.getCurrentTime() + 60 * Time.HUNDREDS_OF_NANOS_IN_A_MINUTE; // a minute expiration
+    public static final long TEST_TOKEN_EXPIRATION = Time.getCurrentTime() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND
+            + 60 * Time.HUNDREDS_OF_NANOS_IN_A_MINUTE; // a minute expiration
     public static final long TEST_STREAM_CLIENT_HANDLE = 0;
     public static final int TEST_CALL_RESULT_OK = 200;
 
@@ -27,14 +29,17 @@ public class TestServiceCallbacks implements ServiceCallbacks {
     private final KinesisVideoProducer mKinesisVideoProducer;
     private final StreamDescription mStreamDescription;
     private final ExecutorService mExecutorService;
+    private final CountDownLatch mDataAvailableLatch;
 
     private boolean mIsInitialized;
 
-    public TestServiceCallbacks(final @Nonnull KinesisVideoProducer kinesisVideoProducer, final @Nonnull Log log, final @Nonnull ExecutorService executorService) {
+    public TestServiceCallbacks(final @Nonnull KinesisVideoProducer kinesisVideoProducer, final @Nonnull Log log, final @Nonnull ExecutorService executorService,
+            final @Nonnull CountDownLatch dataAvailableLatch) {
         mKinesisVideoProducer = kinesisVideoProducer;
         mLog = log;
         mIsInitialized = false;
         mExecutorService = executorService;
+        mDataAvailableLatch = dataAvailableLatch;
 
         mStreamDescription = new StreamDescription(StreamDescription.STREAM_DESCRIPTION_CURRENT_VERSION,
                 TEST_DEVICE_NAME,
@@ -47,7 +52,7 @@ public class TestServiceCallbacks implements ServiceCallbacks {
     }
 
     @Override
-    public void initialize(@Nonnull KinesisVideoProducer kinesisVideoProducer) throws ProducerException {
+    public void initialize(@Nonnull final KinesisVideoProducer kinesisVideoProducer) throws ProducerException {
         mLog.verbose("Called initialize");
         mIsInitialized = true;
     }
@@ -58,9 +63,8 @@ public class TestServiceCallbacks implements ServiceCallbacks {
     }
 
     @Override
-    public void createStream(@Nonnull String deviceName, @Nonnull String streamName, @Nonnull String contentType, @Nullable String kmsKeyId, long retentionPeriod, long callAfter, long timeout, @Nullable byte[] authData, int authType, final long customData) throws ProducerException {
+    public void createStream(@Nonnull final String deviceName, @Nonnull final String streamName, @Nonnull final String contentType, @Nullable final String kmsKeyId, final long retentionPeriod, final long callAfter, final long timeout, @Nullable final byte[] authData, final int authType, final long customData) throws ProducerException {
         mLog.verbose("Called createStream");
-
         mExecutorService.submit(new Runnable() {
             @Override
             public void run() {
@@ -74,7 +78,7 @@ public class TestServiceCallbacks implements ServiceCallbacks {
     }
 
     @Override
-    public void describeStream(@Nonnull String streamName, long callAfter, long timeout, @Nullable byte[] authData, int authType, final long customData) throws ProducerException {
+    public void describeStream(@Nonnull final String streamName, final long callAfter, final long timeout, @Nullable final byte[] authData, final int authType, final long customData) throws ProducerException {
         mLog.verbose("Called describeStream");
 
         mExecutorService.submit(new Runnable() {
@@ -90,7 +94,7 @@ public class TestServiceCallbacks implements ServiceCallbacks {
     }
 
     @Override
-    public void getStreamingEndpoint(@Nonnull String streamName, @Nonnull String apiName, long callAfter, long timeout, @Nullable byte[] authData, int authType, final long customData) throws ProducerException {
+    public void getStreamingEndpoint(@Nonnull final String streamName, @Nonnull final String apiName, final long callAfter, final long timeout, @Nullable final byte[] authData, final int authType, final long customData) throws ProducerException {
         mLog.verbose("Called getStreamingEndpoint");
 
         mExecutorService.submit(new Runnable() {
@@ -106,7 +110,7 @@ public class TestServiceCallbacks implements ServiceCallbacks {
     }
 
     @Override
-    public void getStreamingToken(@Nonnull String streamName, long callAfter, long timeout, @Nullable byte[] authData, int authType, final long customData) throws ProducerException {
+    public void getStreamingToken(@Nonnull final String streamName, final long callAfter, final long timeout, @Nullable final byte[] authData, final int authType, final long customData) throws ProducerException {
         mLog.verbose("Called getStreamingToken");
 
         mExecutorService.submit(new Runnable() {
@@ -122,7 +126,7 @@ public class TestServiceCallbacks implements ServiceCallbacks {
     }
 
     @Override
-    public void putStream(@Nonnull String streamName, @Nonnull String containerType, long streamStartTime, boolean absoluteFragmentTimes, boolean ackRequired, @Nonnull String streamingEndpoint, long callAfter, long timeout, @Nullable byte[] authData, int authType, final long customData) throws ProducerException {
+    public void putStream(@Nonnull final String streamName, @Nonnull final String containerType, final long streamStartTime, final boolean absoluteFragmentTimes, final boolean ackRequired, @Nonnull final String streamingEndpoint, final long callAfter, final long timeout, @Nullable final byte[] authData, final int authType, final long customData) throws ProducerException {
         mLog.verbose("Called putStream");
 
         mExecutorService.submit(new Runnable() {
@@ -130,6 +134,7 @@ public class TestServiceCallbacks implements ServiceCallbacks {
             public void run() {
                 try {
                     mKinesisVideoProducer.putStreamResult(customData, TEST_STREAM_CLIENT_HANDLE, TEST_CALL_RESULT_OK);
+                    mDataAvailableLatch.countDown();
                 } catch (final ProducerException e) {
                     e.printStackTrace();
                 }
@@ -138,7 +143,7 @@ public class TestServiceCallbacks implements ServiceCallbacks {
     }
 
     @Override
-    public void tagResource(@Nonnull String resourceArn, @Nullable Tag[] tags, long callAfter, long timeout, @Nullable byte[] authData, int authType, final long customData) throws ProducerException {
+    public void tagResource(@Nonnull final String resourceArn, @Nullable final Tag[] tags, final long callAfter, final long timeout, @Nullable final byte[] authData, final int authType, final long customData) throws ProducerException {
         mLog.verbose("Called tagResource");
 
         mExecutorService.submit(new Runnable() {
@@ -154,7 +159,7 @@ public class TestServiceCallbacks implements ServiceCallbacks {
     }
 
     @Override
-    public void createDevice(@Nonnull String deviceName, long callAfter, long timeout, @Nullable byte[] authData, int authType, final long customData) throws ProducerException {
+    public void createDevice(@Nonnull final String deviceName, final long callAfter, final long timeout, @Nullable final byte[] authData, final int authType, final long customData) throws ProducerException {
         mLog.verbose("Called createDevice");
 
         mExecutorService.submit(new Runnable() {
@@ -170,7 +175,7 @@ public class TestServiceCallbacks implements ServiceCallbacks {
     }
 
     @Override
-    public void deviceCertToToken(@Nonnull String deviceName, long callAfter, long timeout, @Nullable byte[] authData, int authType, final long customData) throws ProducerException {
+    public void deviceCertToToken(@Nonnull final String deviceName, final long callAfter, final long timeout, @Nullable final byte[] authData, final int authType, final long customData) throws ProducerException {
         mLog.verbose("Called deviceCertToToken");
 
         mExecutorService.submit(new Runnable() {

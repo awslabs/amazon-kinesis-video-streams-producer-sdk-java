@@ -12,9 +12,15 @@ public class BytesMediaSourceConfiguration implements MediaSourceConfiguration {
             implements MediaSourceConfiguration.Builder<BytesMediaSourceConfiguration> {
 
         private int fps;
+        private long retentionPeriodInHours;
 
         public Builder withFps(final int fps) {
             this.fps = fps;
+            return this;
+        }
+
+        public Builder withRetentionPeriodInHours(final long retentionPeriodInHours) {
+            this.retentionPeriodInHours = retentionPeriodInHours;
             return this;
         }
 
@@ -34,13 +40,17 @@ public class BytesMediaSourceConfiguration implements MediaSourceConfiguration {
         return mBuilder.fps;
     }
 
+    public long getRetentionPeriodInHours() {
+        return mBuilder.retentionPeriodInHours;
+    }
+
     @Override
     public String getMediaSourceType() {
-        return null;
+        return MEDIA_SOURCE_TYPE;
     }
 
     @Override
     public String getMediaSourceDescription() {
-        return null;
+        return MEDIA_SOURCE_DESCRIPTION;
     }
 }
