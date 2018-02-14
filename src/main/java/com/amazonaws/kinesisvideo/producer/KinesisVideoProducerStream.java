@@ -30,11 +30,12 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
      * gets closed the stream returned by this function will also close.
      * The caller then should re-acquire a new stream by calling this API again.
      *
+     * @param uploadHandle Client stream upload handle.
      * @return {@link InputStream} for retrieving the data
      * @throws ProducerException
      */
     @Nonnull
-    InputStream getDataStream() throws ProducerException;
+    InputStream getDataStream(final long uploadHandle) throws ProducerException;
 
     /**
      * Get stream data from the buffer.
@@ -58,15 +59,20 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
 
     /**
      * Reports an ACK for a fragment.
-     */
-    void fragmentAck(final @Nonnull KinesisVideoFragmentAck kinesisVideoFragmentAck) throws ProducerException;
-
-    /**
-     * Parses and processes a response which can contain partial/multiple fragment ACK.
+     *
+     * @param uploadHandle Client stream upload handle.
      * @param kinesisVideoFragmentAck ACK string returned from the service.
      * @throws ProducerException
      */
-    void parseFragmentAck(final @Nonnull String kinesisVideoFragmentAck) throws ProducerException;
+    void fragmentAck(final long uploadHandle, final @Nonnull KinesisVideoFragmentAck kinesisVideoFragmentAck) throws ProducerException;
+
+    /**
+     * Parses and processes a response which can contain partial/multiple fragment ACK.
+     * @param uploadHandle Client stream upload handle.
+     * @param kinesisVideoFragmentAck ACK string returned from the service.
+     * @throws ProducerException
+     */
+    void parseFragmentAck(final long uploadHandle, final @Nonnull String kinesisVideoFragmentAck) throws ProducerException;
 
     /**
      * Indicates that the stream format has changed.
@@ -95,10 +101,11 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
 
     /**
      * Reports an abnormal stream termination
+     * @param uploadHandle - Client stream upload handle.
      * @param statusCode - Status code of the termination.
      * @throws ProducerException
      */
-    void streamTerminated(int statusCode) throws ProducerException;
+    void streamTerminated(long uploadHandle, int statusCode) throws ProducerException;
 
     /**
      * Returns stream specific metrics.

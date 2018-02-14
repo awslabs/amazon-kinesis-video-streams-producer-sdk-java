@@ -2,13 +2,13 @@ package com.amazonaws.kinesisvideo.producer.jni;
 
 import com.amazonaws.kinesisvideo.producer.*;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProducerJniTestBase {
     private static final long TEST_LONG_FRAME_DURATION = 40 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
@@ -19,7 +19,6 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
     public NativeKinesisVideoProducerJniTest() throws Exception {
     }
 
-    @Ignore
     @Test
     public void producerCreateSyncTest() throws Exception {
         String filePathWithoutExtension = System.getProperty("tests.additional.LD_LIBRARY_PATH");
@@ -43,7 +42,6 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
         Assert.assertTrue(producer.isReady());
     }
 
-    @Ignore
     @Test
     public void producerStreamCreateSyncTest() throws Exception {
         final KinesisVideoProducerStream stream = mProducer.createStreamSync(mStreamInfo, mStreamCallbacks);
@@ -52,7 +50,6 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
         Assert.assertEquals(0, mStreamReadyLatch.getCount());
     }
 
-    @Ignore
     @Test
     public void putGetFrameBoundaryTest() throws Exception {
         createTestStream();
@@ -114,7 +111,6 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
         }
     }
 
-    @Ignore
     @Test
     public void putGetFrameBoundaryInterleavedTest() throws Exception {
         createTestStream();
@@ -156,6 +152,7 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
             bufferSize = TEST_FRAME_SIZE + offset;
 
             Arrays.fill(getDataBuffer, (byte) 55);
+            mDataAvailableLatch.await(STREAM_CREATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
             filledSize = mStream.getStreamData(getDataBuffer, 0, bufferSize);
             Assert.assertEquals(bufferSize, filledSize);
 
@@ -176,7 +173,6 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
         Assert.assertEquals(0, filledSize);
     }
 
-    @Ignore
     @Test
     public void putGetFrameBoundaryWithCPD1ByteTest() throws Exception {
         // Set some CPD bits
@@ -268,7 +264,6 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
         }
     }
 
-    @Ignore
     @Test
     public void putGetFrameBoundaryWithCPD2ByteTest() throws Exception {
         // Set some CPD bits
@@ -360,7 +355,6 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
         }
     }
 
-    @Ignore
     @Test
     public void putGetFrameBoundaryWithCPD3ByteTest() throws Exception {
         // Set some CPD bits
@@ -452,7 +446,6 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
         }
     }
 
-    @Ignore
     @Test
     public void putGetFrameBoundaryHalfBufferTest() throws Exception {
         createTestStream();
@@ -520,7 +513,6 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
         }
     }
 
-    @Ignore
     @Test
     public void putGetFrameBoundaryHalfBufferInterleavedTest() throws Exception {
         createTestStream();
@@ -562,6 +554,7 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
             bufferSize = TEST_FRAME_SIZE / 2 + offset;
 
             Arrays.fill(getDataBuffer, (byte) 55);
+            mDataAvailableLatch.await(STREAM_CREATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
             filledSize = mStream.getStreamData(getDataBuffer, 0, bufferSize);
             Assert.assertEquals(bufferSize, filledSize);
 
@@ -588,7 +581,6 @@ public class NativeKinesisVideoProducerJniTest extends NativeKinesisVideoProduce
         Assert.assertEquals(0, filledSize);
     }
 
-    @Ignore
     @Test
     public void putGetNonFrameBoundaryBufferTest() throws Exception {
         createTestStream();

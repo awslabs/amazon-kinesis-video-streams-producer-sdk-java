@@ -43,7 +43,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * The expected library version.
      */
-    private static final String EXPECTED_LIBRARY_VERSION = "1.2";
+    private static final String EXPECTED_LIBRARY_VERSION = "1.4";
 
     /**
      * The manifest handle will be set after call to parse()
@@ -173,6 +173,13 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         mLibraryLoader = new NativeLibraryLoader(mLog);
         mServiceCallbacks.initialize(this);
         mKinesisVideoMetrics = new KinesisVideoMetrics();
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        if (isInitialized()) {
+            free();
+        }
     }
 
     /**
@@ -367,7 +374,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param streamHandle the handle of the stream
      * @throws ProducerException
      */
-    public void stopStream(long streamHandle) throws ProducerException
+    public void stopStream(final long streamHandle) throws ProducerException
     {
         // Idempotent call if already closed
         if (!isInitialized()) {
@@ -383,10 +390,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports an abnormal stream termination event.
      * @param streamHandle the handle of the stream
+     * @param uploadHandle the client stream upload handle
      * @param statusCode the status code of the termination event.
      * @throws ProducerException
      */
-    public void streamTerminated(long streamHandle, int statusCode) throws ProducerException
+    public void streamTerminated(final long streamHandle, final long uploadHandle, final int statusCode) throws ProducerException
     {
         // Idempotent call if already closed
         if (!isInitialized()) {
@@ -395,7 +403,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
 
         synchronized (mSyncObject) {
             // Stop the streams
-            kinesisVideoStreamTerminated(mClientHandle, streamHandle, statusCode);
+            kinesisVideoStreamTerminated(mClientHandle, streamHandle, uploadHandle, statusCode);
         }
     }
 
@@ -405,7 +413,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param streamMetrics stream metrics to fill in
      * @throws ProducerException
      */
-    public void getStreamMetrics(long streamHandle, @Nonnull final KinesisVideoStreamMetrics streamMetrics)
+    public void getStreamMetrics(final long streamHandle, @Nonnull final KinesisVideoStreamMetrics streamMetrics)
             throws ProducerException
     {
         Preconditions.checkState(isInitialized());
@@ -422,7 +430,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param kinesisVideoFrame  an KinesisVideoFrame object
      * @throws ProducerException
      */
-    public void putFrame(long streamHandle, final @Nonnull KinesisVideoFrame kinesisVideoFrameFrame) throws ProducerException
+    public void putFrame(final long streamHandle, final @Nonnull KinesisVideoFrame kinesisVideoFrameFrame) throws ProducerException
     {
         Preconditions.checkState(isInitialized());
         Preconditions.checkNotNull(kinesisVideoFrameFrame);
@@ -439,13 +447,13 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param kinesisVideoFragmentAck an KinesisVideoFragmentAck object
      * @throws ProducerException
      */
-    public void fragmentAck(long streamHandle, final @Nonnull KinesisVideoFragmentAck kinesisVideoFragmentAck) throws ProducerException
+    public void fragmentAck(final long streamHandle, final long uploadHandle, final @Nonnull KinesisVideoFragmentAck kinesisVideoFragmentAck) throws ProducerException
     {
         Preconditions.checkState(isInitialized());
         Preconditions.checkNotNull(kinesisVideoFragmentAck);
 
         synchronized (mSyncObject) {
-            kinesisVideoStreamFragmentAck(mClientHandle, streamHandle, kinesisVideoFragmentAck);
+            kinesisVideoStreamFragmentAck(mClientHandle, streamHandle, uploadHandle, kinesisVideoFragmentAck);
         }
     }
 
@@ -456,13 +464,13 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param kinesisVideoFragmentAck string containing ACKs
      * @throws ProducerException
      */
-    public void parseFragmentAck(long streamHandle, final @Nonnull String kinesisVideoFragmentAck) throws ProducerException
+    public void parseFragmentAck(final long streamHandle, final long uploadHandle, final @Nonnull String kinesisVideoFragmentAck) throws ProducerException
     {
         Preconditions.checkState(isInitialized());
         Preconditions.checkNotNull(kinesisVideoFragmentAck);
 
         synchronized (mSyncObject) {
-            kinesisVideoStreamParseFragmentAck(mClientHandle, streamHandle, kinesisVideoFragmentAck);
+            kinesisVideoStreamParseFragmentAck(mClientHandle, streamHandle, uploadHandle, kinesisVideoFragmentAck);
         }
     }
 
@@ -476,7 +484,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @return  The number of bytes filled
      * @throws ProducerException
      */
-    public int getStreamData(long streamHandle, final @Nonnull byte[] fillBuffer, int offset, int length) throws ProducerException
+    public int getStreamData(final long streamHandle, final @Nonnull byte[] fillBuffer, final int offset, final int length) throws ProducerException
     {
         Preconditions.checkState(isInitialized());
         Preconditions.checkNotNull(fillBuffer);
@@ -493,7 +501,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param codecPrivateData    Codec Private Data or null to reset
      * @throws ProducerException
      */
-    public void streamFormatChanged(long streamHandle, final @Nullable byte[] codecPrivateData) throws ProducerException
+    public void streamFormatChanged(final long streamHandle, final @Nullable byte[] codecPrivateData) throws ProducerException
     {
         Preconditions.checkState(isInitialized());
 
@@ -544,7 +552,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream underflow
      */
-    private void streamUnderflowReport(long streamHandle) throws ProducerException
+    private void streamUnderflowReport(final long streamHandle) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -559,7 +567,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports storage overflow pressure
      */
-    private void storageOverflowPressure(long remainingSize)
+    private void storageOverflowPressure(final long remainingSize)
     {
         synchronized (mCallbackSyncObject) {
             mStorageCallbacks.storageOverflowPressure(remainingSize);
@@ -569,7 +577,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream latency pressure
      */
-    private void streamLatencyPressure(long streamHandle, long duration) throws ProducerException
+    private void streamLatencyPressure(final long streamHandle, final long duration) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -584,7 +592,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream connection staleness
      */
-    private void streamConnectionStale(long streamHandle, long lastAckDuration) throws ProducerException
+    private void streamConnectionStale(final long streamHandle, final long lastAckDuration) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -599,7 +607,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports received fragment ACK
      */
-    private void fragmentAckReceived(long streamHandle, @Nonnull final KinesisVideoFragmentAck fragmentAck)
+    private void fragmentAckReceived(final long streamHandle, @Nonnull final KinesisVideoFragmentAck fragmentAck)
             throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
@@ -615,7 +623,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports dropped frame
      */
-    private void droppedFrameReport(long streamHandle, long frameTimecode) throws ProducerException
+    private void droppedFrameReport(final long streamHandle, final long frameTimecode) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -630,7 +638,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports dropped fragment
      */
-    private void droppedFragmentReport(long streamHandle, long fragmentTimecode) throws ProducerException
+    private void droppedFragmentReport(final long streamHandle, final long fragmentTimecode) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -645,7 +653,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream error.
      */
-    private void streamErrorReport(long streamHandle, long fragmentTimecode, long statusCode) throws ProducerException
+    private void streamErrorReport(final long streamHandle, final long fragmentTimecode, final long statusCode) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -660,7 +668,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream data is available
      */
-    private void streamDataAvailable(long streamHandle, String streamName, long duration, long availableSize) throws ProducerException
+    private void streamDataAvailable(final long streamHandle, final String streamName, final long uploadHandle, final long duration, final long availableSize) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -668,14 +676,14 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             }
 
             final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
-            kinesisVideoProducerStream.streamDataAvailable(duration, availableSize);
+            kinesisVideoProducerStream.streamDataAvailable(uploadHandle, duration, availableSize);
         }
     }
 
     /**
      * Reports stream is ready
      */
-    private void streamReady(long streamHandle) throws ProducerException
+    private void streamReady(final long streamHandle) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -690,7 +698,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream is closed
      */
-    private void streamClosed(long streamHandle) throws ProducerException
+    private void streamClosed(final long streamHandle, final long uploadHandle) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -698,14 +706,14 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             }
 
             final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
-            kinesisVideoProducerStream.streamClosed();
+            kinesisVideoProducerStream.streamClosed(uploadHandle);
         }
     }
 
     /**
      * Reports client is ready
      */
-    private void clientReady(long clientHandle) throws ProducerException
+    private void clientReady(final long clientHandle) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             if (mClientHandle != clientHandle) {
@@ -737,12 +745,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             final @Nonnull String streamName,
             final @Nonnull String contentType,
             final @Nullable String kmsKeyId,
-            long retentionPeriod,
-            long callAfter,
-            long timeout,
+            final long retentionPeriod,
+            final long callAfter,
+            final long timeout,
             final @Nullable byte[] authData,
-            int authType,
-            long customData) throws ProducerException
+            final int authType,
+            final long customData) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             try {
@@ -776,11 +784,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @return STATUS of the call
      */
     private int describeStream(final @Nonnull String streamName,
-            long callAfter,
-            long timeout,
+            final long callAfter,
+            final long timeout,
             final byte[] authData,
-            int authType,
-            long customData) throws ProducerException
+            final int authType,
+            final long customData) throws ProducerException
     {
 
         synchronized (mCallbackSyncObject) {
@@ -796,7 +804,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     @Override
     public void describeStreamResult(final long customData,
                                       final @Nullable StreamDescription streamDescription,
-                                      int httpStatusCode) throws ProducerException
+                                      final int httpStatusCode) throws ProducerException
     {
         synchronized (mSyncObject) {
             describeStreamResultEvent(mClientHandle, customData, httpStatusCode, streamDescription);
@@ -816,11 +824,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private int getStreamingEndpoint(final @Nonnull String streamName,
             final @Nonnull String apiName,
-            long callAfter,
-            long timeout,
+            final long callAfter,
+            final long timeout,
             final @Nullable byte[] authData,
-            int authType,
-            long customData) throws ProducerException
+            final int authType,
+            final long customData) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             try {
@@ -833,7 +841,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     }
 
     @Override
-    public void getStreamingEndpointResult(final long customData, final @Nullable String endpoint, int httpStatusCode) throws ProducerException
+    public void getStreamingEndpointResult(final long customData, final @Nullable String endpoint, final int httpStatusCode) throws ProducerException
     {
         synchronized (mSyncObject) {
             getStreamingEndpointResultEvent(mClientHandle, customData, httpStatusCode, endpoint);
@@ -851,11 +859,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @return STATUS of the call
      */
     private int getStreamingToken(final @Nonnull String streamName,
-            long callAfter,
-            long timeout,
+            final long callAfter,
+            final long timeout,
             final @Nullable byte[] authData,
-            int authType,
-            long customData) throws ProducerException
+            final int authType,
+            final long customData) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             try {
@@ -868,7 +876,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     }
 
     @Override
-    public void getStreamingTokenResult(final long customData, final @Nullable byte[] token, long expiration, int httpStatusCode) throws ProducerException
+    public void getStreamingTokenResult(final long customData, final @Nullable byte[] token, final long expiration, final int httpStatusCode) throws ProducerException
     {
         synchronized (mSyncObject) {
             final int tokenSize = token == null ? 0 : token.length;
@@ -894,15 +902,15 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private int putStream(final @Nonnull String streamName,
             final @Nonnull String containerType,
-            long streamStartTime,
-            boolean absoluteFragmentTimes,
-            boolean ackRequired,
+            final long streamStartTime,
+            final boolean absoluteFragmentTimes,
+            final boolean ackRequired,
             final @Nonnull String streamingEndpoint,
-            long callAfter,
-            long timeout,
+            final long callAfter,
+            final long timeout,
             final @Nullable byte[] authData,
-            int authType,
-            long customData) throws ProducerException
+            final int authType,
+            final long customData) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             try {
@@ -925,7 +933,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     }
 
     @Override
-    public void putStreamResult(final long customData, long clientStreamHandle, int httpStatusCode) throws ProducerException
+    public void putStreamResult(final long customData, final long clientStreamHandle, final int httpStatusCode) throws ProducerException
     {
         synchronized (mSyncObject) {
             putStreamResultEvent(mClientHandle, customData, httpStatusCode, clientStreamHandle);
@@ -945,11 +953,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private int tagResource(final @Nonnull String resourceArn,
             final @Nonnull Tag[] tags,
-            long callAfter,
-            long timeout,
+            final long callAfter,
+            final long timeout,
             final @Nullable byte[] authData,
-            int authType,
-            long customData) throws ProducerException
+            final int authType,
+            final long customData) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             try {
@@ -962,7 +970,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     }
 
     @Override
-    public void tagResourceResult(final long customData, int httpStatusCode) throws ProducerException
+    public void tagResourceResult(final long customData, final int httpStatusCode) throws ProducerException
     {
         synchronized (mSyncObject) {
             tagResourceResultEvent(mClientHandle, customData, httpStatusCode);
@@ -985,11 +993,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @return STATUS of the call
      */
     private int createDevice(final @Nonnull String deviceName,
-            long callAfter,
-            long timeout,
+            final long callAfter,
+            final long timeout,
             final @Nullable byte[] authData,
-            int authType,
-            long customData) throws ProducerException
+            final int authType,
+            final long customData) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             try {
@@ -1002,7 +1010,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     }
 
     @Override
-    public void createDeviceResult(final long customData, final @Nullable String deviceArm, int httpStatusCode) throws ProducerException
+    public void createDeviceResult(final long customData, final @Nullable String deviceArm, final int httpStatusCode) throws ProducerException
     {
         synchronized (mSyncObject) {
             createDeviceResultEvent(mClientHandle, customData, httpStatusCode, deviceArm);
@@ -1025,11 +1033,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @return STATUS of the call
      */
     private int deviceCertToToken(final @Nonnull String deviceName,
-            long callAfter,
-            long timeout,
+            final long callAfter,
+            final long timeout,
             final @Nullable byte[] authData,
-            int authType,
-            long customData) throws ProducerException
+            final int authType,
+            final long customData) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
             try {
@@ -1042,7 +1050,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     }
 
     @Override
-    public void deviceCertToTokenResult(final long customData, final @Nullable byte[] token, long expiration, int httpStatusCode) throws ProducerException
+    public void deviceCertToTokenResult(final long customData, final @Nullable byte[] token, final long expiration, final int httpStatusCode) throws ProducerException
     {
         synchronized (mSyncObject) {
             final int tokenSize = token == null ? 0 : token.length;
@@ -1154,10 +1162,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      *
      * @param clientHandle Client handle
      * @param streamHandle Stream handle
+     * @param uploadHandle the client stream upload handle
      * @param kinesisVideoFragmentAck Kinesis Video fragment ack to report for the stream
      * @throws ProducerException
      */
-    private native void kinesisVideoStreamFragmentAck(long clientHandle, long streamHandle, final @Nonnull KinesisVideoFragmentAck kinesisVideoFragmentAck)
+    private native void kinesisVideoStreamFragmentAck(long clientHandle, long streamHandle, long uploadHandle, final @Nonnull KinesisVideoFragmentAck kinesisVideoFragmentAck)
             throws ProducerException;
 
     /**
@@ -1165,10 +1174,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      *
      * @param clientHandle Client handle
      * @param streamHandle Stream handle
+     * @param uploadHandle the client stream upload handle
      * @param kinesisVideoFragmentAck Kinesis Video fragment ack string to report for the stream
      * @throws ProducerException
      */
-    private native void kinesisVideoStreamParseFragmentAck(long clientHandle, long streamHandle, final @Nonnull String kinesisVideoFragmentAck)
+    private native void kinesisVideoStreamParseFragmentAck(long clientHandle, long streamHandle, long uploadHandle, final @Nonnull String kinesisVideoFragmentAck)
             throws ProducerException;
 
     /**
@@ -1321,9 +1331,10 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      *
      * @param clientHandle the handle of the client
      * @param streamHandle the handle of the stream
+     * @param uploadHandle the client stream upload handle
      * @param statusCode the status code of the termination event
      * @throws ProducerException
      */
-    private native void kinesisVideoStreamTerminated(long clientHandle, long streamHandle, int statusCode)
+    private native void kinesisVideoStreamTerminated(long clientHandle, long streamHandle, long uploadHandle, int statusCode)
             throws ProducerException;
 }

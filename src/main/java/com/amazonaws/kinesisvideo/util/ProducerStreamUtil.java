@@ -57,7 +57,7 @@ public final class ProducerStreamUtil {
         if (isCameraConfiguration(mediaSourceConfiguration)) {
             return getCameraStreamInfo(streamName, mediaSourceConfiguration);
         } else if (isBytesConfiguration(mediaSourceConfiguration)) {
-            return getBytesStreamInfo(streamName);
+            return getBytesStreamInfo(streamName, mediaSourceConfiguration);
         } else if (isImageFileConfiguration(mediaSourceConfiguration)) {
             return getImageFileStreamInfo(mediaSourceConfiguration, streamName);
         }
@@ -119,26 +119,29 @@ public final class ProducerStreamUtil {
                 DEFAULT_BUFFER_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
                 DEFAULT_REPLAY_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
                 DEFAULT_STALENESS_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
-                configuration.getTimeScale() / 100,
+                configuration.getTimeScale() / NANOS_IN_A_TIME_UNIT,
                 RECALCULATE_METRICS,
                 configuration.getCodecPrivateData(),
                 getTags(),
                 configuration.getNalAdaptationFlags());
     }
 
-    private static StreamInfo getBytesStreamInfo(final String streamName) throws KinesisVideoException {
+    private static StreamInfo getBytesStreamInfo(final String streamName,
+            final MediaSourceConfiguration mediaSourceConfiguration) throws KinesisVideoException {
+        final BytesMediaSourceConfiguration configuration =
+                (BytesMediaSourceConfiguration) mediaSourceConfiguration;
         return new StreamInfo(VERSION_ZERO,
                 streamName,
                 StreamInfo.StreamingType.STREAMING_TYPE_REALTIME,
                 "application/octet-stream",
                 NO_KMS_KEY_ID,
-                NO_RETENTION,
+                configuration.getRetentionPeriodInHours() * HUNDREDS_OF_NANOS_IN_AN_HOUR,
                 NOT_ADAPTIVE,
                 MAX_LATENCY_ZERO,
                 DEFAULT_GOP_DURATION * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
                 KEYFRAME_FRAGMENTATION,
-                SDK_GENERATES_TIMECODES,
-                RELATIVE_FRAGMENT_TIMECODES,
+                USE_FRAME_TIMECODES,
+                ABSOLUTE_TIMECODES,
                 REQUEST_FRAGMENT_ACKS,
                 RECOVER_ON_FAILURE,
                 null,
@@ -148,7 +151,7 @@ public final class ProducerStreamUtil {
                 DEFAULT_BUFFER_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
                 DEFAULT_REPLAY_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
                 DEFAULT_STALENESS_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
-                DEFAULT_TIMESCALE / 100,
+                DEFAULT_TIMESCALE,
                 RECALCULATE_METRICS,
                 null,
                 getTags(),
@@ -160,15 +163,15 @@ public final class ProducerStreamUtil {
         try {
             return (StreamInfo) configuration.getClass().getMethod("toStreamInfo", String.class)
                     .invoke(configuration, streamName);
-        } catch (IllegalAccessException e) {
+        } catch (final IllegalAccessException e) {
             throw new KinesisVideoException(e);
-        } catch (IllegalArgumentException e) {
+        } catch (final IllegalArgumentException e) {
             throw new KinesisVideoException(e);
-        } catch (InvocationTargetException e) {
+        } catch (final InvocationTargetException e) {
             throw new KinesisVideoException(e);
-        } catch (NoSuchMethodException e) {
+        } catch (final NoSuchMethodException e) {
             throw new KinesisVideoException(e);
-        } catch (SecurityException e) {
+        } catch (final SecurityException e) {
             throw new KinesisVideoException(e);
         }
     }

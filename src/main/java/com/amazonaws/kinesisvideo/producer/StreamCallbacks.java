@@ -65,11 +65,12 @@ public interface StreamCallbacks
 
     /**
      * New data is available for the stream.
+     * @param uploadHandle The client stream upload handle.
      * @param duration The duration of content available in the stream.
      * @param availableSize The size of the content available in the stream.
      * @throws ProducerException
      */
-    void streamDataAvailable(long duration, long availableSize) throws ProducerException;
+    void streamDataAvailable(long uploadHandle, long duration, long availableSize) throws ProducerException;
 
     /**
      * Ready to stream data.
@@ -79,7 +80,8 @@ public interface StreamCallbacks
 
     /**
      * Stream has been closed.
+     * @param uploadHandle The client stream upload handle.
      * @throws ProducerException
      */
-    void streamClosed() throws ProducerException;
+    void streamClosed(long uploadHandle) throws ProducerException;
 }

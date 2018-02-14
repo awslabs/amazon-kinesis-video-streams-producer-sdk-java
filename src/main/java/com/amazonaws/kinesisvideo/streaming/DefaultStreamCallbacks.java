@@ -43,7 +43,8 @@ public class DefaultStreamCallbacks implements StreamCallbacks {
     }
 
     @Override
-    public void streamDataAvailable(final long duration, final long availableSize) throws ProducerException {
+    public void streamDataAvailable(final long uploadHandle, final long duration, final long availableSize)
+            throws ProducerException {
         // no-op
     }
 
@@ -53,7 +54,7 @@ public class DefaultStreamCallbacks implements StreamCallbacks {
     }
 
     @Override
-    public void streamClosed() throws ProducerException {
+    public void streamClosed(final long uploadHandle) throws ProducerException {
         // no-op
     }
 }
