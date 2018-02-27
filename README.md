@@ -25,25 +25,130 @@ The Amazon Kinesis Video Streams Producer SDK Java makes it easy to build an on-
 
 Import the Maven project to your IDE, it will find dependency packages from Maven and build.
 
-### Launching sample application
+### Examples
 
-Run DemoAppMain.java in ./src/main/demo with JVM arguments set to
-* "-Daws.accessKeyId={YourAwsAccessKey} -Daws.secretKey={YourAwsSecretKey} -Djava.library.path={NativeLibraryPath}" for non-temporary AWS credential.
-* "-Daws.accessKeyId={YourAwsAccessKey} -Daws.secretKey={YourAwsSecretKey} -Daws.sessionToken={YourAwsSessionToken} -Djava.library.path={NativeLibraryPath}" for temporary AWS credential.
+#### Launching Demoapp sample application
 
-*Note: NativeLibraryPath must contain  your ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp) library. (File name depends on your Operating System, "libKinesisVideoProducerJNI.so" for Linux, "libKinesisVideoProducerJNI.dylib" for Mac OS, "KinesisVideoProducerJNI.dll" for Windows)*
+Run `DemoAppMain.java` in `./src/main/demo` with JVM arguments set to
+```
+-Daws.accessKeyId={YourAwsAccessKey} -Daws.secretKey={YourAwsSecretKey} -Djava.library.path={NativeLibraryPath} 
+```
+for **non-temporary** AWS credential.
 
-Demo app will start running and putting sample video frames in a loop into Kinesis Video Streams. You can change your stream settings in DemoAppMain.java before you run the app.
+```
+-Daws.accessKeyId={YourAwsAccessKey} -Daws.secretKey={YourAwsSecretKey} -Daws.sessionToken={YourAwsSessionToken} -Djava.library.path={NativeLibraryPath}
+```
+for *temporary* AWS credential.
+
+**Note**: NativeLibraryPath must contain  your ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp) library. (File name depends on your Operating System: 
+* `libKinesisVideoProducerJNI.so` for Linux 
+* `libKinesisVideoProducerJNI.dylib` for Mac OS 
+* `KinesisVideoProducerJNI.dll` for Windows
+
+Demo app will start running and putting sample video frames in a loop into Kinesis Video Streams. You can change your stream settings in `DemoAppMain.java` before you run the app.
+
+##### Run the demo application from command line 
+
+If you want to run the `DemoAppMain`, follow the [steps](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues/14) below.
+
+Change the current working directory to
+
+```
+$ cd /<YOUR_FOLDER_PATH_WHERE_SDK_IS_DOWNLOADED>/amazon-kinesis-video-streams-producer-sdk-java/
+```
+
+Compile the Java SDK and Demoapp 
+``` 
+$ mvn package
+```
+Create a temporary filename in /tmp directory
+```
+$ jar_files=$(mktemp)
+```
+Create classpath string of dependencies from the local repository to a file
+
+```
+$ mvn -Dmdep.outputFile=$jar_files dependency:build-classpath
+```
+Set the **LD_LIBRARY_PATH** to include the open source dependencies.
+
+(refer: [Kinesis Video Streams Producer SDK CPP](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp)
+```
+$ export LD_LIBRARY_PATH=/<YOUR_FOLDER_PATH_WHERE_SDK_IS_DOWNLOADED>/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build/downloads/local/lib:$LD_LIBRARY_PATH
+$ classpath_values=$(cat $jar_files)
+```
+Start the demo app
+```
+$ java -classpath target/kinesisvideo-java-demo-1.0-SNAPSHOT.jar:$classpath_values -Daws.accessKeyId=${ACCESS_KEY} -Daws.secretKey=${SECRET_KEY} -Djava.library.path=/opt/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+
+```
+
+##### Run the demo application from Docker
+
+Refer the **README.md** file in the  *dockerscripts* folder for running the build and demo app within Docker container.
+
+#### Launching PutMediaDemo sample application
+
+ Run `PutMediaDemo.java` to send sample mkv stream to Kinesis Video Streams. **Note:** ACCESS_KEY and SECRET_KEY are required for running this sample application as well. However, this demo application does not require JNI. 
+
+```
+-Daws.accessKeyId={YourAwsAccessKey} -Daws.secretKey={YourAwsSecretKey} 
+```
+for **non-temporary** AWS credential.
+
+```
+-Daws.accessKeyId={YourAwsAccessKey} -Daws.secretKey={YourAwsSecretKey} -Daws.sessionToken={YourAwsSessionToken}
+```
+
+#### Additional Examples
+
+For additional examples on using Kinesis Video Streams Java SDK and  Kinesis Video Streams Parsing Library refer: 
+
+##### [Kinesis Video Streams Producer SDK CPP](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp/blob/master/README.md)
+##### [Kinesis Video Streams Parser Library](https://github.com/aws/amazon-kinesis-video-streams-parser-library/blob/master/README.md)
+
+##### [Kinesis Video Streams Android](https://github.com/awslabs/aws-sdk-android-samples/tree/master/AmazonKinesisVideoDemoApp)
+
+#### Troubleshooting
+
+If you notice error in loading the native library (JNI), then check the output of `ldd` or `otool`
+
+```
+$ ldd libKinesisVideoProducerJNI.so
+```
+or in MacOS
+```
+$ otool -L libKinesisVideoProducerJNI.dylib
+```
+
+This will provide details on missing libraries during linking; If the output shows missing shared libraries, then run the following commands to clean the `CMakeCache` and link again.  
+
+```
+rm -rf ./kinesis-video-native-build/CMakeCache.txt ./kinesis-video-native-build/CMakeFiles
+ 
+```
+and run `./install-script` again.
+
+```
+./install-script
+
+```
+Also, set the `LD_LIBRARY_PATH` as below
+```
+export LD_LIBRARY_PATH=/<YOUR_PRODUCER_SDK_CPP_DOWNLOAD>/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build/downloads/local/lib:$LD_LIBRARY_PATH
+```
+
+This should resolve native library loading issues.
 
 ## Release Notes
 
 ### Release 1.2.1 (February 2018)
 
-* Remove some unit tests relying on native library to avoid break mvn package build (without -skipTests=true).
+* Remove some unit tests relying on native library to avoid mvn package build (without -skipTests=true) failure.
 
 ### Release 1.2.0 (February 2018)
 
-* Bug fixes and performance enhancement
+* Bug fixes and performance enhancement.
 * There are some interface changes to be compatible with native library changes.
 
 ### Release 1.1.0 (December 2017)
