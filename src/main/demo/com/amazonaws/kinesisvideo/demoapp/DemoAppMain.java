@@ -18,7 +18,7 @@ public final class DemoAppMain {
     private static final String IMAGE_DIR = "src/main/resources/data/h264/";
     private static final String IMAGE_FILENAME_FORMAT = "frame-%03d.h264";
     private static final int START_FILE_INDEX = 1;
-    private static final int END_FILE_INDEX = 299;
+    private static final int END_FILE_INDEX = 444;
 
     private DemoAppMain() {
         throw new UnsupportedOperationException();
