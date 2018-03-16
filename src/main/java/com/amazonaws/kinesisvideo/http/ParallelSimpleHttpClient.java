@@ -1,7 +1,6 @@
 package com.amazonaws.kinesisvideo.http;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
-
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,12 +14,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import com.amazonaws.kinesisvideo.common.function.Consumer;
 import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.socket.SocketFactory;
-
-import lombok.NonNull;
 
 public final class ParallelSimpleHttpClient implements HttpClient {
     private static final String SPACE = " ";
@@ -29,20 +25,19 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private static final String HEADER_FORMAT = "%s: %s";
     private static final String HOST_HEADER = "Host";
     private final Log log;
-
     private static final Consumer<OutputStream> NO_OP_SENDER = new Consumer<OutputStream>() {
         @Override
         public void accept(final OutputStream outputStream) {
             // no op;
         }
     };
-
     private static final Consumer<Exception> NO_OP_COMPLETION = new Consumer<Exception>() {
         @Override
         public void accept(Exception object) {
             // No op;
         }
     };
+
 
     public static final class Builder {
         private final Map<String, String> mHeaders;
@@ -82,7 +77,6 @@ public final class ParallelSimpleHttpClient implements HttpClient {
             if (completion != null) {
                 mCompletion = completion;
             }
-
             return this;
         }
 
@@ -101,7 +95,10 @@ public final class ParallelSimpleHttpClient implements HttpClient {
             return this;
         }
 
-        public Builder log(@NonNull final Log log) {
+        public Builder log(final Log log) {
+            if (log == null) {
+                throw new NullPointerException("log");
+            }
             mLog = log;
             return this;
         }
@@ -120,8 +117,8 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private ExecutorService responseReceiver;
 
     private ParallelSimpleHttpClient(final Builder builder) {
-            mBuilder = builder;
-            log = mBuilder.mLog;
+        mBuilder = builder;
+        log = mBuilder.mLog;
     }
 
     public static Builder builder() {
@@ -165,28 +162,15 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
     private void sendInitRequest() throws Exception {
         final Writer outputWriter = new BufferedWriter(new OutputStreamWriter(mOutputStream, Charset.defaultCharset()));
-        final String initRequest = new StringBuilder()
-                .append(getHttpRequestString())
-                .append(getHeadersString())
-                .append(CLRF)
-                .toString();
-
+        final String initRequest = new StringBuilder().append(getHttpRequestString()).append(getHeadersString()).append(CLRF).toString();
         log.debug("Request: " + initRequest);
-
         outputWriter.write(initRequest);
         outputWriter.flush();
     }
 
     private String getHttpRequestString() {
         final StringBuilder httpRequest = new StringBuilder();
-        return httpRequest
-                .append(mBuilder.mMethod)
-                .append(SPACE)
-                .append(mBuilder.mUri.getPath())
-                .append(SPACE)
-                .append(HTTP_1_1)
-                .append(CLRF)
-                .toString();
+        return httpRequest.append(mBuilder.mMethod).append(SPACE).append(mBuilder.mUri.getPath()).append(SPACE).append(HTTP_1_1).append(CLRF).toString();
     }
 
     @Override
@@ -216,7 +200,6 @@ public final class ParallelSimpleHttpClient implements HttpClient {
             builder.append(headerString);
             builder.append(CLRF);
         }
-
         final String allHeaders = builder.toString();
         return allHeaders.isEmpty() ? CLRF : allHeaders;
     }
@@ -224,50 +207,48 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private void sendPayloadInBackground() {
         if (mBuilder.mSender != null) {
             payloadSender = Executors.newFixedThreadPool(1);
-            payloadSender.execute(
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            Exception storedException = null;
-                            try {
-                                // This is needed to get the thread Id.
-                                log.debug("Start sending data.");
-                                mBuilder.mSender.accept(mOutputStream);
-                                log.debug("End sending data. Sent all data, close.");
-                            } catch (final Exception e) {
-                                log.exception(e, "Exception thrown on sending thread");
-                                storedException = e;
-                            } finally {
-                                mBuilder.mCompletion.accept(storedException);
-                                payloadSender.shutdownNow();
-                            }
-                        }
-                    });
+            payloadSender.execute(new Runnable() {
+                @Override
+                public void run() {
+                    Exception storedException = null;
+                    try {
+                        // This is needed to get the thread Id.
+                        log.debug("Start sending data.");
+                        mBuilder.mSender.accept(mOutputStream);
+                        log.debug("End sending data. Sent all data, close.");
+                    } catch (final Exception e) {
+                        log.exception(e, "Exception thrown on sending thread");
+                        storedException = e;
+                    } finally {
+                        mBuilder.mCompletion.accept(storedException);
+                        payloadSender.shutdownNow();
+                    }
+                }
+            });
         }
     }
 
     private void receiveResponseInBackground() {
         if (mBuilder.mReceiver != null) {
             responseReceiver = Executors.newFixedThreadPool(1);
-            responseReceiver.execute(
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            Exception storedException = null;
-                            try {
-                                log.debug("Starting receiving data");
-                                mBuilder.mReceiver.accept(mInputStream);
-                                log.debug("Received all data, close");
-                            } catch (final Exception e) {
-                                log.exception(e, "Exception thrown on receiving thread");
-                                storedException = e;
-                            } finally {
-                                mBuilder.mCompletion.accept(storedException);
-                                responseReceiver.shutdownNow();
-                                closeSocket();
-                            }
-                        }
-                    });
+            responseReceiver.execute(new Runnable() {
+                @Override
+                public void run() {
+                    Exception storedException = null;
+                    try {
+                        log.debug("Starting receiving data");
+                        mBuilder.mReceiver.accept(mInputStream);
+                        log.debug("Received all data, close");
+                    } catch (final Exception e) {
+                        log.exception(e, "Exception thrown on receiving thread");
+                        storedException = e;
+                    } finally {
+                        mBuilder.mCompletion.accept(storedException);
+                        responseReceiver.shutdownNow();
+                        closeSocket();
+                    }
+                }
+            });
         }
     }
 

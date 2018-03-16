@@ -43,7 +43,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * The expected library version.
      */
-    private static final String EXPECTED_LIBRARY_VERSION = "1.4";
+    private static final String EXPECTED_LIBRARY_VERSION = "1.5";
 
     /**
      * The manifest handle will be set after call to parse()
@@ -481,16 +481,21 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param fillBuffer    The buffer to fill
      * @param offset    The start of the buffer
      * @param length    The number of bytes to fill
-     * @return  The number of bytes filled
+     * @param readResult    The read result to fill in
      * @throws ProducerException
      */
-    public int getStreamData(final long streamHandle, final @Nonnull byte[] fillBuffer, final int offset, final int length) throws ProducerException
+    public void getStreamData(final long streamHandle,
+                              final @Nonnull byte[] fillBuffer,
+                              final int offset,
+                              final int length,
+                              final @Nonnull ReadResult readResult) throws ProducerException
     {
         Preconditions.checkState(isInitialized());
         Preconditions.checkNotNull(fillBuffer);
+        Preconditions.checkNotNull(readResult);
 
         synchronized (mSyncObject) {
-            return getKinesisVideoStreamData(mClientHandle, streamHandle, fillBuffer, offset, length);
+            getKinesisVideoStreamData(mClientHandle, streamHandle, fillBuffer, offset, length, readResult);
         }
     }
 
@@ -1283,10 +1288,10 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param fillBuffer the buffer to fill
      * @param offset the offset into the buffer to fill
      * @param length the length of the buffer to fill
-     * @return Actual byte size copied
+     * @param readResult the result of the read operation
      * @throws ProducerException
      */
-    private native int getKinesisVideoStreamData(long clientHandle, long streamHandle, final @Nonnull byte[] fillBuffer, int offset, int length)
+    private native void getKinesisVideoStreamData(long clientHandle, long streamHandle, final @Nonnull byte[] fillBuffer, int offset, int length, final @Nonnull ReadResult readResult)
             throws ProducerException;
 
     /**
