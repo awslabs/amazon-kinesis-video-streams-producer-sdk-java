@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 import static com.amazonaws.kinesisvideo.http.HttpMethodName.POST;
@@ -53,7 +54,7 @@ public final class PutMediaClient {
     public void putMediaInBackground() {
         final ParallelSimpleHttpClient.Builder clientBuilder = ParallelSimpleHttpClient.builder().uri(mBuilder.mUri).method(POST).log(log).header(STREAM_NAME_HEADER, mBuilder.mStreamName).header(TRANSFER_ENCODING, CHUNKED).header(CONNECTION, KEEP_ALIVE);
         clientBuilder.setReceiverCallback(mBuilder.mAcksReceiver);
-        clientBuilder.header(PRODUCER_START_TIMESTAMP_HEADER, String.format("%.3f", mBuilder.mTimestamp / MILLI_TO_SEC));
+        clientBuilder.header(PRODUCER_START_TIMESTAMP_HEADER, String.format(Locale.US, "%.3f", mBuilder.mTimestamp / MILLI_TO_SEC));
         clientBuilder.header(FRAGMENT_TIME_CODE_TYPE_HEADER, mBuilder.mFragmentTimecodeType);
         clientBuilder.completionCallback(mBuilder.mCompletion);
         clientBuilder.setSenderCallback(sendChunkEncodedMvkStream());
