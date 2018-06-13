@@ -20,6 +20,7 @@ import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
 import com.amazonaws.kinesisvideo.producer.DeviceInfo;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoProducer;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoProducerStream;
+import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.ServiceCallbacks;
 import com.amazonaws.kinesisvideo.producer.StorageCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
@@ -27,6 +28,7 @@ import com.amazonaws.kinesisvideo.producer.client.KinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.producer.jni.NativeKinesisVideoProducerJni;
 import com.amazonaws.kinesisvideo.service.DefaultServiceCallbacksImpl;
 import com.amazonaws.kinesisvideo.streaming.DefaultStreamCallbacks;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implement Kinesis Video Client interface for Android.
@@ -99,7 +101,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
         defaultServiceCallbacks = (DefaultServiceCallbacksImpl) checkNotNull(serviceCallbacks);
         this.streamCallbacks = checkNotNull(streamCallbacks);
 
-        mediaSources = new ArrayList<MediaSource>();
+        mediaSources = new ArrayList<>();
     }
 
     /**
@@ -107,15 +109,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
      */
     @Override
     public void initialize(@Nonnull final DeviceInfo deviceInfo) throws KinesisVideoException {
-        // Create the producer object
-        kinesisVideoProducer = new NativeKinesisVideoProducerJni(
-                authCallbacks,
-                storageCallbacks,
-                defaultServiceCallbacks,
-                mLog);
-
-        kinesisVideoProducer.createSync(deviceInfo);
-
+        kinesisVideoProducer = initializeNewKinesisVideoProducer(deviceInfo);
         super.initialize(deviceInfo);
     }
 
@@ -157,5 +151,21 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
 
             mIsInitialized = false;
         }
+    }
+
+    /**
+     * Initialize a new native {@link com.amazonaws.kinesisvideo.producer.KinesisVideoProducer}.
+     * Used internally by {@link #initialize} and visible for testing.
+     */
+    @VisibleForTesting
+    @Nonnull
+    KinesisVideoProducer initializeNewKinesisVideoProducer(final DeviceInfo deviceInfo) throws ProducerException {
+        final KinesisVideoProducer kinesisVideoProducer = new NativeKinesisVideoProducerJni(
+                authCallbacks,
+                storageCallbacks,
+                defaultServiceCallbacks,
+                mLog);
+        kinesisVideoProducer.createSync(deviceInfo);
+        return kinesisVideoProducer;
     }
 }
