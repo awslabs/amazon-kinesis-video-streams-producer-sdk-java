@@ -4,3 +4,5 @@
 .settings
 /eclipse-bin/
 .idea
+/.gradle
+/target

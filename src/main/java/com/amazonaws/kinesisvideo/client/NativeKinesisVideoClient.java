@@ -1,5 +1,14 @@
 package com.amazonaws.kinesisvideo.client;
 
+import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+
+import javax.annotation.Nonnull;
+
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceConfiguration;
@@ -7,21 +16,17 @@ import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.common.logging.LogLevel;
 import com.amazonaws.kinesisvideo.mediasource.ProducerStreamSink;
-import com.amazonaws.kinesisvideo.producer.*;
+import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
+import com.amazonaws.kinesisvideo.producer.DeviceInfo;
+import com.amazonaws.kinesisvideo.producer.KinesisVideoProducer;
+import com.amazonaws.kinesisvideo.producer.KinesisVideoProducerStream;
+import com.amazonaws.kinesisvideo.producer.ServiceCallbacks;
+import com.amazonaws.kinesisvideo.producer.StorageCallbacks;
+import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.client.KinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.producer.jni.NativeKinesisVideoProducerJni;
 import com.amazonaws.kinesisvideo.service.DefaultServiceCallbacksImpl;
 import com.amazonaws.kinesisvideo.streaming.DefaultStreamCallbacks;
-import com.amazonaws.kinesisvideo.util.ProducerStreamUtil;
-
-import javax.annotation.Nonnull;
-
-import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Implement Kinesis Video Client interface for Android.
@@ -117,8 +122,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
     @Override
     public void registerMediaSource(final String streamName,
                                     final MediaSource mediaSource) throws KinesisVideoException {
-        final StreamInfo streamInfo = ProducerStreamUtil.toStreamInfo(streamName, mediaSource.getConfiguration());
-        final KinesisVideoProducerStream producerStream = kinesisVideoProducer.createStreamSync(streamInfo, streamCallbacks);
+        final KinesisVideoProducerStream producerStream = kinesisVideoProducer.createStreamSync(mediaSource.getStreamInfo(streamName), streamCallbacks);
         mediaSources.add(mediaSource);
         mediaSource.initialize(new ProducerStreamSink(producerStream));
         defaultServiceCallbacks.addStream(producerStream);

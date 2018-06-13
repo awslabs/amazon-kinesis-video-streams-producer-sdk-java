@@ -3,11 +3,10 @@ package com.amazonaws.kinesisvideo.client.mediasource;
 import javax.annotation.Nonnull;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.kinesisvideo.producer.StreamInfo;
 
 /**
  * Interface representing a media source.
- *
- *
  */
 public interface MediaSource {
     /**
@@ -17,18 +16,33 @@ public interface MediaSource {
 
     /**
      * Returns the {@link MediaSourceConfiguration} used to create this media source
+     * @deprecated Once constructed, configuration should be private. This method will be removed in a future release.
      */
-    MediaSourceConfiguration getConfiguration();
+    @Deprecated
+    default MediaSourceConfiguration getConfiguration() {
+        throw new UnsupportedOperationException("Once constructed, configuration should be private. This method will be removed in a future release.");
+    }
+
+    /**
+     * Returns the {@link StreamInfo} describing the stream this media source produces
+     */
+    StreamInfo getStreamInfo(String streamName);
 
     /**
      * Initializes the media source with a {@link MediaSourceSink} object
      */
-    void initialize(@Nonnull final MediaSourceSink mediaSourceSink) throws KinesisVideoException;
+    void initialize(@Nonnull MediaSourceSink mediaSourceSink) throws KinesisVideoException;
 
     /**
      * Configures the media source
+     * @deprecated {@link MediaSource} configuration should be specified on construction and not modified thereafter. This method will be
+     *      removed in a future release.
      */
-    void configure(final MediaSourceConfiguration configuration);
+    @Deprecated
+    default void configure(MediaSourceConfiguration configuration) {
+        throw new UnsupportedOperationException("MediaSources should be configured on initialization and not modified thereafter. " +
+                "This method will be removed in a future release.");
+    }
 
     /**
      * Starts the media source

@@ -1,5 +1,31 @@
 package com.amazonaws.kinesisvideo.mediasource.bytes;
 
+import static com.amazonaws.kinesisvideo.producer.StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE;
+import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_AN_HOUR;
+import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
+import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_SECOND;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.ABSOLUTE_TIMECODES;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_BITRATE;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_BUFFER_DURATION_IN_SECONDS;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_GOP_DURATION;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_REPLAY_DURATION_IN_SECONDS;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_STALENESS_DURATION_IN_SECONDS;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_TIMESCALE;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.FRAMERATE_30;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.KEYFRAME_FRAGMENTATION;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.MAX_LATENCY_ZERO;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.NOT_ADAPTIVE;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.NO_KMS_KEY_ID;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RECALCULATE_METRICS;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RECOVER_ON_FAILURE;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.REQUEST_FRAGMENT_ACKS;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.USE_FRAME_TIMECODES;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VERSION_ZERO;
+
+import java.nio.ByteBuffer;
+
+import javax.annotation.Nonnull;
+
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceSink;
@@ -7,9 +33,8 @@ import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceState;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.mediasource.OnFrameDataAvailable;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
-
-import javax.annotation.Nonnull;
-import java.nio.ByteBuffer;
+import com.amazonaws.kinesisvideo.producer.StreamInfo;
+import com.amazonaws.kinesisvideo.producer.Tag;
 
 public class BytesMediaSource implements MediaSource {
     private static final String TAG = "BytesMediaSource";
@@ -35,6 +60,38 @@ public class BytesMediaSource implements MediaSource {
     @Override
     public MediaSourceConfiguration getConfiguration() {
         return configuration;
+    }
+
+    @Override
+    public StreamInfo getStreamInfo(final String streamName) {
+        return new StreamInfo(VERSION_ZERO,
+                streamName,
+                StreamInfo.StreamingType.STREAMING_TYPE_REALTIME,
+                "application/octet-stream",
+                NO_KMS_KEY_ID,
+                configuration.getRetentionPeriodInHours() * HUNDREDS_OF_NANOS_IN_AN_HOUR,
+                NOT_ADAPTIVE,
+                MAX_LATENCY_ZERO,
+                DEFAULT_GOP_DURATION * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
+                KEYFRAME_FRAGMENTATION,
+                USE_FRAME_TIMECODES,
+                ABSOLUTE_TIMECODES,
+                REQUEST_FRAGMENT_ACKS,
+                RECOVER_ON_FAILURE,
+                null,
+                null,
+                DEFAULT_BITRATE,
+                FRAMERATE_30,
+                DEFAULT_BUFFER_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
+                DEFAULT_REPLAY_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
+                DEFAULT_STALENESS_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
+                DEFAULT_TIMESCALE,
+                RECALCULATE_METRICS,
+                null,
+                new Tag[] {
+                        new Tag("device", "Test Device"),
+                        new Tag("stream", "Test Stream") },
+                NAL_ADAPTATION_FLAG_NONE);
     }
 
     @Override
