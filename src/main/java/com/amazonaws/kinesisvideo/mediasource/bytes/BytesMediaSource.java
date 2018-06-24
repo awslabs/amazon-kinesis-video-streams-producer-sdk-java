@@ -11,7 +11,7 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_GOP_DU
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_REPLAY_DURATION_IN_SECONDS;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_STALENESS_DURATION_IN_SECONDS;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_TIMESCALE;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.FRAMERATE_30;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.FRAME_RATE_30;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.KEYFRAME_FRAGMENTATION;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.MAX_LATENCY_ZERO;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.NOT_ADAPTIVE;
@@ -81,7 +81,7 @@ public class BytesMediaSource implements MediaSource {
                 null,
                 null,
                 DEFAULT_BITRATE,
-                FRAMERATE_30,
+                FRAME_RATE_30,
                 DEFAULT_BUFFER_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
                 DEFAULT_REPLAY_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
                 DEFAULT_STALENESS_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,

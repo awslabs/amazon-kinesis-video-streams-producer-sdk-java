@@ -18,7 +18,7 @@ public final class StreamInfoConstants {
     public static final long DEFAULT_GOP_DURATION = 2000L * HUNDREDS_OF_NANOS_IN_A_SECOND;
     public static final int DEFAULT_BITRATE = 2000000;
     public static final int DEFAULT_TIMESCALE = 10000;
-    public static final int FRAMERATE_30 = 30;
+    public static final int FRAME_RATE_30 = 30;
     public static final int FRAME_RATE_25 = 25;
     public static final boolean USE_FRAME_TIMECODES = true;
     public static final boolean ABSOLUTE_TIMECODES = true;
