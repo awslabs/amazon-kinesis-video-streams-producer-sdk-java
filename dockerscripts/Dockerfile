@@ -23,7 +23,7 @@ RUN git clone https://github.com/awslabs/amazon-kinesis-video-streams-producer-s
 # Build the Producer SDK (CPP) 
 WORKDIR /opt/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build/
 RUN  chmod a+x ./install-script
-RUN ./install-script a 
+RUN ./install-script -a
 RUN ./java-install-script
 WORKDIR /opt/
 # Checkout latest Kinesis Video Streams Producer SDK (Java)
