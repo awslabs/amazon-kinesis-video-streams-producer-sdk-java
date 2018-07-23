@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 class AckConsumer implements Consumer<InputStream> {
     private static final long STOPPED_TIMEOUT_IN_MILLISECONDS = 15000;
     private static final int FOUR_KB = 4096;
+    private static final String END_OF_STREAM_MSG = "0";
     private final KinesisVideoProducerStream stream;
     private InputStream ackStream = null;
     private final CountDownLatch stoppedLatch;
@@ -57,13 +58,17 @@ class AckConsumer implements Consumer<InputStream> {
                 // This is a blocking operation
                 bytesRead = ackStream.read(buffer);
 
+                String bytesString = null;
+                if (bytesRead > 0) {
+                    bytesString = new String(buffer, 0, bytesRead, StandardCharsets.UTF_8);
+                }
+
                 // Check for end-of-stream and 0 before processing
-                if (-1 == bytesRead) {
+                if (bytesRead == -1 || END_OF_STREAM_MSG.equals(bytesString)) {
                     // End-of-stream
                     log.debug("Received end-of-stream for ACKs.");
                     closed = true;
                 } else if (bytesRead != 0) {
-                    final String bytesString = new String(buffer, 0, bytesRead, StandardCharsets.UTF_8);
                     log.debug("Received ACK bits: " + bytesString);
                     try {
                         stream.parseFragmentAck(uploadHandle, bytesString);

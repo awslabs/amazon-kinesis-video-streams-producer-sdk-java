@@ -189,4 +189,10 @@ public interface ServiceCallbacks
             final @Nullable byte[] authData,
             int authType,
             long customData) throws ProducerException;
+
+    /**
+     * Add a producer stream to ongoing stream list
+     * @param kinesisVideoProducerStream producer stream used by PIC
+     */
+    void addStream(@Nonnull final KinesisVideoProducerStream kinesisVideoProducerStream);
 }

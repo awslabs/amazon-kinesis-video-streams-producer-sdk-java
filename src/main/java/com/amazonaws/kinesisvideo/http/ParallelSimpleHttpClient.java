@@ -1,5 +1,9 @@
 package com.amazonaws.kinesisvideo.http;
 
+import com.amazonaws.kinesisvideo.common.function.Consumer;
+import com.amazonaws.kinesisvideo.common.logging.Log;
+import com.amazonaws.kinesisvideo.socket.SocketFactory;
+
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -14,9 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import com.amazonaws.kinesisvideo.common.function.Consumer;
-import com.amazonaws.kinesisvideo.common.logging.Log;
-import com.amazonaws.kinesisvideo.socket.SocketFactory;
 
 public final class ParallelSimpleHttpClient implements HttpClient {
     private static final String SPACE = " ";
@@ -24,7 +25,6 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private static final String HTTP_1_1 = "HTTP/1.1";
     private static final String HEADER_FORMAT = "%s: %s";
     private static final String HOST_HEADER = "Host";
-    private final Log log;
     private static final Consumer<OutputStream> NO_OP_SENDER = new Consumer<OutputStream>() {
         @Override
         public void accept(final OutputStream outputStream) {
@@ -37,78 +37,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
             // No op;
         }
     };
-
-
-    public static final class Builder {
-        private final Map<String, String> mHeaders;
-        private URI mUri;
-        private HttpMethodName mMethod;
-        private Consumer<OutputStream> mSender;
-        private Consumer<InputStream> mReceiver;
-        private Integer mTimeout;
-        private Consumer<Exception> mCompletion;
-        // TODO: Set to correct output channel
-        private Log mLog = new Log(Log.SYSTEM_OUT);
-
-        private Builder() {
-            mHeaders = new HashMap<String, String>();
-            mSender = NO_OP_SENDER;
-            mCompletion = NO_OP_COMPLETION;
-        }
-
-        public Builder uri(final URI uri) {
-            mUri = uri;
-            mHeaders.put(HOST_HEADER, uri.getHost());
-            return this;
-        }
-
-        public Builder method(final HttpMethodName method) {
-            mMethod = method;
-            return this;
-        }
-
-        public Builder header(final String key, final String value) {
-            mHeaders.put(key, value);
-            return this;
-        }
-
-        public Builder completionCallback(final Consumer<Exception> completion) {
-            // Make sure we don't override the default no-op
-            if (completion != null) {
-                mCompletion = completion;
-            }
-            return this;
-        }
-
-        public Builder setSenderCallback(final Consumer<OutputStream> sender) {
-            mSender = sender;
-            return this;
-        }
-
-        public Builder setReceiverCallback(final Consumer<InputStream> receiver) {
-            mReceiver = receiver;
-            return this;
-        }
-
-        public Builder setTimeout(final Integer timeout) {
-            mTimeout = timeout;
-            return this;
-        }
-
-        public Builder log(final Log log) {
-            if (log == null) {
-                throw new NullPointerException("log");
-            }
-            mLog = log;
-            return this;
-        }
-
-        public ParallelSimpleHttpClient build() {
-            checkNotNull(mUri);
-            return new ParallelSimpleHttpClient(this);
-        }
-    }
-
+    private final Log log;
     private final Builder mBuilder;
     private Socket mSocket;
     private InputStream mInputStream;
@@ -220,7 +149,10 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                         log.exception(e, "Exception thrown on sending thread");
                         storedException = e;
                     } finally {
-                        mBuilder.mCompletion.accept(storedException);
+                        //Only call completion if there is an exception, otherwise sender will call completion
+                        if (storedException != null) {
+                            mBuilder.mCompletion.accept(storedException);
+                        }
                         payloadSender.shutdownNow();
                     }
                 }
@@ -271,5 +203,76 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         responseReceiver.shutdownNow();
         closeSocket();
         mBuilder.mCompletion.accept(null);
+    }
+
+
+    public static final class Builder {
+        private final Map<String, String> mHeaders;
+        private URI mUri;
+        private HttpMethodName mMethod;
+        private Consumer<OutputStream> mSender;
+        private Consumer<InputStream> mReceiver;
+        private Integer mTimeout;
+        private Consumer<Exception> mCompletion;
+        // TODO: Set to correct output channel
+        private Log mLog = new Log(Log.SYSTEM_OUT);
+
+        private Builder() {
+            mHeaders = new HashMap<String, String>();
+            mSender = NO_OP_SENDER;
+            mCompletion = NO_OP_COMPLETION;
+        }
+
+        public Builder uri(final URI uri) {
+            mUri = uri;
+            mHeaders.put(HOST_HEADER, uri.getHost());
+            return this;
+        }
+
+        public Builder method(final HttpMethodName method) {
+            mMethod = method;
+            return this;
+        }
+
+        public Builder header(final String key, final String value) {
+            mHeaders.put(key, value);
+            return this;
+        }
+
+        public Builder completionCallback(final Consumer<Exception> completion) {
+            // Make sure we don't override the default no-op
+            if (completion != null) {
+                mCompletion = completion;
+            }
+            return this;
+        }
+
+        public Builder setSenderCallback(final Consumer<OutputStream> sender) {
+            mSender = sender;
+            return this;
+        }
+
+        public Builder setReceiverCallback(final Consumer<InputStream> receiver) {
+            mReceiver = receiver;
+            return this;
+        }
+
+        public Builder setTimeout(final Integer timeout) {
+            mTimeout = timeout;
+            return this;
+        }
+
+        public Builder log( final Log log) {
+            if (log == null) {
+                throw new NullPointerException("log");
+            }
+            mLog = log;
+            return this;
+        }
+
+        public ParallelSimpleHttpClient build() {
+            checkNotNull(mUri);
+            return new ParallelSimpleHttpClient(this);
+        }
     }
 }

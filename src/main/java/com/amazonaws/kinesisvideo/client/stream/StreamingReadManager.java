@@ -1,5 +1,6 @@
 package com.amazonaws.kinesisvideo.client.stream;
 
+
 import org.apache.http.client.methods.CloseableHttpResponse;
 import com.amazonaws.kinesisvideo.client.StreamingReadClient;
 import com.amazonaws.kinesisvideo.config.ClientConfiguration;
@@ -11,7 +12,7 @@ public class StreamingReadManager {
     private final KinesisVideoSigner mSigner;
 
     @Inject
-    public StreamingReadManager(@Named("AWSKinesisVideoV4SignerForNonStreamingPayload") final KinesisVideoSigner signer) {
+    public StreamingReadManager(@Named("AWSKinesisVideoV4SignerForNonStreamingPayload")  final KinesisVideoSigner signer) {
         if (signer == null) {
             throw new NullPointerException("signer");
         }

@@ -2,6 +2,7 @@ package com.amazonaws.kinesisvideo.client.mediasource;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
+import com.amazonaws.kinesisvideo.producer.KinesisVideoProducerStream;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -18,4 +19,6 @@ public interface MediaSourceSink {
     void onFrame(final @Nonnull KinesisVideoFrame kinesisVideoFrame) throws KinesisVideoException;
 
     void onCodecPrivateData(final @Nullable byte[] codecPrivateData) throws KinesisVideoException;
+
+    KinesisVideoProducerStream getProducerStream();
 }
