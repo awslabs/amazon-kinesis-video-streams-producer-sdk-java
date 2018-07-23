@@ -1,14 +1,14 @@
 package com.amazonaws.kinesisvideo.mediasource;
 
-import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceSink;
-import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
-import com.amazonaws.kinesisvideo.producer.KinesisVideoProducerStream;
-
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
+import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceSink;
+import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
+import com.amazonaws.kinesisvideo.producer.KinesisVideoProducerStream;
 
 /**
  * Implementation of the MediaSourceSink interface that pushes frames and stream configuration
@@ -38,5 +38,10 @@ public class ProducerStreamSink implements MediaSourceSink {
     @Override
     public void onCodecPrivateData(@Nullable final byte[] bytes) throws KinesisVideoException {
         producerStream.streamFormatChanged(bytes);
+    }
+
+    @Override
+    public KinesisVideoProducerStream getProducerStream() {
+        return producerStream;
     }
 }

@@ -10,6 +10,9 @@ import com.amazonaws.kinesisvideo.stream.throttling.BandwidthThrottledOutputStre
 import com.amazonaws.kinesisvideo.stream.throttling.BandwidthThrottler;
 import com.amazonaws.kinesisvideo.stream.throttling.BandwidthThrottlerImpl;
 import com.amazonaws.kinesisvideo.stream.throttling.OpsPerSecondMeasurer;
+
+import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
+import static com.amazonaws.kinesisvideo.http.HttpMethodName.POST;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -19,8 +22,6 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
-import static com.amazonaws.kinesisvideo.http.HttpMethodName.POST;
 
 /**
  * Client for making a PutMedia API call on Kinesis Video Streams.
@@ -39,8 +40,8 @@ public final class PutMediaClient {
     private static final double MILLI_TO_SEC = 1000;
     private static final int LOGGING_INTERVAL = 250; // Rougly every 10 seconds in 25 fps
     private final Builder mBuilder;
-    private ParallelSimpleHttpClient httpClient;
     private final Log log;
+    private ParallelSimpleHttpClient httpClient;
 
     private PutMediaClient(final Builder builder) {
         mBuilder = builder;
@@ -52,12 +53,26 @@ public final class PutMediaClient {
     }
 
     public void putMediaInBackground() {
-        final ParallelSimpleHttpClient.Builder clientBuilder = ParallelSimpleHttpClient.builder().uri(mBuilder.mUri).method(POST).log(log).header(STREAM_NAME_HEADER, mBuilder.mStreamName).header(TRANSFER_ENCODING, CHUNKED).header(CONNECTION, KEEP_ALIVE);
+        putMediaWithSender(sendChunkEncodedMvkStream(0));
+    }
+
+    public void putMediaInBackgroundWithSleep(final int sleepTime) {
+        putMediaWithSender(sendChunkEncodedMvkStream(sleepTime));
+    }
+
+    private void putMediaWithSender(final Consumer<OutputStream> sender) {
+        final ParallelSimpleHttpClient.Builder clientBuilder = ParallelSimpleHttpClient.builder()
+            .uri(mBuilder.mUri).method(POST)
+            .log(log)
+            .header(STREAM_NAME_HEADER, mBuilder.mStreamName)
+            .header(TRANSFER_ENCODING, CHUNKED)
+            .header(CONNECTION, KEEP_ALIVE);
         clientBuilder.setReceiverCallback(mBuilder.mAcksReceiver);
-        clientBuilder.header(PRODUCER_START_TIMESTAMP_HEADER, String.format(Locale.US, "%.3f", mBuilder.mTimestamp / MILLI_TO_SEC));
+        clientBuilder.header(PRODUCER_START_TIMESTAMP_HEADER, 
+                             String.format(Locale.US, "%.3f", mBuilder.mTimestamp / MILLI_TO_SEC));
         clientBuilder.header(FRAGMENT_TIME_CODE_TYPE_HEADER, mBuilder.mFragmentTimecodeType);
         clientBuilder.completionCallback(mBuilder.mCompletion);
-        clientBuilder.setSenderCallback(sendChunkEncodedMvkStream());
+        clientBuilder.setSenderCallback(sender);
         // Timeout if no response is received from the server for put(i.e., acks)
         // Socket will/should be closed by the consumer by throwing the SocketTimeoutException
         clientBuilder.setTimeout(mBuilder.mReceiveTimeout);
@@ -82,7 +97,7 @@ public final class PutMediaClient {
         }
     }
 
-    private Consumer<OutputStream> sendChunkEncodedMvkStream() {
+    private Consumer<OutputStream> sendChunkEncodedMvkStream(final int fragmentThrottle) {
         return new Consumer<OutputStream>() {
             @Override
             public void accept(final OutputStream rawOutputStream) {
@@ -106,12 +121,15 @@ public final class PutMediaClient {
                         } else {
                             throttledOutputStream.write(ChunkEncoder.encode(buffer, mkvBytesRead));
                             tryWriteToFile(outputFileStream, buffer, mkvBytesRead);
+                            if (fragmentThrottle > 0) {
+                                Thread.sleep(fragmentThrottle);
+                            }
                         }
                     }
                     throttledOutputStream.write(ChunkEncoder.encode(buffer, 0));
                     rawOutputStream.flush();
                     log.debug("Data sent. counter : " + counter);
-                } catch (final IOException e) {
+                } catch (final Exception e) {
                     log.debug("Exception while sending data.", e);
                     throw new RuntimeException("Exception while sending encoded chunk in MKV stream ! ", e);
                 } finally {
@@ -176,7 +194,7 @@ public final class PutMediaClient {
         try {
             outputFileStream.close();
         } catch (final IOException e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
     }
 

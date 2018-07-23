@@ -115,4 +115,9 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
      */
     @Nonnull
     KinesisVideoStreamMetrics getMetrics() throws ProducerException;
+
+    /**
+     * Reset current connection of producer stream
+     */
+    void resetConnection() throws ProducerException;
 }
