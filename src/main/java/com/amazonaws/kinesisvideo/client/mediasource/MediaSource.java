@@ -3,11 +3,10 @@ package com.amazonaws.kinesisvideo.client.mediasource;
 import javax.annotation.Nonnull;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.kinesisvideo.producer.StreamInfo;
 
 /**
  * Interface representing a media source.
- *
- *
  */
 public interface MediaSource {
     /**
@@ -21,14 +20,19 @@ public interface MediaSource {
     MediaSourceConfiguration getConfiguration();
 
     /**
+     * Returns the {@link StreamInfo} describing the stream this media source produces
+     */
+    StreamInfo getStreamInfo(String streamName) throws KinesisVideoException;;
+
+    /**
      * Initializes the media source with a {@link MediaSourceSink} object
      */
-    void initialize(@Nonnull final MediaSourceSink mediaSourceSink) throws KinesisVideoException;
+    void initialize(@Nonnull MediaSourceSink mediaSourceSink) throws KinesisVideoException;
 
     /**
      * Configures the media source
      */
-    void configure(final MediaSourceConfiguration configuration);
+    void configure(MediaSourceConfiguration configuration);
 
     /**
      * Starts the media source
@@ -49,4 +53,6 @@ public interface MediaSource {
      * Releases resources
      */
     void free() throws KinesisVideoException;
+
+    MediaSourceSink getMediaSourceSink();
 }

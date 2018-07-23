@@ -19,7 +19,7 @@ The Amazon Kinesis Video Streams Producer SDK Java makes it easy to build an on-
 
 ### Prerequisites
 
-* You can find available pre-built KinesisVideoProducerJNI library in [src/main/resources/lib/](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/tree/master/src/main/resources/lib) for Mac (x64), Ubuntu (x64) and Raspian (x86). If pre-built libraries did not work for you, ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp#build-the-native-library-kinesisvideoproducerjni-to-run-java-demo-app) native library need to be built before running Java demo app.
+* You can find available pre-built KinesisVideoProducerJNI library in [src/main/resources/lib/](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/tree/master/src/main/resources/lib) for Mac (x64), Ubuntu (x64) and Raspian (x86). If pre-built libraries did not work for you, ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp) native library needs to be built first before running the Java demo application. Please follow the steps  in the section **Build the native library (KinesisVideoProducerJNI) to run Java Demo App** in Producer SDK CPP [readme](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp).
 
 ### Building from Source
 
@@ -147,6 +147,11 @@ export LD_LIBRARY_PATH=/<YOUR_PRODUCER_SDK_CPP_DOWNLOAD>/amazon-kinesis-video-st
 This should resolve native library loading issues.
 
 ## Release Notes
+
+### Release 1.3.1 (23rd July 2018)
+
+* Add reset connection function.
+* Fix key frame data-flag matching issue which could cause parsing issue in decoding process.
 
 ### Release 1.3.0 (15th March 2018)
 

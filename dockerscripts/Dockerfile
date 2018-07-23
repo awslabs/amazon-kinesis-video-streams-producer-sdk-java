@@ -19,10 +19,11 @@ RUN git clone https://github.com/awslabs/amazon-kinesis-video-streams-producer-s
 # Uncomment next two lines to debug any custom  install-script
 #WORKDIR /opt/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build/
 #COPY install-script /opt/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build/
-# 
-# Build the Producer SDK (CPP) 
+#
+# Build the Producer SDK (CPP)
 WORKDIR /opt/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build/
 RUN  chmod a+x ./install-script
+RUN  chmod a+x ./java-install-script
 RUN ./install-script -a
 RUN ./java-install-script
 WORKDIR /opt/
