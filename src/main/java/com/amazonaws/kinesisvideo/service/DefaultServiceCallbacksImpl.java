@@ -54,15 +54,6 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 // The exception can be null indicating successful completion
                 final int statusCode = getStatusCodeFromException(object);
 
-                // Find in the list of streams
-                for (final OngoingStreamingInfo streamingInfo : mStreams) {
-                    if (streamingInfo.getStream().getStreamHandle() == streamHandle) {
-                        // Terminate this object
-                        streamingInfo.stopSession(this);
-                        break;
-                    }
-                }
-
                 if (statusCode != HTTP_OK) {
                     try {
                         stream.streamTerminated(uploadHandle, statusCode);
@@ -74,83 +65,14 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         }
     }
 
-    private class OngoingStream {
-        private final BlockingInputStream dataStream;
-        private final AckConsumer ackConsumer;
-        private final CompletionCallback completionCallback;
-
-        public OngoingStream(
-                @Nonnull final BlockingInputStream dataStream,
-                @Nonnull final AckConsumer ackConsumer,
-                @Nonnull final CompletionCallback completionCallback) {
-            this.dataStream = Preconditions.checkNotNull(dataStream);
-            this.ackConsumer = Preconditions.checkNotNull(ackConsumer);
-            this.completionCallback = Preconditions.checkNotNull(completionCallback);
-        }
-
-        public void stop() {
-            try {
-                log.debug("Closing data stream");
-                dataStream.close();
-            } catch (final IOException e) {
-                log.exception(e, "Stopping data stream threw an exception");
-            }
-
-            try {
-                log.debug("Stopping ack stream");
-                ackConsumer.close();
-            } catch (final ProducerException e) {
-                log.exception(e, "Stopping ack stream threw an exception");
-            }
-        }
-
-        public void setActive() {
-            // Unblock the stream
-            dataStream.unblock();
-        }
-
-        @Nonnull
-        public CompletionCallback getCompletionCallback() {
-            return completionCallback;
-        }
-    }
-
-    private static class OngoingStreamList extends ArrayList<OngoingStream> {
-        public OngoingStream stopActiveStream(final int index) throws IndexOutOfBoundsException {
-            final OngoingStream stream = super.remove(index);
-            stream.stop();
-
-            // Promote the next
-            if (index < size()) {
-                final OngoingStream nextActive = get(index);
-                nextActive.setActive();
-            }
-
-            return stream;
-        }
-
-        public boolean addStream(final OngoingStream stream) {
-            if (size() == 0) {
-                // Mark as active if no other streams are in progress
-                stream.setActive();
-            }
-
-            return super.add(stream);
-        }
-    }
-
     /**
      * Internal class for storing the ongoing streams
      */
-    private class OngoingStreamingInfo {
-        private final OngoingStreamList ongoingStreams;
+    private class StreamingInfo {
         private final KinesisVideoProducerStream stream;
-        private final Object syncObj;
 
-        public OngoingStreamingInfo(@Nonnull final KinesisVideoProducerStream stream) {
+        public StreamingInfo(@Nonnull final KinesisVideoProducerStream stream) {
             this.stream = Preconditions.checkNotNull(stream);
-            ongoingStreams = new OngoingStreamList();
-            syncObj = new Object();
         }
 
         public void stop() {
@@ -160,33 +82,10 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
             } catch (final ProducerException e) {
                 log.exception(e, "Stopping stream threw an exception.");
             }
-
-            for (final OngoingStream ongoingStream : ongoingStreams) {
-                ongoingStream.stop();
-            }
-        }
-
-        public void stopSession(@Nonnull final CompletionCallback completionCallback) {
-            synchronized (syncObj) {
-                for (int index = 0; index < ongoingStreams.size(); index++) {
-                    if (completionCallback == ongoingStreams.get(index).getCompletionCallback()) {
-                        ongoingStreams.stopActiveStream(index);
-                        break;
-                    }
-                }
-            }
         }
 
         public KinesisVideoProducerStream getStream() {
             return stream;
-        }
-
-        public void appendOngoingStream(@Nonnull final BlockingInputStream dataStream,
-                                        @Nonnull final AckConsumer ackConsumer,
-                                        @Nonnull final CompletionCallback completionCallback) {
-            synchronized (syncObj) {
-                ongoingStreams.addStream(new OngoingStream(dataStream, ackConsumer, completionCallback));
-            }
         }
     }
 
@@ -218,7 +117,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     /**
      * The list of streams for which the callbacks can be applied.
      */
-    private final List<OngoingStreamingInfo> mStreams = new ArrayList<OngoingStreamingInfo>();
+    private final List<StreamingInfo> mStreams = new ArrayList<StreamingInfo>();
 
     /**
      * A monotonically increasing value serving as an upload handle
@@ -488,7 +387,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
             public void run() {
                 // find the right stream
                 KinesisVideoProducerStream kinesisVideoProducerStream = null;
-                for (final OngoingStreamingInfo streamingInfo : mStreams) {
+                for (final StreamingInfo streamingInfo : mStreams) {
                     if (streamingInfo.getStream().getStreamHandle() == customData) {
                         kinesisVideoProducerStream = streamingInfo.getStream();
                         break;
@@ -509,13 +408,10 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 final long clientUploadHandle = getUploadHandle();
 
                 try {
-                    final BlockingInputStream dataStream = new BlockingInputStream(kinesisVideoProducerStream.getDataStream(clientUploadHandle), log);
+                    final InputStream dataStream = kinesisVideoProducerStream.getDataStream(clientUploadHandle);
                     final AckConsumer ackConsumer = new AckConsumer(clientUploadHandle, kinesisVideoProducerStream, log);
                     final BlockingAckConsumer blockingAckConsumer = new BlockingAckConsumer(ackConsumer);
                     final CompletionCallback completionCallback = new CompletionCallback(kinesisVideoProducerStream, clientUploadHandle);
-
-                    // Insert into the ongoing streams for book keeping
-                    addOngoingStreams(dataStream, ackConsumer, completionCallback, kinesisVideoProducerStream);
 
                     // This will kick-off a long running operation
                     kinesisVideoServiceClient.putMedia(streamName,
@@ -649,7 +545,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
     @Override
     public void free() {
-        for (final OngoingStreamingInfo streamingInfo : mStreams) {
+        for (final StreamingInfo streamingInfo : mStreams) {
             // Cancel the futures
             streamingInfo.stop();
         }
@@ -657,8 +553,9 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         this.executor.shutdownNow();
     }
 
+    @Override
     public void addStream(@Nonnull final KinesisVideoProducerStream kinesisVideoProducerStream) {
-        mStreams.add(new OngoingStreamingInfo(kinesisVideoProducerStream));
+        mStreams.add(new StreamingInfo(kinesisVideoProducerStream));
     }
 
     private long calculateRelativeServiceCallAfter(final long absoluteCallAfter) {
@@ -757,21 +654,5 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 return HTTP_BAD_REQUEST;
             }
         }
-    }
-
-    private void addOngoingStreams(@Nonnull final BlockingInputStream dataStream,
-                                   @Nonnull final AckConsumer ackConsumer,
-                                   @Nonnull final CompletionCallback completionCallback,
-                                   @Nonnull final KinesisVideoProducerStream stream) {
-
-        // Append to the running streams.
-        for(final OngoingStreamingInfo streamingInfo: mStreams) {
-            if (streamingInfo.getStream() == stream) {
-                streamingInfo.appendOngoingStream(dataStream, ackConsumer, completionCallback);
-                return;
-            }
-        }
-
-        throw new RuntimeException("Internal error - can't find the active stream");
     }
 }

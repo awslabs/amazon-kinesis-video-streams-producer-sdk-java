@@ -54,7 +54,7 @@ public class ProducerException extends KinesisVideoException {
     }
 
     public ProducerException(final @Nonnull String message, final int statusCode) {
-        super(message);
+        super(message + " StatusCode: 0x" + Integer.toHexString(statusCode));
         mStatusCode = statusCode;
     }
 

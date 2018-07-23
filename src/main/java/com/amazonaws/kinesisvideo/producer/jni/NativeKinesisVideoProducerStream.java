@@ -61,6 +61,8 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                 synchronized (mMonitor) {
                     while (!mDataAvailable) {
                         try {
+                            mLog.debug("no data for stream %s with uploadHandle %d, waiting", mStreamInfo.getName(),
+                                    mUploadHandle);
                             mMonitor.wait();
                         } catch (final InterruptedException e) {
                             mLog.exception(e, "Waiting for the data availability with uploadHandle %d"
@@ -82,6 +84,9 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                 try {
                     mKinesisVideoProducerJni.getStreamData(mStreamHandle, b, off, len, mReadResult);
                     bytesRead = mReadResult.getReadBytes();
+                    mLog.debug("getStreamData fill %d bytes for stream %s with uploadHandle %d", bytesRead,
+                            mStreamInfo.getName(),
+                            mUploadHandle);
 
                     if (mReadResult.isEndOfStream()) {
                         if (mReadResult.getUploadHandle() == mUploadHandle) {
@@ -171,6 +176,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         }
     }
 
+    private static final int SERVICE_CALL_RESULT_OK = 200;
     private final NativeKinesisVideoProducerJni mKinesisVideoProducerJni;
     private final long mStreamHandle;
     private final StreamInfo mStreamInfo;
@@ -407,6 +413,17 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         if (mStreamCallbacks != null) {
             mStreamCallbacks.streamClosed(uploadHandle);
         }
+    }
+
+    /**
+     * Create a new connection to continue sending data in current buffer
+     * @throws ProducerException
+     */
+    @Override
+    public void resetConnection() throws ProducerException {
+        mLog.debug("Current connection of stream %s is being reset", mStreamInfo.getName());
+
+        streamTerminated(ReadResult.INVALID_UPLOAD_HANDLE_VALUE, SERVICE_CALL_RESULT_OK);
     }
 
 

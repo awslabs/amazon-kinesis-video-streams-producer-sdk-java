@@ -16,9 +16,12 @@ public final class DemoAppMain {
     private static final String STREAM_NAME = "my-stream";
     private static final int FPS_25 = 25;
     private static final String IMAGE_DIR = "src/main/resources/data/h264/";
+    // CHECKSTYLE:SUPPRESS:LineLength
+    // Need to get key frame configured properly so the output can be decoded. h264 files can be decoded using gstreamer plugin
+    // gst-launch-1.0 rtspsrc location="YourRtspUri" short-header=TRUE protocols=tcp ! rtph264depay ! decodebin ! videorate ! videoscale ! vtenc_h264_hw allow-frame-reordering=FALSE max-keyframe-interval=25 bitrate=1024 realtime=TRUE ! video/x-h264,stream-format=avc,alignment=au,profile=baseline,width=640,height=480,framerate=1/25 ! multifilesink location=./frame-%03d.h264 index=1
     private static final String IMAGE_FILENAME_FORMAT = "frame-%03d.h264";
     private static final int START_FILE_INDEX = 1;
-    private static final int END_FILE_INDEX = 444;
+    private static final int END_FILE_INDEX = 375;
 
     private DemoAppMain() {
         throw new UnsupportedOperationException();
