@@ -9,6 +9,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -43,7 +44,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * The expected library version.
      */
-    private static final String EXPECTED_LIBRARY_VERSION = "1.5";
+    private static final String EXPECTED_LIBRARY_VERSION = "1.8";
 
     /**
      * The manifest handle will be set after call to parse()
@@ -74,11 +75,6 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * Keeps the mapping between the stream handle and the Kinesis Video stream object
      */
     private final Map<Long, KinesisVideoProducerStream> mKinesisVideoHandleMap = new HashMap<Long, KinesisVideoProducerStream>();
-
-    /**
-     * Keeps the mapping between the stream name and the Kinesis Video stream object
-     */
-    private final Map<String, KinesisVideoProducerStream> mStreamMap = new HashMap<String, KinesisVideoProducerStream>();
 
     /**
      * Callbacks for integration with the device auth subsystem.
@@ -307,7 +303,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     @Override
     public KinesisVideoProducerStream createStream(final @Nonnull StreamInfo streamInfo,
-                                             final @Nullable StreamCallbacks streamCallbacks)
+                                                   final @Nullable StreamCallbacks streamCallbacks)
             throws ProducerException
     {
         Preconditions.checkNotNull(streamInfo);
@@ -324,7 +320,6 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
 
             // Insert into the maps
             mKinesisVideoHandleMap.put(streamHandle, kinesisVideoProducerStream);
-            mStreamMap.put(streamInfo.getName(), kinesisVideoProducerStream);
 
             return kinesisVideoProducerStream;
         }
@@ -339,7 +334,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     @Override
     public KinesisVideoProducerStream createStreamSync(final @Nonnull StreamInfo streamInfo,
-                                                 final @Nullable StreamCallbacks streamCallbacks)
+                                                       final @Nullable StreamCallbacks streamCallbacks)
             throws ProducerException
     {
         final NativeKinesisVideoProducerStream stream = (NativeKinesisVideoProducerStream) createStream(streamInfo, streamCallbacks);
@@ -384,6 +379,38 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         synchronized (mSyncObject) {
             // Stop the streams
             stopKinesisVideoStream(mClientHandle, streamHandle);
+        }
+    }
+
+    @Override
+    public void freeStreams() throws ProducerException
+    {
+        Preconditions.checkState(isInitialized());
+        synchronized (mSyncObject) {
+            final Collection<KinesisVideoProducerStream> streamCollection = mKinesisVideoHandleMap.values();
+            for (final KinesisVideoProducerStream stream: streamCollection) {
+                // Remove from the map
+                mKinesisVideoHandleMap.remove(stream.getStreamHandle());
+
+                // Free the stream
+                freeStream(stream);
+            }
+        }
+    }
+
+    @Override
+    public void freeStream(final @Nonnull KinesisVideoProducerStream stream) throws ProducerException
+    {
+        Preconditions.checkNotNull(stream);
+
+        // Idempotent call if already closed
+        if (!isInitialized()) {
+            return;
+        }
+
+        synchronized (mSyncObject) {
+            // Stop the streams
+            freeKinesisVideoStream(mClientHandle, stream.getStreamHandle());
         }
     }
 
@@ -437,6 +464,27 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
 
         synchronized (mSyncObject) {
             putKinesisVideoFrame(mClientHandle, streamHandle, kinesisVideoFrameFrame);
+        }
+    }
+
+    /**
+     * Put a fragment metadata.
+     *
+     * @param streamHandle the handle of the stream
+     * @param metadataName  metadata name
+     * @param metadataValue  metadata value
+     * @param persistent  whether this is persistent metadata or not
+     * @throws ProducerException
+     */
+    public void putFragmentMetadata(final long streamHandle, final @Nonnull String metadataName, @Nonnull final String metadataValue,
+                                    final boolean persistent) throws ProducerException
+    {
+        Preconditions.checkState(isInitialized());
+        Preconditions.checkNotNull(metadataName);
+        Preconditions.checkNotNull(metadataValue);
+
+        synchronized (mSyncObject) {
+            putKinesisVideoFragmentMetadata(mClientHandle, streamHandle, metadataName, metadataValue, persistent);
         }
     }
 
@@ -1141,6 +1189,15 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     private native void stopKinesisVideoStream(long clientHandle, long streamHandle) throws ProducerException;
 
     /**
+     * Frees the underlying native stream. The existing buffer content (if any) will be dropped and not sent.
+     *
+     * @param clientHandle Client handle
+     * @param streamHandle Stream handle
+     * @throws ProducerException
+     */
+    private native void freeKinesisVideoStream(long clientHandle, long streamHandle) throws ProducerException;
+
+    /**
      * Creates a new Kinesis Video stream native component
      *
      * @param streamInfo
@@ -1160,6 +1217,19 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @throws ProducerException
      */
     private native void putKinesisVideoFrame(long clientHandle, long streamHandle, final @Nonnull KinesisVideoFrame kinesisVideoFrame)
+            throws ProducerException;
+
+    /**
+     * Puts a Metadata into the native producer.
+     *
+     * @param clientHandle Client handle
+     * @param streamHandle Stream handle
+     * @param metadataName  metadata name
+     * @param metadataValue  metadata value
+     * @param persistent  whether this is persistent metadata or not
+     * @throws ProducerException
+     */
+    private native void putKinesisVideoFragmentMetadata(long clientHandle, long streamHandle, final @Nonnull String metadataName, final @Nonnull String metadataValue, boolean persistent)
             throws ProducerException;
 
     /**

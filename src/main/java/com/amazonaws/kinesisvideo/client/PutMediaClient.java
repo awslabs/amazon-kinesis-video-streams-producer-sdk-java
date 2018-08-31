@@ -10,6 +10,7 @@ import com.amazonaws.kinesisvideo.stream.throttling.BandwidthThrottledOutputStre
 import com.amazonaws.kinesisvideo.stream.throttling.BandwidthThrottler;
 import com.amazonaws.kinesisvideo.stream.throttling.BandwidthThrottlerImpl;
 import com.amazonaws.kinesisvideo.stream.throttling.OpsPerSecondMeasurer;
+import com.amazonaws.kinesisvideo.util.VersionUtil;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 import static com.amazonaws.kinesisvideo.http.HttpMethodName.POST;
@@ -36,6 +37,7 @@ public final class PutMediaClient {
     private static final String CHUNKED = "chunked";
     private static final String CONNECTION = "connection";
     private static final String KEEP_ALIVE = "keep-alive";
+    private static final String USER_AGENT = "user-agent";
     private static final int BUFFER_SIZE = 128 * 128; //16kb
     private static final double MILLI_TO_SEC = 1000;
     private static final int LOGGING_INTERVAL = 250; // Rougly every 10 seconds in 25 fps
@@ -66,9 +68,10 @@ public final class PutMediaClient {
             .log(log)
             .header(STREAM_NAME_HEADER, mBuilder.mStreamName)
             .header(TRANSFER_ENCODING, CHUNKED)
-            .header(CONNECTION, KEEP_ALIVE);
+            .header(CONNECTION, KEEP_ALIVE)
+            .header(USER_AGENT, VersionUtil.getUserAgent());
         clientBuilder.setReceiverCallback(mBuilder.mAcksReceiver);
-        clientBuilder.header(PRODUCER_START_TIMESTAMP_HEADER, 
+        clientBuilder.header(PRODUCER_START_TIMESTAMP_HEADER,
                              String.format(Locale.US, "%.3f", mBuilder.mTimestamp / MILLI_TO_SEC));
         clientBuilder.header(FRAGMENT_TIME_CODE_TYPE_HEADER, mBuilder.mFragmentTimecodeType);
         clientBuilder.completionCallback(mBuilder.mCompletion);

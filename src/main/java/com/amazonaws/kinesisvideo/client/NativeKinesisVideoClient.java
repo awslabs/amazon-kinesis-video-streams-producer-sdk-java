@@ -2,9 +2,10 @@ package com.amazonaws.kinesisvideo.client;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.Nonnull;
@@ -15,6 +16,7 @@ import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.common.logging.LogLevel;
+import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.mediasource.ProducerStreamSink;
 import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
 import com.amazonaws.kinesisvideo.producer.DeviceInfo;
@@ -49,13 +51,17 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
     private static final String TAG = "NativeKinesisVideoClient";
 
     /**
+     * Map of the media source to KVS producer stream
+     */
+    private final Map<MediaSource, KinesisVideoProducerStream> mMediaSourceToStreamMap;
+
+    /**
      * Kinesis Video producer callbacks
      */
-    private final AuthCallbacks authCallbacks;
-    private final StorageCallbacks storageCallbacks;
-    private final StreamCallbacks streamCallbacks;
-    private final ServiceCallbacks defaultServiceCallbacks;
-    private final List<MediaSource> mediaSources;
+    private final AuthCallbacks mAuthCallbacks;
+    private final StorageCallbacks mStorageCallbacks;
+    private final StreamCallbacks mStreamCallbacks;
+    private final ServiceCallbacks mServiceCallbacks;
 
     /**
      * Underlying Kinesis Video producer object.
@@ -95,12 +101,12 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
 
         super(log);
 
-        this.authCallbacks = checkNotNull(authCallbacks);
-        this.storageCallbacks = checkNotNull(storageCallbacks);
-        defaultServiceCallbacks = checkNotNull(serviceCallbacks);
-        this.streamCallbacks = checkNotNull(streamCallbacks);
+        mAuthCallbacks = checkNotNull(authCallbacks);
+        mStorageCallbacks = checkNotNull(storageCallbacks);
+        mServiceCallbacks = checkNotNull(serviceCallbacks);
+        mStreamCallbacks = checkNotNull(streamCallbacks);
 
-        mediaSources = new ArrayList<MediaSource>();
+        mMediaSourceToStreamMap = new HashMap<MediaSource, KinesisVideoProducerStream>();
     }
 
     /**
@@ -113,17 +119,41 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
     }
 
     @Override
-    public void registerMediaSource(final String streamName,
-                                    final MediaSource mediaSource) throws KinesisVideoException {
-        final KinesisVideoProducerStream producerStream = kinesisVideoProducer.createStreamSync(mediaSource.getStreamInfo(streamName), streamCallbacks);
-        mediaSources.add(mediaSource);
+    public void registerMediaSource(final MediaSource mediaSource) throws KinesisVideoException {
+        Preconditions.checkNotNull(mediaSource);
+        StreamCallbacks streamCallbacks = mediaSource.getStreamCallbacks();
+        if (streamCallbacks == null) {
+            streamCallbacks = mStreamCallbacks;
+        }
+
+        final KinesisVideoProducerStream producerStream = kinesisVideoProducer.createStreamSync(mediaSource.getStreamInfo(), streamCallbacks);
         mediaSource.initialize(new ProducerStreamSink(producerStream));
-        defaultServiceCallbacks.addStream(producerStream);
+        mServiceCallbacks.addStream(producerStream);
+        mMediaSourceToStreamMap.put(mediaSource, producerStream);
+        super.registerMediaSource(mediaSource);
+    }
+
+    @Override
+    public void unregisterMediaSource(final MediaSource mediaSource) throws KinesisVideoException {
+        Preconditions.checkNotNull(mediaSource);
+        super.unregisterMediaSource(mediaSource);
+
+        final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.get(mediaSource);
+
+        // The following call will not block for the stopped event
+        producerStream.stopStream();
+
+        kinesisVideoProducer.freeStream(producerStream);
+        mServiceCallbacks.removeStream(producerStream);
     }
 
     @Override
     public void stopAllMediaSources() throws KinesisVideoException {
         super.stopAllMediaSources();
+        for (final MediaSource mediaSource : mMediaSources) {
+            final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.get(mediaSource);
+            producerStream.stopStreamSync();
+        }
     }
 
     @Override
@@ -144,7 +174,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
         if (isInitialized()) {
             super.free();
 
-            defaultServiceCallbacks.free();
+            mServiceCallbacks.free();
             kinesisVideoProducer.stopStreams();
             kinesisVideoProducer.free();
 
@@ -159,9 +189,9 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
     @Nonnull
     KinesisVideoProducer initializeNewKinesisVideoProducer(final DeviceInfo deviceInfo) throws ProducerException {
         final KinesisVideoProducer kinesisVideoProducer = new NativeKinesisVideoProducerJni(
-                authCallbacks,
-                storageCallbacks,
-                defaultServiceCallbacks,
+                mAuthCallbacks,
+                mStorageCallbacks,
+                mServiceCallbacks,
                 mLog);
         kinesisVideoProducer.createSync(deviceInfo);
         return kinesisVideoProducer;

@@ -59,6 +59,11 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
     void putFrame(final @Nonnull KinesisVideoFrame kinesisVideoFrame) throws ProducerException;
 
     /**
+     * Puts a metadata into the stream.
+     */
+    void putFragmentMetadata(final @Nonnull String metadataName, @Nonnull String metadataValue, boolean persistent) throws ProducerException;
+
+    /**
      * Reports an ACK for a fragment.
      *
      * @param uploadHandle Client stream upload handle.
@@ -96,9 +101,15 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
     String getStreamName();
 
     /**
-     * Stops the Kinesis Video stream.
+     * Stops the Kinesis Video stream. This simply kicks off stop stream operation but doesn't await for the resulting
+     * stream stopped notification.
      */
     void stopStream() throws ProducerException;
+
+    /**
+     * Stops the Kinesis Video stream and awaits for the stream stopped notification in a sync call.
+     */
+    void stopStreamSync() throws ProducerException;
 
     /**
      * Reports an abnormal stream termination

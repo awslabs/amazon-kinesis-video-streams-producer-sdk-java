@@ -195,4 +195,10 @@ public interface ServiceCallbacks
      * @param kinesisVideoProducerStream producer stream used by PIC
      */
     void addStream(@Nonnull final KinesisVideoProducerStream kinesisVideoProducerStream);
+
+    /**
+     * Removes a producer stream to ongoing stream list
+     * @param kinesisVideoProducerStream producer stream used by PIC
+     */
+    void removeStream(@Nonnull final KinesisVideoProducerStream kinesisVideoProducerStream);
 }

@@ -2,12 +2,11 @@ package com.amazonaws.kinesisvideo.java.mediasource.file;
 
 import static com.amazonaws.kinesisvideo.producer.StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE;
 import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
-import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_SECOND;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_BITRATE;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_BUFFER_DURATION_IN_SECONDS;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_BUFFER_DURATION;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_GOP_DURATION;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_REPLAY_DURATION_IN_SECONDS;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_STALENESS_DURATION_IN_SECONDS;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_REPLAY_DURATION;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_STALENESS_DURATION;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_TIMESCALE;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.KEYFRAME_FRAGMENTATION;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.MAX_LATENCY_ZERO;
@@ -22,19 +21,22 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.USE_FRAME_TIME
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VERSION_ZERO;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
+import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceSink;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceState;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.mediasource.OnFrameDataAvailable;
+import com.amazonaws.kinesisvideo.mediasource.OnStreamDataAvailable;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.kinesisvideo.producer.Tag;
+
+import java.nio.ByteBuffer;
 
 /**
  * MediaSource based on local image files. Currently, this MediaSource expects
@@ -56,13 +58,18 @@ public class ImageFileMediaSource implements MediaSource {
     private static final int FRAME_FLAG_KEY_FRAME = 1;
     private static final int FRAME_FLAG_NONE = 0;
     private static final long FRAME_DURATION_20_MS = 20L;
-    private final Log log = LogFactory.getLog(ImageFileMediaSource.class);
+
+    private final String streamName;
 
     private ImageFileMediaSourceConfiguration imageFileMediaSourceConfiguration;
     private MediaSourceState mediaSourceState;
     private MediaSourceSink mediaSourceSink;
     private ImageFrameSource imageFrameSource;
     private int frameIndex;
+
+    public ImageFileMediaSource(@Nonnull final String streamName) {
+        this.streamName = streamName;
+    }
 
     @Override
     public MediaSourceState getMediaSourceState() {
@@ -75,7 +82,7 @@ public class ImageFileMediaSource implements MediaSource {
     }
 
     @Override
-    public StreamInfo getStreamInfo(final String streamName) {
+    public StreamInfo getStreamInfo() {
         return new StreamInfo(VERSION_ZERO,
                 streamName,
                 StreamInfo.StreamingType.STREAMING_TYPE_REALTIME,
@@ -84,7 +91,7 @@ public class ImageFileMediaSource implements MediaSource {
                 RETENTION_ONE_HOUR,
                 NOT_ADAPTIVE,
                 MAX_LATENCY_ZERO,
-                DEFAULT_GOP_DURATION * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
+                DEFAULT_GOP_DURATION,
                 KEYFRAME_FRAGMENTATION,
                 USE_FRAME_TIMECODES,
                 RELATIVE_TIMECODES,
@@ -94,9 +101,9 @@ public class ImageFileMediaSource implements MediaSource {
                 "test-track",
                 DEFAULT_BITRATE,
                 imageFileMediaSourceConfiguration.getFps(),
-                DEFAULT_BUFFER_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
-                DEFAULT_REPLAY_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
-                DEFAULT_STALENESS_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
+                DEFAULT_BUFFER_DURATION,
+                DEFAULT_REPLAY_DURATION,
+                DEFAULT_STALENESS_DURATION,
                 DEFAULT_TIMESCALE,
                 RECALCULATE_METRICS,
                 AVCC_EXTRA_DATA,
@@ -113,6 +120,8 @@ public class ImageFileMediaSource implements MediaSource {
 
     @Override
     public void configure(final MediaSourceConfiguration configuration) {
+        Preconditions.checkState(this.imageFileMediaSourceConfiguration == null);
+
         if (!(configuration instanceof ImageFileMediaSourceConfiguration)) {
             throw new IllegalStateException("Configuration must be an instance of OpenCvMediaSourceConfiguration");
         }
@@ -125,7 +134,7 @@ public class ImageFileMediaSource implements MediaSource {
     public void start() throws KinesisVideoException {
         mediaSourceState = MediaSourceState.RUNNING;
         imageFrameSource = new ImageFrameSource(imageFileMediaSourceConfiguration);
-        imageFrameSource.onBytesAvailable(createKinesisVideoFrameAndPushToProducer());
+        imageFrameSource.onStreamDataAvailable(createKinesisVideoMkvDataAvailableCallback());
         imageFrameSource.start();
     }
 
@@ -145,30 +154,39 @@ public class ImageFileMediaSource implements MediaSource {
 
     @Override
     public void free() throws KinesisVideoException {
-
+        // No-op
     }
 
-    private OnFrameDataAvailable createKinesisVideoFrameAndPushToProducer() {
-        return data -> {
-            final long currentTimeMs = System.currentTimeMillis();
+    private OnStreamDataAvailable createKinesisVideoMkvDataAvailableCallback() {
+        return new OnStreamDataAvailable() {
+            @Override
+            public void onFrameDataAvailable(@Nonnull final ByteBuffer data) throws KinesisVideoException {
+                final long currentTimeMs = System.currentTimeMillis();
 
-            final int flags = isKeyFrame()
-                    ? FRAME_FLAG_KEY_FRAME
-                    : FRAME_FLAG_NONE;
+                final int flags = isKeyFrame()
+                        ? FRAME_FLAG_KEY_FRAME
+                        : FRAME_FLAG_NONE;
 
-            final KinesisVideoFrame frame = new KinesisVideoFrame(
-                    frameIndex++,
-                    flags,
-                    currentTimeMs * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
-                    currentTimeMs * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
-                    FRAME_DURATION_20_MS * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
-                    data);
+                final KinesisVideoFrame frame = new KinesisVideoFrame(
+                        frameIndex++,
+                        flags,
+                        currentTimeMs * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
+                        currentTimeMs * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
+                        FRAME_DURATION_20_MS * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
+                        data);
 
-            if (frame.getSize() == 0) {
-                return;
+                if (frame.getSize() == 0) {
+                    return;
+                }
+
+                putFrame(frame);
             }
 
-            putFrame(frame);
+            @Override
+            public void onFragmentMetadataAvailable(@Nonnull final String metadataName, @Nonnull final String metadataValue,
+                                                    final boolean persistent) throws KinesisVideoException {
+                putMetadata(metadataName, metadataValue, persistent);
+            }
         };
     }
 
@@ -176,16 +194,23 @@ public class ImageFileMediaSource implements MediaSource {
         return frameIndex % imageFileMediaSourceConfiguration.getFps() == 0;
     }
 
-    private void putFrame(final KinesisVideoFrame kinesisVideoFrame) {
-        try {
-            mediaSourceSink.onFrame(kinesisVideoFrame);
-        } catch (final KinesisVideoException ex) {
-            log.error("Failed to put frame with Exception", ex);
-        }
+    private void putFrame(final KinesisVideoFrame kinesisVideoFrame) throws KinesisVideoException {
+        mediaSourceSink.onFrame(kinesisVideoFrame);
+    }
+
+    private void putMetadata(@Nonnull final String metadataName, @Nonnull final String metadataValue, final boolean persistent)
+            throws KinesisVideoException {
+        mediaSourceSink.onFragmentMetadata(metadataName, metadataValue, persistent);
     }
 
     @Override
     public MediaSourceSink getMediaSourceSink() {
         return mediaSourceSink;
+    }
+
+    @Nullable
+    @Override
+    public StreamCallbacks getStreamCallbacks() {
+        return null;
     }
 }

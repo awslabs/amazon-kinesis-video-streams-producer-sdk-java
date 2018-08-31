@@ -266,6 +266,16 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     }
 
     @Override
+    public void putFragmentMetadata(@Nonnull final String metadataName, @Nonnull final String metadataValue, boolean persistent)
+            throws ProducerException {
+        Preconditions.checkNotNull(metadataName);
+        Preconditions.checkNotNull(metadataValue);
+
+        mKinesisVideoProducerJni.putFragmentMetadata(mStreamHandle, metadataName, metadataValue, persistent);
+    }
+
+
+    @Override
     public void fragmentAck(final long uploadHandle, final @Nonnull KinesisVideoFragmentAck kinesisVideoFragmentAck) throws ProducerException {
         Preconditions.checkNotNull(kinesisVideoFragmentAck);
 
@@ -293,6 +303,12 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     public void stopStream() throws ProducerException {
         // Stop the underlying native stream
         mKinesisVideoProducerJni.stopStream(mStreamHandle);
+    }
+
+    @Override
+    public void stopStreamSync() throws ProducerException {
+        // Kick off stream stop
+        stopStream();
 
         // Await for the data to finish.
         try {
@@ -425,8 +441,6 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
 
         streamTerminated(ReadResult.INVALID_UPLOAD_HANDLE_VALUE, SERVICE_CALL_RESULT_OK);
     }
-
-
 
     public void awaitReady() throws ProducerException
     {

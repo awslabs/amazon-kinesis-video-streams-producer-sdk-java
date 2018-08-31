@@ -1,8 +1,10 @@
 package com.amazonaws.kinesisvideo.client.mediasource;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 
 /**
@@ -22,7 +24,7 @@ public interface MediaSource {
     /**
      * Returns the {@link StreamInfo} describing the stream this media source produces
      */
-    StreamInfo getStreamInfo(String streamName) throws KinesisVideoException;;
+    StreamInfo getStreamInfo() throws KinesisVideoException;;
 
     /**
      * Initializes the media source with a {@link MediaSourceSink} object
@@ -54,5 +56,14 @@ public interface MediaSource {
      */
     void free() throws KinesisVideoException;
 
+    /**
+     * Returns the {@link MediaSourceSink} object
+     */
     MediaSourceSink getMediaSourceSink();
+
+    /**
+     * Returns a stream-specific {@link StreamCallbacks} implementation if any.
+     */
+    @Nullable
+    StreamCallbacks getStreamCallbacks();
 }

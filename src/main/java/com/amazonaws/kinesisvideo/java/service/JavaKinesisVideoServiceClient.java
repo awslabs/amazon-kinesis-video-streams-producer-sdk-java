@@ -19,6 +19,7 @@ import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.StreamDescription;
 import com.amazonaws.kinesisvideo.producer.StreamStatus;
 import com.amazonaws.kinesisvideo.producer.client.KinesisVideoServiceClient;
+import com.amazonaws.kinesisvideo.util.VersionUtil;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
@@ -219,7 +220,8 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withProtocol(Protocol.HTTPS)
                 .withConnectionTimeout(timeoutInMillis)
                 .withMaxConnections(DEFAULT_MAX_CONNECTIONS)
-                .withSocketTimeout(timeoutInMillis);
+                .withSocketTimeout(timeoutInMillis)
+                .withUserAgentPrefix(VersionUtil.getUserAgent());
     }
 
     public JavaKinesisVideoServiceClient(@Nonnull final Log log) {

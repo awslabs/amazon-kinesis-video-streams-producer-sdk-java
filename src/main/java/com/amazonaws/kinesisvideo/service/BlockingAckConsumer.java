@@ -2,8 +2,10 @@ package com.amazonaws.kinesisvideo.service;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
+import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.encoding.ChunkDecoder;
 import com.amazonaws.kinesisvideo.model.ResponseStatus;
+import com.amazonaws.kinesisvideo.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.service.exception.AccessDeniedException;
 import com.amazonaws.kinesisvideo.service.exception.AmazonServiceException;
 import com.amazonaws.kinesisvideo.service.exception.ResourceNotFoundException;
@@ -25,10 +27,15 @@ class BlockingAckConsumer implements Consumer<InputStream> {
     private final Consumer<InputStream> inputStreamConsumer;
     private final CountDownLatch responseLatch;
     private Exception storedException;
+    private Log log;
+    private KinesisVideoProducerStream kinesisVideoProducerStream;
 
-    public BlockingAckConsumer(@Nonnull final Consumer<InputStream> inputStreamConsumer) {
+    public BlockingAckConsumer(@Nonnull final Consumer<InputStream> inputStreamConsumer, Log log,
+                               @Nonnull final KinesisVideoProducerStream kinesisVideoProducerStream) {
         this.inputStreamConsumer = checkNotNull(inputStreamConsumer);
         this.responseLatch = new CountDownLatch(1);
+        this.log = log;
+        this.kinesisVideoProducerStream = kinesisVideoProducerStream;
     }
 
     @Override
@@ -41,15 +48,19 @@ class BlockingAckConsumer implements Consumer<InputStream> {
             final int responseCode = responseStatus.getStatusCode();
             switch (responseCode) {
                 case HTTP_OK:
+                    log.debug(String.format("PutMedia call for stream %s return OK with request id %s",
+                            kinesisVideoProducerStream.getStreamName(), ChunkDecoder.decodeHeaders(inputStream)));
                     break;
                 case HTTP_BAD_REQUEST:
-                    throw new AmazonServiceException("PutMedia call returned bad request status code");
+                    throw new AmazonServiceException("PutMedia call returned bad request: "
+                            + responseStatus.getReason());
                 case HTTP_NOT_FOUND:
-                    throw new ResourceNotFoundException("Resource not found");
+                    throw new ResourceNotFoundException("Resource not found: " + responseStatus.getReason());
                 case HTTP_ACCESS_DENIED:
-                    throw new AccessDeniedException("Access is denied");
+                    throw new AccessDeniedException("Access is denied: " + responseStatus.getReason());
                 default:
-                    throw new AmazonServiceException("PutMedia call returned status code " + responseCode);
+                    throw new AmazonServiceException("PutMedia call returned status code " + responseCode +
+                            " with reason: " + responseStatus.getReason());
             }
         } catch (final Exception e) {
             // Store the exception

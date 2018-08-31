@@ -1,15 +1,16 @@
 package com.amazonaws.kinesisvideo.mediasource.bytes;
 
+import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_KEY_FRAME;
+import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_NONE;
 import static com.amazonaws.kinesisvideo.producer.StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE;
 import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_AN_HOUR;
 import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
-import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_SECOND;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.ABSOLUTE_TIMECODES;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_BITRATE;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_BUFFER_DURATION_IN_SECONDS;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_BUFFER_DURATION;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_GOP_DURATION;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_REPLAY_DURATION_IN_SECONDS;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_STALENESS_DURATION_IN_SECONDS;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_REPLAY_DURATION;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_STALENESS_DURATION;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_TIMESCALE;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.FRAMERATE_30;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.KEYFRAME_FRAGMENTATION;
@@ -25,24 +26,26 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VERSION_ZERO;
 import java.nio.ByteBuffer;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceSink;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceState;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.mediasource.OnFrameDataAvailable;
+import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
+import com.amazonaws.kinesisvideo.mediasource.OnStreamDataAvailable;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
+import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.kinesisvideo.producer.Tag;
 
 public class BytesMediaSource implements MediaSource {
     private static final String TAG = "BytesMediaSource";
-    private static final long HUNDREDS_OF_NANOS_IN_MS = 10 * 1000;
     private static final int KEY_FRAME_EVERY_60_FRAMES = 60;
-    private static final int FRAME_FLAG_KEY_FRAME = 1;
-    private static final int FRAME_FLAG_NONE = 0;
     private static final long DEFAULT_FRAME_DURATION_33MS = 33L;
+
+    private final String streamName;
 
     private BytesMediaSourceConfiguration configuration;
     private MediaSourceState mediaSourceState;
@@ -51,6 +54,9 @@ public class BytesMediaSource implements MediaSource {
     private int frameIndex;
     private long lastTimestampMillis;
 
+    public BytesMediaSource(final @Nonnull String streamName) {
+        this.streamName = streamName;
+    }
 
     @Override
     public MediaSourceState getMediaSourceState() {
@@ -63,7 +69,7 @@ public class BytesMediaSource implements MediaSource {
     }
 
     @Override
-    public StreamInfo getStreamInfo(final String streamName) {
+    public StreamInfo getStreamInfo() {
         return new StreamInfo(VERSION_ZERO,
                 streamName,
                 StreamInfo.StreamingType.STREAMING_TYPE_REALTIME,
@@ -82,9 +88,9 @@ public class BytesMediaSource implements MediaSource {
                 null,
                 DEFAULT_BITRATE,
                 FRAMERATE_30,
-                DEFAULT_BUFFER_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
-                DEFAULT_REPLAY_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
-                DEFAULT_STALENESS_DURATION_IN_SECONDS * HUNDREDS_OF_NANOS_IN_A_SECOND,
+                DEFAULT_BUFFER_DURATION,
+                DEFAULT_REPLAY_DURATION,
+                DEFAULT_STALENESS_DURATION,
                 DEFAULT_TIMESCALE,
                 RECALCULATE_METRICS,
                 null,
@@ -101,6 +107,8 @@ public class BytesMediaSource implements MediaSource {
 
     @Override
     public void configure(final MediaSourceConfiguration configuration) {
+        Preconditions.checkState(this.configuration == null);
+
         if (!(configuration instanceof BytesMediaSourceConfiguration)) {
             throw new IllegalArgumentException("can only use BytesMediaSourceConfiguration");
         }
@@ -112,21 +120,21 @@ public class BytesMediaSource implements MediaSource {
     public void start() throws KinesisVideoException {
         mediaSourceState = MediaSourceState.RUNNING;
         bytesGenerator = new BytesGenerator(configuration.getFps());
-        bytesGenerator.onFrameDataAvailable(createFrameAndPushToProducer());
+        bytesGenerator.onStreamDataAvailable(createDataAvailableCallback());
         bytesGenerator.start();
     }
 
-    private OnFrameDataAvailable createFrameAndPushToProducer() {
-        return new OnFrameDataAvailable() {
+    private OnStreamDataAvailable createDataAvailableCallback() {
+        return new OnStreamDataAvailable() {
             @Override
             public void onFrameDataAvailable(final ByteBuffer data) {
                 final long currentTimeMs = System.currentTimeMillis();
-                final long decodingTs = currentTimeMs * HUNDREDS_OF_NANOS_IN_MS;
-                final long presentationTs = currentTimeMs * HUNDREDS_OF_NANOS_IN_MS;
+                final long decodingTs = currentTimeMs * HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
+                final long presentationTs = currentTimeMs * HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
                 final long msSinceLastFrame = currentTimeMs - lastTimestampMillis;
                 final long frameDuration = lastTimestampMillis == 0
-                        ? DEFAULT_FRAME_DURATION_33MS * HUNDREDS_OF_NANOS_IN_MS
-                        : msSinceLastFrame * HUNDREDS_OF_NANOS_IN_MS / 2;
+                        ? DEFAULT_FRAME_DURATION_33MS * HUNDREDS_OF_NANOS_IN_A_MILLISECOND
+                        : msSinceLastFrame * HUNDREDS_OF_NANOS_IN_A_MILLISECOND / 2;
 
                 final int flags = isKeyFrame()
                         ? FRAME_FLAG_KEY_FRAME
@@ -148,6 +156,15 @@ public class BytesMediaSource implements MediaSource {
 
                 lastTimestampMillis = currentTimeMs;
                 submitFrameOnUIThread(frame);
+            }
+
+            @Override
+            public void onFragmentMetadataAvailable(final String metadataName, final String metadataValue, final boolean persistent) {
+                try {
+                    mediaSourceSink.onFragmentMetadata(metadataName, metadataValue, persistent);
+                } catch (final KinesisVideoException e) {
+                    // TODO: log/throw
+                }
             }
         };
     }
@@ -184,5 +201,11 @@ public class BytesMediaSource implements MediaSource {
     @Override
     public MediaSourceSink getMediaSourceSink() {
         return mediaSourceSink;
+    }
+
+    @Nullable
+    @Override
+    public StreamCallbacks getStreamCallbacks() {
+        return null;
     }
 }
