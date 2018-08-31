@@ -40,7 +40,12 @@ public interface KinesisVideoClient {
     /**
      * Register a media source
      */
-    void registerMediaSource(final String streamName, final MediaSource mediaSource) throws KinesisVideoException;
+    void registerMediaSource(final MediaSource mediaSource) throws KinesisVideoException;
+
+    /**
+     * Un-Register a media source
+     */
+    void unregisterMediaSource(final MediaSource mediaSource) throws KinesisVideoException;
 
     /**
      * Start all registered media sources

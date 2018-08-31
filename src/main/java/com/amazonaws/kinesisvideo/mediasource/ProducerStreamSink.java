@@ -41,6 +41,12 @@ public class ProducerStreamSink implements MediaSourceSink {
     }
 
     @Override
+    public void onFragmentMetadata(final String metadataName, final String metadataValue, final boolean persistent)
+            throws KinesisVideoException {
+        producerStream.putFragmentMetadata(metadataName, metadataValue, persistent);
+    }
+
+    @Override
     public KinesisVideoProducerStream getProducerStream() {
         return producerStream;
     }

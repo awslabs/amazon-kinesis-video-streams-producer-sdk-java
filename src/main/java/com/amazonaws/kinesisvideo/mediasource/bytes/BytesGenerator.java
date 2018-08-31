@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.mediasource.bytes;
 
-import com.amazonaws.kinesisvideo.mediasource.OnFrameDataAvailable;
+import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.kinesisvideo.mediasource.OnStreamDataAvailable;
 import com.amazonaws.kinesisvideo.stream.throttling.DiscreteTimePeriodsThrottler;
 
 import java.nio.ByteBuffer;
@@ -8,11 +9,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 public class BytesGenerator {
     private static final int DISCRETENESS_10HZ = 10;
     private static final int MAX_FRAME_SIZE_BYTES_1024 = 1024;
 
-    private OnFrameDataAvailable onFrameDataAvailable;
+    private OnStreamDataAvailable streamDataAvailable;
 
     private final ExecutorService executor = Executors.newFixedThreadPool(1);
     private final DiscreteTimePeriodsThrottler throttler;
@@ -25,6 +29,7 @@ public class BytesGenerator {
             new byte[MAX_FRAME_SIZE_BYTES_1024]
     };
 
+    private final Log log = LogFactory.getLog(BytesGenerator.class);
     private volatile boolean isRunning;
     private int frameCounter;
 
@@ -33,8 +38,8 @@ public class BytesGenerator {
         throttler = new DiscreteTimePeriodsThrottler(fps, DISCRETENESS_10HZ);
     }
 
-    public void onFrameDataAvailable(final OnFrameDataAvailable onFrameDataAvailable) {
-        this.onFrameDataAvailable = onFrameDataAvailable;
+    public void onStreamDataAvailable(final OnStreamDataAvailable streamDataAvailable) {
+        this.streamDataAvailable = streamDataAvailable;
     }
 
     public synchronized void start() {
@@ -55,17 +60,21 @@ public class BytesGenerator {
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                generateBytesAndNotifyListener();
+                try {
+                    generateBytesAndNotifyListener();
+                } catch (final KinesisVideoException e) {
+                    log.error("Failed to keep generating frames with Exception", e);
+                }
             }
         });
     }
 
-    private void generateBytesAndNotifyListener() {
+    private void generateBytesAndNotifyListener() throws KinesisVideoException {
         while (isRunning) {
             fillArrayWithDigitsOfFramesCounter();
 
-            if (onFrameDataAvailable != null) {
-                onFrameDataAvailable
+            if (streamDataAvailable != null) {
+                streamDataAvailable
                         .onFrameDataAvailable(ByteBuffer.wrap(framesData[frameCounter % framesData.length]));
             }
 

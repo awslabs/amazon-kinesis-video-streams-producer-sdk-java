@@ -17,9 +17,32 @@ import java.util.Date;
 public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentialsProvider {
 
     private final AWSCredentialsProvider credentialsProvider;
+    private Date tokenExpiration;
+    private final long rotationPeriodInMillis;
 
+    /**
+     * Constructor for non-temporary credential provider
+     *
+     * @param awsCredentialsProvider credential provider
+     */
     public JavaCredentialsProviderImpl(@Nonnull final AWSCredentialsProvider awsCredentialsProvider) {
         this.credentialsProvider = Preconditions.checkNotNull(awsCredentialsProvider);
+        tokenExpiration = KinesisVideoCredentials.CREDENTIALS_NEVER_EXPIRE;
+        rotationPeriodInMillis = 0;
+    }
+
+    /**
+     * Constructor for temporary credential provider with token rotation period
+     * (i.e. token expires for every 5 minutes)
+     *
+     * @param awsCredentialsProvider credential provider
+     * @param rotationPeriodInMillis token expire periodically for every rotationPeriodInMillis milliseconds
+     */
+    public JavaCredentialsProviderImpl(@Nonnull final AWSCredentialsProvider awsCredentialsProvider,
+                                       final long rotationPeriodInMillis) {
+        this.credentialsProvider = Preconditions.checkNotNull(awsCredentialsProvider);
+        this.rotationPeriodInMillis = rotationPeriodInMillis;
+        tokenExpiration = new Date(System.currentTimeMillis() + rotationPeriodInMillis);
     }
 
     @Override
@@ -36,11 +59,13 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
             sessionToken = sessionCredentials.getSessionToken();
         }
 
-        Date expiration = KinesisVideoCredentials.CREDENTIALS_NEVER_EXPIRE;
+        if (tokenExpiration != KinesisVideoCredentials.CREDENTIALS_NEVER_EXPIRE) {
+            tokenExpiration = new Date(System.currentTimeMillis() + rotationPeriodInMillis);
+        }
 
         return new KinesisVideoCredentials(awsCredentials.getAWSAccessKeyId(),
                 awsCredentials.getAWSSecretKey(),
                 sessionToken,
-                expiration);
+                tokenExpiration);
     }
 }

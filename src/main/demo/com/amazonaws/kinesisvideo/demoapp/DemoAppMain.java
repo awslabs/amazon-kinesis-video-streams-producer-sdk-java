@@ -40,7 +40,7 @@ public final class DemoAppMain {
             final MediaSource bytesMediaSource = createImageFileMediaSource();
 
             // register media source with Kinesis Video Client
-            kinesisVideoClient.registerMediaSource(STREAM_NAME, bytesMediaSource);
+            kinesisVideoClient.registerMediaSource(bytesMediaSource);
 
             // start streaming
             bytesMediaSource.start();
@@ -63,7 +63,7 @@ public final class DemoAppMain {
                         .startFileIndex(START_FILE_INDEX)
                         .endFileIndex(END_FILE_INDEX)
                         .build();
-        final ImageFileMediaSource mediaSource = new ImageFileMediaSource();
+        final ImageFileMediaSource mediaSource = new ImageFileMediaSource(STREAM_NAME);
         mediaSource.configure(configuration);
 
         return mediaSource;

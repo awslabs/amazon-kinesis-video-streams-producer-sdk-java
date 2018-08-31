@@ -44,6 +44,12 @@ public interface KinesisVideoProducer {
     void free() throws ProducerException;
 
     /**
+     * Frees all of the underlying streams
+     * @throws ProducerException
+     */
+    void freeStreams() throws ProducerException;
+
+    /**
      * Stops all the streams
      */
     void stopStreams() throws ProducerException;
@@ -71,6 +77,13 @@ public interface KinesisVideoProducer {
     @Nonnull
     KinesisVideoProducerStream createStreamSync(final @Nonnull StreamInfo streamInfo,
                                           final @Nullable StreamCallbacks streamCallbacks) throws ProducerException;
+
+    /**
+     * Frees the specified stream
+     * @param stream Stream to free
+     * @throws ProducerException
+     */
+    void freeStream(final @Nonnull KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
      * CreateStream result event

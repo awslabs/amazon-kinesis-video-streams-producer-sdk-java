@@ -24,7 +24,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
     /**
      * Stores the list of streams
      */
-    private final List<MediaSource> mMediaSources = new ArrayList<MediaSource>();
+    protected final List<MediaSource> mMediaSources = new ArrayList<MediaSource>();
 
     /**
      * Whether the object has been initialized
@@ -121,9 +121,16 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
      * Adds an already created {@link MediaSource} to the list.
      */
     @Override
-    public void registerMediaSource(@Nonnull final String streamName,
-                                    @Nonnull final MediaSource mediaSource) throws KinesisVideoException {
+    public void registerMediaSource(@Nonnull final MediaSource mediaSource) throws KinesisVideoException {
         // The actual media source creation happens in the derived class
         mMediaSources.add(mediaSource);
+    }
+
+    /**
+     * Removes/unregisters {@link MediaSource} from the list.
+     */
+    @Override
+    public void unregisterMediaSource(@Nonnull final MediaSource mediaSource) throws KinesisVideoException {
+        mMediaSources.remove(mediaSource);
     }
 }

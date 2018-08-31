@@ -19,7 +19,7 @@ The Amazon Kinesis Video Streams Producer SDK Java makes it easy to build an on-
 
 ### Prerequisites
 
-* You can find available pre-built KinesisVideoProducerJNI library in [src/main/resources/lib/](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/tree/master/src/main/resources/lib) for Mac (x64), Ubuntu (x64) and Raspian (x86). If pre-built libraries did not work for you, ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp) native library needs to be built first before running the Java demo application. Please follow the steps  in the section **Build the native library (KinesisVideoProducerJNI) to run Java Demo App** in Producer SDK CPP [readme](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp).
+* You can find available pre-built KinesisVideoProducerJNI library in [src/main/resources/lib/](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/tree/master/src/main/resources/lib) for Mac (x64), Ubuntu (x64) and Raspian (x86) and Windows 10. If pre-built libraries did not work for you, ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp) native library needs to be built first before running the Java demo application. Please follow the steps  in the section **Build the native library (KinesisVideoProducerJNI) to run Java Demo App** in Producer SDK CPP [readme](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp).
 
 ### Building from Source
 
@@ -31,12 +31,12 @@ Import the Maven project to your IDE, it will find dependency packages from Mave
 
 Run `DemoAppMain.java` in `./src/main/demo` with JVM arguments set to
 ```
--Daws.accessKeyId={YourAwsAccessKey} -Daws.secretKey={YourAwsSecretKey} -Djava.library.path={NativeLibraryPath} 
+-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Djava.library.path=<NativeLibraryPath>
 ```
 for **non-temporary** AWS credential.
 
 ```
--Daws.accessKeyId={YourAwsAccessKey} -Daws.secretKey={YourAwsSecretKey} -Daws.sessionToken={YourAwsSessionToken} -Djava.library.path={NativeLibraryPath}
+-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Djava.library.path=<NativeLibraryPath>
 ```
 for *temporary* AWS credential.
 
@@ -45,13 +45,13 @@ for *temporary* AWS credential.
 * `libKinesisVideoProducerJNI.dylib` for Mac OS 
 * `KinesisVideoProducerJNI.dll` for Windows
 
-If you are using pre-built libraries, please specify the path of library. Take pre-build library for Mac as example, you can specify `src/resources/lib/mac` as {NativeLibraryPath}.
+If you are using pre-built libraries, please specify the path of library. Take pre-build library for Mac as example, you can specify `src/resources/lib/mac` as <NativeLibraryPath>.
 
 Demo app will start running and putting sample video frames in a loop into Kinesis Video Streams. You can change your stream settings in `DemoAppMain.java` before you run the app.
 
 ##### Run the demo application from command line 
 
-If you want to run the `DemoAppMain`, follow the [steps](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues/14) below.
+If you want to run the `DemoAppMain`, follow the [steps](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues/14) below. See [Prerequisites](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java#prerequisites) to find available native library needed to run `DemoAppMain`.
 
 Change the current working directory to
 
@@ -59,29 +59,14 @@ Change the current working directory to
 $ cd /<YOUR_FOLDER_PATH_WHERE_SDK_IS_DOWNLOADED>/amazon-kinesis-video-streams-producer-sdk-java/
 ```
 
-Compile the Java SDK and Demoapp 
-``` 
-$ mvn package
+Compile and assemble Java SDK, Java Demoapp and the Maven dependencies
 ```
-Create a temporary filename in /tmp directory
+$ mvn clean compile assembly:single
 ```
-$ jar_files=$(mktemp)
-```
-Create classpath string of dependencies from the local repository to a file
 
-```
-$ mvn -Dmdep.outputFile=$jar_files dependency:build-classpath
-```
-Set the **LD_LIBRARY_PATH** to include the open source dependencies.
-
-(refer: [Kinesis Video Streams Producer SDK CPP](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp)
-```
-$ export LD_LIBRARY_PATH=/<YOUR_FOLDER_PATH_WHERE_SDK_IS_DOWNLOADED>/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build/downloads/local/lib:$LD_LIBRARY_PATH
-$ classpath_values=$(cat $jar_files)
-```
 Start the demo app
 ```
-$ java -classpath target/kinesisvideo-java-demo-1.0-SNAPSHOT.jar:$classpath_values -Daws.accessKeyId=${ACCESS_KEY} -Daws.secretKey=${SECRET_KEY} -Djava.library.path=/opt/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+$ java -classpath target/kinesisvideo-java-demo-1.0-SNAPSHOT-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Djava.library.path=<NativeLibraryPath> com.amazonaws.kinesisvideo.demoapp.DemoAppMain
 
 ```
 
@@ -94,12 +79,12 @@ Refer the **README.md** file in the  *dockerscripts* folder for running the buil
  Run `PutMediaDemo.java` to send sample mkv stream to Kinesis Video Streams. **Note:** ACCESS_KEY and SECRET_KEY are required for running this sample application as well. However, this demo application does not require JNI. 
 
 ```
--Daws.accessKeyId={YourAwsAccessKey} -Daws.secretKey={YourAwsSecretKey} 
+-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> 
 ```
 for **non-temporary** AWS credential.
 
 ```
--Daws.accessKeyId={YourAwsAccessKey} -Daws.secretKey={YourAwsSecretKey} -Daws.sessionToken={YourAwsSessionToken}
+-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken>
 ```
 #### Pre-built KinesisVideoProducerJNI library supported platforms
 * Mac OS X (El capitan 10.11 or above)
@@ -147,6 +132,11 @@ export LD_LIBRARY_PATH=/<YOUR_PRODUCER_SDK_CPP_DOWNLOAD>/amazon-kinesis-video-st
 This should resolve native library loading issues.
 
 ## Release Notes
+
+### Release 1.5.0 (24th August 2018)
+* Windows native library available for Producer SDK
+* Intermittent producer support
+* Per-stream customized callback support
 
 ### Release 1.3.1 (23rd July 2018)
 
