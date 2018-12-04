@@ -9,7 +9,7 @@ public class AckEventData {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(final String type) {
         this.type = type;
     }
 
@@ -17,7 +17,7 @@ public class AckEventData {
         return errorCode;
     }
 
-    public void setErrorCode(int errorCode) {
+    public void setErrorCode(final int errorCode) {
         this.errorCode = errorCode;
     }
 
@@ -25,7 +25,7 @@ public class AckEventData {
         return fragmentTimecode;
     }
 
-    public void setFragmentTimecode(long fragmentTimecode) {
+    public void setFragmentTimecode(final long fragmentTimecode) {
         this.fragmentTimecode = fragmentTimecode;
     }
 }

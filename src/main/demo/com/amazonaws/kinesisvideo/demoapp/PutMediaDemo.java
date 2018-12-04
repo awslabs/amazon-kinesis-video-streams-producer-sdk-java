@@ -100,7 +100,8 @@ public final class PutMediaDemo {
                 @Override
                 public void onFailure(Throwable t) {
                     latch.countDown();
-                    throw new RuntimeException(t);
+                    System.out.println("onFailure: " + t.getMessage());
+                    // TODO: Add your failure handling logic here
                 }
 
                 @Override

@@ -93,7 +93,7 @@ public final class ChunkDecoder {
         do {
             result = inputStream.read(buffer, offset++, 1);
         } while (result > -1 && arrayIndexOf(buffer, 0, offset, delimiter) == -1);
-        return new String(buffer, 0 , offset, StandardCharsets.UTF_8);
+        return new String(buffer, 0, offset, StandardCharsets.UTF_8);
     }
 
     public static int arrayIndexOf(final byte[] haystack, final int tail, final int head, final byte[] needle) {
@@ -165,12 +165,21 @@ public final class ChunkDecoder {
     public static Integer decodeAckInResponseBody(final InputStream inputStream,
                                                   final Consumer<String> ackTimestampConsumer) {
         final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.US_ASCII));
-        String line;
-        int chunkSize;
-        int numBytesRead, offset, ackCount = 0;
 
         try {
             skipResponseHeaders(reader);
+            return parseResponseBodyAndDecodeAck(reader, ackTimestampConsumer);
+        } catch (final Throwable e) {
+            throw new RuntimeException("Exception while decoding Ack in response ! ", e);
+        }
+    }
+
+    public static Integer parseResponseBodyAndDecodeAck(final BufferedReader reader,
+            final Consumer<String> ackTimestampConsumer) {
+        String line;
+        int chunkSize;
+        int numBytesRead, offset, ackCount = 0;
+        try {
             line = skipEmptyLines(reader);
 
             // Parse chunk data
@@ -203,7 +212,6 @@ public final class ChunkDecoder {
         } catch (final Throwable e) {
             throw new RuntimeException("Exception while decoding Ack in response ! ", e);
         }
-
         return ackCount;
     }
 

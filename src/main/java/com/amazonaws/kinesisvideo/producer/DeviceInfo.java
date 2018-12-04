@@ -1,5 +1,7 @@
 package com.amazonaws.kinesisvideo.producer;
 
+import com.amazonaws.kinesisvideo.producer.StorageInfo;
+import com.amazonaws.kinesisvideo.producer.Tag;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;

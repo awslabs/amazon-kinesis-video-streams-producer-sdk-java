@@ -26,12 +26,12 @@ import javax.annotation.Nullable;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 
-import com.amazonaws.kinesisvideo.client.mediasource.MediaSource;
-import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceConfiguration;
-import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceSink;
+import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
+import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
+import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceSink;
 import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceState;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.mediasource.OnStreamDataAvailable;
+import com.amazonaws.kinesisvideo.internal.mediasource.OnStreamDataAvailable;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.kinesisvideo.producer.Tag;

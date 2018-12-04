@@ -3,6 +3,7 @@ package com.amazonaws.kinesisvideo.client.mediasource;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;

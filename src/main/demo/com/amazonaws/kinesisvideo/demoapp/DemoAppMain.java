@@ -1,7 +1,7 @@
 package com.amazonaws.kinesisvideo.demoapp;
 
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
-import com.amazonaws.kinesisvideo.client.mediasource.MediaSource;
+import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
 import com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory;

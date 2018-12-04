@@ -2,6 +2,7 @@ package com.amazonaws.kinesisvideo.client;
 
 import com.amazonaws.kinesisvideo.common.function.Consumer;
 import com.amazonaws.kinesisvideo.common.logging.Log;
+import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.encoding.ChunkEncoder;
 import com.amazonaws.kinesisvideo.http.ParallelSimpleHttpClient;
 import com.amazonaws.kinesisvideo.signing.KinesisVideoSigner;
@@ -38,7 +39,7 @@ public final class PutMediaClient {
     private static final String CONNECTION = "connection";
     private static final String KEEP_ALIVE = "keep-alive";
     private static final String USER_AGENT = "user-agent";
-    private static final int BUFFER_SIZE = 128 * 128; //16kb
+    private static final int BUFFER_SIZE = 1024 * 1024; // 1MB
     private static final double MILLI_TO_SEC = 1000;
     private static final int LOGGING_INTERVAL = 250; // Rougly every 10 seconds in 25 fps
     private final Builder mBuilder;
@@ -289,10 +290,7 @@ public final class PutMediaClient {
         }
 
         public Builder log(final Log log) {
-            if (log == null) {
-                throw new NullPointerException("log");
-            }
-            mLog = log;
+            mLog = Preconditions.checkNotNull(log);
             return this;
         }
 
