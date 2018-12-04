@@ -2,7 +2,7 @@ package com.amazonaws.kinesisvideo.java.mediasource.file;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
-import com.amazonaws.kinesisvideo.mediasource.OnStreamDataAvailable;
+import com.amazonaws.kinesisvideo.internal.mediasource.OnStreamDataAvailable;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

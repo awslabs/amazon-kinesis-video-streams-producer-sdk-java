@@ -10,8 +10,9 @@ public class BandwidthMeasuringOutputStream extends OutputStream {
 
     private final OutputStream mOutputStream;
     private final OpsPerSecondMeasurer mOpsPerSecondMeasurer;
-    
-    public BandwidthMeasuringOutputStream(OutputStream outputStream, OpsPerSecondMeasurer opsPerSecondMeasurer) {
+
+    public BandwidthMeasuringOutputStream(final OutputStream outputStream,
+            final OpsPerSecondMeasurer opsPerSecondMeasurer) {
         this.mOutputStream = outputStream;
         this.mOpsPerSecondMeasurer = opsPerSecondMeasurer;
     }

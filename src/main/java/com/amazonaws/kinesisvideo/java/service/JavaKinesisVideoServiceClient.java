@@ -18,7 +18,7 @@ import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.StreamDescription;
 import com.amazonaws.kinesisvideo.producer.StreamStatus;
-import com.amazonaws.kinesisvideo.producer.client.KinesisVideoServiceClient;
+import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.util.VersionUtil;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;

@@ -33,7 +33,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     };
     private static final Consumer<Exception> NO_OP_COMPLETION = new Consumer<Exception>() {
         @Override
-        public void accept(Exception object) {
+        public void accept(final Exception object) {
             // No op;
         }
     };

@@ -1,7 +1,7 @@
 package com.amazonaws.kinesisvideo.java.mediasource.file;
 
 
-import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceConfiguration;
+import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 
 public class ImageFileMediaSourceConfiguration implements MediaSourceConfiguration {
 

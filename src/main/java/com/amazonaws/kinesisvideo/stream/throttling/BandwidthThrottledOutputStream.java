@@ -32,7 +32,7 @@ public class BandwidthThrottledOutputStream extends OutputStream {
     }
 
     @Override
-    public void write(final byte[] b, int off, int len) throws IOException {
+    public void write(final byte[] b, final int off, final int len) throws IOException {
         int bytesWritten = 0;
         while (bytesWritten < len) {
             final int allowedBytesToWrite = throttler.getAllowedBytes(len - bytesWritten);

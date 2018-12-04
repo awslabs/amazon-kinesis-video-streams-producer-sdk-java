@@ -196,7 +196,7 @@ public final class KinesisVideoApacheHttpClient implements HttpClient {
 
     private static class NoOpHostNameVerifier implements HostnameVerifier {
         @Override
-        public boolean verify(String hostname, SSLSession session) {
+        public boolean verify(final String hostname, final SSLSession session) {
             return true;
         }
     }

@@ -2,11 +2,11 @@ package com.amazonaws.kinesisvideo.java.client;
 
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
-import com.amazonaws.kinesisvideo.client.NativeKinesisVideoClient;
+import com.amazonaws.kinesisvideo.internal.client.NativeKinesisVideoClient;
 import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
-import com.amazonaws.kinesisvideo.producer.client.KinesisVideoServiceClient;
-import com.amazonaws.kinesisvideo.service.DefaultServiceCallbacksImpl;
+import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
+import com.amazonaws.kinesisvideo.internal.service.DefaultServiceCallbacksImpl;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.ScheduledExecutorService;

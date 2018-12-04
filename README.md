@@ -133,6 +133,38 @@ This should resolve native library loading issues.
 
 ## Release Notes
 
+### Release 1.6.0 (3rd December 2018)
+* Remove streamName parameter from KinesisVideoClient.registerMediaSource() as MediaSource already has the stream name in StreamInfo.
+* Add KinesisVideoClient.unregisterMediaSource() to remove MediaSource to KinesisVideoProducerStream binding from KinesisVideoClient. Customers can use unregisterMediaSource() after they stop streaming, so MediaSource data will not to be sent to Kinesis Video Streams.
+* Add getStreamInfo() to MediaSource instead of MediaSourceConfiguration. If customers have implemented their own MediaSource and MediaSourceConfiguration, they would need to provide stream information via MediaSource.getStreamInfo(). The MediaSourceConfiguration.getStreamInfo() will not work.
+* The following classes are no longer publicly available.
+ * MediaSource
+ * MediaSourceConfiguration
+ * MediaSourceSink
+ * AbstractKinesisVideoClient
+ * NativeKinesisVideoClient
+ * BytesGenerator
+ * BytesMediaSource
+ * BytesMediaSourceConfiguration
+ * ProducerStreamSink
+ * KinesisVideoServiceClient
+ * NativeKinesisVideoProducerJni
+ * NativeKinesisVideoProducerStream
+ * NativeLibraryLoader
+ * KinesisVideoMetrics
+ * KinesisVideoProducer
+ * KinesisVideoProducerStream
+ * KinesisVideoStreamMetrics
+ * ReadResult
+ * ServiceCallbacks
+ * com.amazonaws.kinesisvideo.service.exception.AccessDeniedException
+ * com.amazonaws.kinesisvideo.service.exception.AmazonServiceException
+ * com.amazonaws.kinesisvideo.service.exception.ResourceInUseException
+ * com.amazonaws.kinesisvideo.service.exception.ResourceNotFoundException
+ * AckConsumer
+ * BlockingAckConsumer
+ * DefaultServiceCallbacksImpl
+
 ### Release 1.5.0 (24th August 2018)
 * Windows native library available for Producer SDK
 * Intermittent producer support
