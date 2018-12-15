@@ -300,8 +300,9 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     }
 
     @Override
-    public void streamFormatChanged(final @Nullable byte[] codecPrivateData) throws ProducerException {
-        mKinesisVideoProducerJni.streamFormatChanged(mStreamHandle, codecPrivateData);
+    public void streamFormatChanged(@Nullable final byte[] codecPrivateData, int trackId)
+            throws ProducerException {
+        mKinesisVideoProducerJni.streamFormatChanged(mStreamHandle, codecPrivateData, trackId);
     }
 
     @Override
@@ -370,10 +371,11 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     }
 
     @Override
-    public void fragmentAckReceived(@Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException
+    public void fragmentAckReceived(final long uploadHandle,
+                                    @Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException
     {
         if (mStreamCallbacks != null) {
-            mStreamCallbacks.fragmentAckReceived(fragmentAck);
+            mStreamCallbacks.fragmentAckReceived(uploadHandle, fragmentAck);
         }
     }
 
@@ -394,10 +396,10 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     }
 
     @Override
-    public void streamErrorReport(final long fragmentTimecode, final long statusCode) throws ProducerException
+    public void streamErrorReport(final long uploadHandle, final long fragmentTimecode, final long statusCode) throws ProducerException
     {
         if (mStreamCallbacks != null) {
-            mStreamCallbacks.streamErrorReport(fragmentTimecode, statusCode);
+            mStreamCallbacks.streamErrorReport(uploadHandle, fragmentTimecode, statusCode);
         }
     }
 
@@ -438,6 +440,13 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
 
         if (mStreamCallbacks != null) {
             mStreamCallbacks.streamClosed(uploadHandle);
+        }
+    }
+
+    @Override
+    public void bufferDurationOverflowPressure(final long remainDuration) throws ProducerException {
+        if (mStreamCallbacks != null) {
+            mStreamCallbacks.bufferDurationOverflowPressure(remainDuration);
         }
     }
 

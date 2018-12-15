@@ -28,6 +28,7 @@ public final class StreamInfoConstants {
     public static final boolean ABSOLUTE_TIMECODES = true;
     public static final boolean RELATIVE_TIMECODES = false;
     public static final boolean RECALCULATE_METRICS = true;
+    public static final int DEFAULT_TRACK_ID = 0;
 
     /**
      * Default buffer duration for a stream

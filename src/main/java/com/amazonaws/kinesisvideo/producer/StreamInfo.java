@@ -8,6 +8,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import static com.amazonaws.kinesisvideo.producer.MkvTrackInfoType.VIDEO;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_TRACK_ID;
+
 /**
  * Stream information class.
  *
@@ -121,8 +124,6 @@ public class StreamInfo {
     private final boolean mAbsoluteFragmentTimes;
     private final boolean mFragmentAcks;
     private final boolean mRecoverOnError;
-    private final String mCodecId;
-    private final String mTrackName;
     private final int mAvgBandwidthBps;
     private final int mFrameRate;
     private final long mBufferDuration;
@@ -130,9 +131,9 @@ public class StreamInfo {
     private final long mConnectionStalenessDuration;
     private final long mTimecodeScale;
     private final boolean mRecalculateMetrics;
-    private final byte[] mCodecPrivateData;
     private final Tag[] mTags;
     private final NalAdaptationFlags mNalAdaptationFlags;
+    private final TrackInfo[] mTrackInfoList;
 
     /**
      * Generates a track name from a content type
@@ -203,6 +204,23 @@ public class StreamInfo {
                       @Nullable final byte[] codecPrivateData,
                       @Nullable final Tag[] tags,
                       @Nonnull final NalAdaptationFlags nalAdaptationFlags) {
+        this(version, name, streamingType, contentType, kmsKeyId, retentionPeriod, adaptive, maxLatency,
+                fragmentDuration, keyFrameFragmentation, frameTimecodes, absoluteFragmentTimes, fragmentAcks,
+                recoverOnError, avgBandwidthBps, frameRate, bufferDuration, replayDuration,
+                connectionStalenessDuration, timecodeScale, recalculateMetrics, tags,
+                nalAdaptationFlags,
+                new TrackInfo[] {new TrackInfo(DEFAULT_TRACK_ID, codecId, trackName, codecPrivateData, VIDEO)});
+    }
+    public StreamInfo(final int version, @Nullable final String name, @Nonnull final StreamingType streamingType,
+                      @Nonnull final String contentType, @Nullable final String kmsKeyId, final long retentionPeriod,
+                      final boolean adaptive, final long maxLatency, final long fragmentDuration,
+                      final boolean keyFrameFragmentation, final boolean frameTimecodes,
+                      final boolean absoluteFragmentTimes, final boolean fragmentAcks, final boolean recoverOnError,
+                      final int avgBandwidthBps, final int frameRate, final long bufferDuration,
+                      final long replayDuration, final long connectionStalenessDuration, final long timecodeScale,
+                      final boolean recalculateMetrics, @Nullable final Tag[] tags,
+                      @Nonnull final NalAdaptationFlags nalAdaptationFlags,
+                      @Nonnull final TrackInfo[] trackInfoList) {
         mVersion = version;
         mName = name;
         mStreamingType = streamingType;
@@ -217,8 +235,6 @@ public class StreamInfo {
         mAbsoluteFragmentTimes = absoluteFragmentTimes;
         mFragmentAcks = fragmentAcks;
         mRecoverOnError = recoverOnError;
-        mCodecId = codecId;
-        mTrackName = trackName;
         mAvgBandwidthBps = avgBandwidthBps;
         mFrameRate = frameRate;
         mBufferDuration = bufferDuration;
@@ -226,9 +242,9 @@ public class StreamInfo {
         mConnectionStalenessDuration = connectionStalenessDuration;
         mTimecodeScale = timecodeScale;
         mRecalculateMetrics = recalculateMetrics;
-        mCodecPrivateData = codecPrivateData;
         mTags = tags;
         mNalAdaptationFlags = nalAdaptationFlags;
+        mTrackInfoList = trackInfoList;
     }
 
     public int getVersion() {
@@ -290,16 +306,6 @@ public class StreamInfo {
         return mRecoverOnError;
     }
 
-    @Nullable
-    public String getCodecId() {
-        return mCodecId;
-    }
-
-    @Nullable
-    public String getTrackName() {
-        return mTrackName;
-    }
-
     public int getAvgBandwidthBps() {
         return mAvgBandwidthBps;
     }
@@ -328,9 +334,57 @@ public class StreamInfo {
         return mRecalculateMetrics;
     }
 
+    @Nonnull
+    public TrackInfo[] getTrackInfoList() {
+        return mTrackInfoList;
+    }
+
+    public int getTrackInfoCount() {
+        return mTrackInfoList.length;
+    }
+
+    @Nullable
+    public String getCodecId(final int trackIndex) {
+        return mTrackInfoList[trackIndex].getCodecId();
+    }
+
+    @Nullable
+    public String getTrackName(final int trackIndex) {
+        return mTrackInfoList[trackIndex].getTrackName();
+    }
+
     @Nullable
     public byte[] getCodecPrivateData() {
-        return mCodecPrivateData;
+        return mTrackInfoList == null || mTrackInfoList.length == 0 ? null : mTrackInfoList[0].getCodecPrivateData();
+    }
+
+    @Nullable
+    public String getCodecId() {
+        return mTrackInfoList == null || mTrackInfoList.length == 0 ? null : mTrackInfoList[0].getCodecId();
+    }
+
+    @Nullable
+    public String getTrackName() {
+        return mTrackInfoList == null || mTrackInfoList.length == 0 ? null : mTrackInfoList[0].getTrackName();
+    }
+
+    @Nullable
+    public byte[] getCodecPrivateData(final int trackIndex) {
+        Preconditions.checkState(mTrackInfoList != null && trackIndex < mTrackInfoList.length,
+                "Requested track is not available in track info list.");
+        return mTrackInfoList[trackIndex].getCodecPrivateData();
+    }
+
+    public long getTrackId(final int trackIndex) {
+        Preconditions.checkState(mTrackInfoList != null && trackIndex < mTrackInfoList.length,
+                "Requested track is not available in track info list.");
+        return mTrackInfoList[trackIndex].getTrackId();
+    }
+
+    public int getTrackInfoType(final int trackIndex) {
+        Preconditions.checkState(mTrackInfoList != null && trackIndex < mTrackInfoList.length,
+                "Requested track is not available in track info list.");
+        return mTrackInfoList[trackIndex].getTrackType().intValue();
     }
 
     @Nullable

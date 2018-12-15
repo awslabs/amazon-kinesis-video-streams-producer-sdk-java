@@ -23,7 +23,7 @@ public class DefaultStreamCallbacks implements StreamCallbacks {
     }
 
     @Override
-    public void fragmentAckReceived(@Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException {
+    public void fragmentAckReceived(final long uploadHandle, @Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException {
         // no-op
     }
 
@@ -33,7 +33,7 @@ public class DefaultStreamCallbacks implements StreamCallbacks {
     }
 
     @Override
-    public void streamErrorReport(final long frameTimecode, final long statusCode) throws ProducerException {
+    public void streamErrorReport(final long uploadHandle, final long frameTimecode, final long statusCode) throws ProducerException {
         // no-op
     }
 
@@ -55,6 +55,11 @@ public class DefaultStreamCallbacks implements StreamCallbacks {
 
     @Override
     public void streamClosed(final long uploadHandle) throws ProducerException {
+        // no-op
+    }
+
+    @Override
+    public void bufferDurationOverflowPressure(final long remainDuration) throws ProducerException {
         // no-op
     }
 }

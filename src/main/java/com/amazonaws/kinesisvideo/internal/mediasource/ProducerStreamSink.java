@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.internal.mediasource;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_TRACK_ID;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -36,8 +37,13 @@ public class ProducerStreamSink implements MediaSourceSink {
     }
 
     @Override
-    public void onCodecPrivateData(@Nullable final byte[] bytes) throws KinesisVideoException {
-        producerStream.streamFormatChanged(bytes);
+    public void onCodecPrivateData(@Nullable final byte[] codecPrivateData) throws KinesisVideoException {
+        onCodecPrivateData(codecPrivateData, DEFAULT_TRACK_ID);
+    }
+
+    @Override
+    public void onCodecPrivateData(@Nullable final byte[] bytes, int trackId) throws KinesisVideoException {
+        producerStream.streamFormatChanged(bytes, trackId);
     }
 
     @Override

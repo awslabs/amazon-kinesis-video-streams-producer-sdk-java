@@ -34,10 +34,11 @@ public interface StreamCallbacks
 
     /**
      * Reports the received ACK.
+     * @param uploadHandle The client stream upload handle.
      * @param fragmentAck The received fragment ACK.
      * @throws ProducerException
      */
-    void fragmentAckReceived(@Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException;
+    void fragmentAckReceived(long uploadHandle, @Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException;
 
     /**
      * Reports a dropped frame for the stream.
@@ -57,11 +58,12 @@ public interface StreamCallbacks
      * Reports an error for the stream. The client should terminate the connection
      * as the inlet host would have/has already terminated the connection.
      *
+     * @param uploadHandle The client stream upload handle.
      * @param fragmentTimecode Fragment time code of the errored fragment.
      * @param statusCode Status code of the failure.
      * @throws ProducerException
      */
-    void streamErrorReport(long fragmentTimecode, long statusCode) throws ProducerException;
+    void streamErrorReport(long uploadHandle, long fragmentTimecode, long statusCode) throws ProducerException;
 
     /**
      * New data is available for the stream.
@@ -84,4 +86,11 @@ public interface StreamCallbacks
      * @throws ProducerException
      */
     void streamClosed(long uploadHandle) throws ProducerException;
+
+    /**
+     * Stream temporal buffer pressure.
+     * @param remainDuration Remaining duration in the buffer in hundreds of nanos.
+     * @throws ProducerException
+     */
+    void bufferDurationOverflowPressure(long remainDuration) throws ProducerException;
 }
