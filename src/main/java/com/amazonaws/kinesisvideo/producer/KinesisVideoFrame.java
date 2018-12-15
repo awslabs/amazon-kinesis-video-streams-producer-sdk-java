@@ -1,5 +1,6 @@
 package com.amazonaws.kinesisvideo.producer;
 
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_TRACK_ID;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.ByteBuffer;
@@ -40,18 +41,29 @@ public class KinesisVideoFrame {
     private final long mDuration;
 
     /**
+     * The track id of the frame
+     */
+    private final long mTrackId;
+
+    /**
      * The actual frame data
      */
     private final ByteBuffer mData;
 
     public KinesisVideoFrame(int index, int flags, long decodingTs, long presentationTs, long duration,
-            @Nonnull ByteBuffer data) {
+            @Nonnull ByteBuffer data, long trackId) {
         mIndex = index;
         mFlags = flags;
         mDecodingTs = decodingTs;
         mPresentationTs = presentationTs;
         mDuration = duration;
         mData = requireNonNull(data);
+        mTrackId = trackId;
+    }
+
+    public KinesisVideoFrame(int index, int flags, long decodingTs, long presentationTs, long duration,
+                             @Nonnull ByteBuffer data) {
+        this(index, flags, decodingTs, presentationTs, duration, data, DEFAULT_TRACK_ID);
     }
 
     public int getIndex() {
@@ -93,10 +105,15 @@ public class KinesisVideoFrame {
         return byteBuffer;
     }
 
+    public long getTrackId() {
+        return mTrackId;
+    }
+
     @Override public String toString() {
         return new StringBuilder().append(getClass().getSimpleName()).append("{").append("mIndex=").append(mIndex)
                 .append(", mFlags=").append(mFlags).append(", mDecodingTs=").append(mDecodingTs)
                 .append(", mPresentationTs=").append(mPresentationTs).append(", mDuration=").append(mDuration)
-                .append(", mData=").append(mData).append("}").toString();
+                .append(", mData=").append(mData).append(", mTrackId=").append(mTrackId).append("}")
+                .toString();
     }
 }

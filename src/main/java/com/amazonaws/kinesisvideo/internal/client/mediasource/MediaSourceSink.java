@@ -20,6 +20,8 @@ public interface MediaSourceSink {
 
     void onCodecPrivateData(final @Nullable byte[] codecPrivateData) throws KinesisVideoException;
 
+    void onCodecPrivateData(final @Nullable byte[] codecPrivateData, final int trackId) throws KinesisVideoException;
+
     void onFragmentMetadata(final @Nonnull String metadataName, final @Nonnull String metadataValue, final boolean persistent)
             throws KinesisVideoException;
 

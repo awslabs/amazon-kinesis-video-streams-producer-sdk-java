@@ -91,7 +91,7 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
      * NOTE: CPD is @Nullable - specifying a null will remove the CPD.
      * NOTE: currently, only Codec Private Data is supported while not streaming.
      */
-    void streamFormatChanged(final @Nullable byte[] codecPrivateData) throws ProducerException;
+    void streamFormatChanged(final @Nullable byte[] codecPrivateData, final int trackId) throws ProducerException;
 
     /**
      * Returns the underlying native stream handle

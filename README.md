@@ -41,15 +41,15 @@ for **non-temporary** AWS credential.
 for *temporary* AWS credential.
 
 **Note**: NativeLibraryPath must contain your ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp#build-the-native-library-kinesisvideoproducerjni-to-run-java-demo-app) library. File name depends on your Operating System:
-* `libKinesisVideoProducerJNI.so` for Linux 
-* `libKinesisVideoProducerJNI.dylib` for Mac OS 
+* `libKinesisVideoProducerJNI.so` for Linux
+* `libKinesisVideoProducerJNI.dylib` for Mac OS
 * `KinesisVideoProducerJNI.dll` for Windows
 
 If you are using pre-built libraries, please specify the path of library. Take pre-build library for Mac as example, you can specify `src/resources/lib/mac` as <NativeLibraryPath>.
 
 Demo app will start running and putting sample video frames in a loop into Kinesis Video Streams. You can change your stream settings in `DemoAppMain.java` before you run the app.
 
-##### Run the demo application from command line 
+##### Run the demo application from command line
 
 If you want to run the `DemoAppMain`, follow the [steps](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues/14) below. See [Prerequisites](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java#prerequisites) to find available native library needed to run `DemoAppMain`.
 
@@ -76,10 +76,10 @@ Refer the **README.md** file in the  *dockerscripts* folder for running the buil
 
 #### Launching PutMediaDemo sample application
 
- Run `PutMediaDemo.java` to send sample mkv stream to Kinesis Video Streams. **Note:** ACCESS_KEY and SECRET_KEY are required for running this sample application as well. However, this demo application does not require JNI. 
+ Run `PutMediaDemo.java` to send sample mkv stream to Kinesis Video Streams. **Note:** ACCESS_KEY and SECRET_KEY are required for running this sample application as well. However, this demo application does not require JNI.
 
 ```
--Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> 
+-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey>
 ```
 for **non-temporary** AWS credential.
 
@@ -93,7 +93,7 @@ for **non-temporary** AWS credential.
 
 #### Additional Examples
 
-For additional examples on using Kinesis Video Streams Java SDK and  Kinesis Video Streams Parsing Library refer: 
+For additional examples on using Kinesis Video Streams Java SDK and  Kinesis Video Streams Parsing Library refer:
 
 ##### [Kinesis Video Streams Producer SDK CPP](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp/blob/master/README.md)
 ##### [Kinesis Video Streams Parser Library](https://github.com/aws/amazon-kinesis-video-streams-parser-library/blob/master/README.md)
@@ -112,11 +112,11 @@ or in MacOS
 $ otool -L libKinesisVideoProducerJNI.dylib
 ```
 
-This will provide details on missing libraries during linking; If the output shows missing shared libraries, then run the following commands to clean the `CMakeCache` and link again.  
+This will provide details on missing libraries during linking; If the output shows missing shared libraries, then run the following commands to clean the `CMakeCache` and link again.
 
 ```
 rm -rf ./kinesis-video-native-build/CMakeCache.txt ./kinesis-video-native-build/CMakeFiles
- 
+
 ```
 and run `./install-script` again.
 
@@ -132,6 +132,10 @@ export LD_LIBRARY_PATH=/<YOUR_PRODUCER_SDK_CPP_DOWNLOAD>/amazon-kinesis-video-st
 This should resolve native library loading issues.
 
 ## Release Notes
+
+### Release 1.7.0 (3rd December 2018)
+* Added support for uploading files(offline mode) to Kinesis Video Stream
+* Additional fixes
 
 ### Release 1.6.0 (3rd December 2018)
 * Remove streamName parameter from KinesisVideoClient.registerMediaSource() as MediaSource already has the stream name in StreamInfo.
