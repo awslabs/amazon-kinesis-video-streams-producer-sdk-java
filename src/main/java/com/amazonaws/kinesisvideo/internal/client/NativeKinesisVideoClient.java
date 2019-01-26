@@ -139,13 +139,14 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
         Preconditions.checkNotNull(mediaSource);
         super.unregisterMediaSource(mediaSource);
 
-        final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.get(mediaSource);
-
-        // The following call will not block for the stopped event
-        producerStream.stopStream();
-
-        kinesisVideoProducer.freeStream(producerStream);
-        mServiceCallbacks.removeStream(producerStream);
+        final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.get(mediaSource);;
+        try {
+            // The following call will not block for the stopped event
+            producerStream.stopStream();
+        } finally {
+            kinesisVideoProducer.freeStream(producerStream);
+            mServiceCallbacks.removeStream(producerStream);
+        }
     }
 
     @Override
