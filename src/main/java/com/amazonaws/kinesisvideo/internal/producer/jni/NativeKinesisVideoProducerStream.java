@@ -435,6 +435,15 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     public void streamClosed(final long uploadHandle) throws ProducerException
     {
         mLog.debug("Stream %s is closed", mStreamInfo.getName());
+
+        for (final InputStream stream : mInputStreamMap.values()) {
+            try {
+                mInputStreamMap.get(uploadHandle).close();
+            } catch (IOException e) {
+                mLog.error("stream close failed with exception ", e);
+            }
+        }
+
         // Release the stopped latch
         mStoppedLatch.countDown();
 

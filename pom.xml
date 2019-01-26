@@ -6,16 +6,19 @@
 
     <!-- Output to jar format -->
     <packaging>jar</packaging>
-    
-    <properties>
-      <maven.compiler.source>1.8</maven.compiler.source>
-      <maven.compiler.target>1.8</maven.compiler.target>
-    </properties>
-    
-    <groupId>com.amazonaws</groupId>
-    <artifactId>kinesisvideo-java-demo</artifactId>
-    <version>1.0-SNAPSHOT</version>
 
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+
+    <groupId>com.amazonaws</groupId>
+    <artifactId>amazon-kinesis-video-streams-producer-java-sdk</artifactId>
+    <name>Amazon Kinesis Video Streams Producer Java SDK</name>
+    <version>1.8.0</version>
+    <description>The Amazon Kinesis Video Streams Producer SDK for Java enables Java developers to ingest data into
+        Amazon Kinesis Video.
+    </description>
     <repositories>
         <repository>
             <id>lib</id>
@@ -23,11 +26,33 @@
         </repository>
     </repositories>
 
+    <licenses>
+        <license>
+            <name>Apache License Version 2.0</name>
+            <url>http://aws.amazon.com/apache2.0/</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-bom</artifactId>
+                <version>1.11.487</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-core</artifactId>
-            <version>1.11.172</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-kinesisvideo</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.inject</groupId>
@@ -101,12 +126,6 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.4</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-kinesisvideo</artifactId>
-            <version>1.11.255</version>
         </dependency>
 
 

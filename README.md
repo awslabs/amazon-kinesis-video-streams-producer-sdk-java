@@ -133,6 +133,11 @@ This should resolve native library loading issues.
 
 ## Release Notes
 
+### Release 1.8.0 (25th January 2019)
+* Fix duplicate stream error after unregistering media source when service call failed
+* Fix inputstream not closing after stopSync issue
+* Updating the name and description of Java SDK to publish in maven
+
 ### Release 1.7.0 (3rd December 2018)
 * Added support for uploading files(offline mode) to Kinesis Video Stream
 * Additional fixes

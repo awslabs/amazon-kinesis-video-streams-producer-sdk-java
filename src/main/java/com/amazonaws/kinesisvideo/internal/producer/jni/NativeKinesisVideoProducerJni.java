@@ -1,5 +1,6 @@
 package com.amazonaws.kinesisvideo.internal.producer.jni;
 
+import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.common.logging.LogLevel;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
@@ -351,9 +352,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     {
         final NativeKinesisVideoProducerStream stream = (NativeKinesisVideoProducerStream) createStream(streamInfo, streamCallbacks);
 
-        // Block until ready
-        stream.awaitReady();
-
+        try {
+            // Block until ready
+            stream.awaitReady();
+        } catch (final KinesisVideoException e) {
+            freeStream(stream);
+        }
         return stream;
     }
 
