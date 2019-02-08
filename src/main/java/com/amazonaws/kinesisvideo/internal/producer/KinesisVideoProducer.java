@@ -141,11 +141,11 @@ public interface KinesisVideoProducer {
      * PutStream result event
      *
      * @param customData         Custom data that should be passed to the engine
-     * @param clientStreamHandle A stream handle identifier from the client side
+     * @param uploadHandle       A stream upload handle identifier from the client side
      * @param httpStatusCode     HTTP status code
      * @throws ProducerException
      */
-    void putStreamResult(final long customData, long clientStreamHandle, int httpStatusCode)
+    void putStreamResult(final long customData, long uploadHandle, int httpStatusCode)
             throws ProducerException;
 
     /**

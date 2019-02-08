@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.internal.client;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
+import static com.amazonaws.kinesisvideo.internal.producer.ReadResult.INVALID_UPLOAD_HANDLE_VALUE;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -137,12 +138,28 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
     @Override
     public void unregisterMediaSource(@Nonnull final MediaSource mediaSource) throws KinesisVideoException {
         Preconditions.checkNotNull(mediaSource);
+        mediaSource.stop();
         super.unregisterMediaSource(mediaSource);
 
         final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.get(mediaSource);;
         try {
-            // The following call will not block for the stopped event
-            producerStream.stopStream();
+            // The following call will blocked till the stopped event completes
+            producerStream.stopStreamSync();
+        } finally {
+            kinesisVideoProducer.freeStream(producerStream);
+            mServiceCallbacks.removeStream(producerStream);
+        }
+    }
+
+    @Override
+    public void freeMediaSource(@Nonnull final MediaSource mediaSource) throws KinesisVideoException {
+        Preconditions.checkNotNull(mediaSource);
+        super.freeMediaSource(mediaSource);
+
+        final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.get(mediaSource);
+        try {
+            // The following call will not blocked during the stopped event
+            producerStream.streamClosed(INVALID_UPLOAD_HANDLE_VALUE);
         } finally {
             kinesisVideoProducer.freeStream(producerStream);
             mServiceCallbacks.removeStream(producerStream);

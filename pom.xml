@@ -15,7 +15,7 @@
     <groupId>com.amazonaws</groupId>
     <artifactId>amazon-kinesis-video-streams-producer-sdk-java</artifactId>
     <name>Amazon Kinesis Video Streams Producer SDK Java</name>
-    <version>1.8.0</version>
+    <version>1.9.0</version>
     <description>The Amazon Kinesis Video Streams Producer SDK for Java enables Java developers to ingest data into
         Amazon Kinesis Video.
     </description>
@@ -26,6 +26,20 @@
         </repository>
     </repositories>
 
+    <developers>
+        <developer>
+            <id>amazonwebservices</id>
+            <organization>Amazon Web Services</organization>
+            <organizationUrl>https://aws.amazon.com</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
+    </developers>
+    <url>https://aws.amazon.com/kinesis/video-streams</url>
+    <scm>
+        <url>https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java.git</url>
+    </scm>
     <licenses>
         <license>
             <name>Apache License Version 2.0</name>

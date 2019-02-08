@@ -45,17 +45,15 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
     /**
      * Get stream data from the buffer.
      *
-     * @param fillBuffer
-     *         The buffer to fill
-     * @param offset
-     *         The start of the buffer
-     * @param length
-     *         The number of bytes to fill
-     * @param readResult
-     *         The result of the read
+     * @param uploadHandle Client stream upload handle.
+     * @param fillBuffer The buffer to fill
+     * @param offset The start of the buffer
+     * @param length The number of bytes to fill
+     * @param readResult The result of the read
      * @throws ProducerException
      */
-    void getStreamData(final @Nonnull byte[] fillBuffer, int offset, int length, @Nonnull final ReadResult readResult)
+    void getStreamData(final long uploadHandle, final @Nonnull byte[] fillBuffer, int offset, int length,
+                       @Nonnull final ReadResult readResult)
             throws ProducerException;
 
     /**
@@ -131,6 +129,11 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
      */
     @Nonnull
     KinesisVideoStreamMetrics getMetrics() throws ProducerException;
+
+    /**
+     * Free the Kinesis Video stream.
+     */
+    void streamFreed() throws ProducerException;
 
     /**
      * Reset current connection of producer stream

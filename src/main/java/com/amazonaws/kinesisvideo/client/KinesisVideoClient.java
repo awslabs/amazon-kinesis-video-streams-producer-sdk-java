@@ -19,11 +19,16 @@ import java.util.List;
 public interface KinesisVideoClient {
     /**
      * Returns whether the client has been initialized
+     *
+     * @return true if initialized. false otherwise.
      */
     boolean isInitialized();
 
     /**
      * Initializes the client object.
+     *
+     * @param deviceInfo Device info for which the client needs to be initialized.
+     * @throws KinesisVideoException if unable to initialize KinesisVideoClient.
      */
     void initialize(@Nonnull final DeviceInfo deviceInfo)
             throws KinesisVideoException;
@@ -40,28 +45,42 @@ public interface KinesisVideoClient {
     /**
      * Register a media source. The media source will be binding to kinesis video producer stream
      * to send out data from media source.
+     * Sync call to create the stream and bind to media source.
      *
      * @param mediaSource media source binding to kinesis video producer stream
-     * @throws KinesisVideoException
+     * @throws KinesisVideoException if unable to register media source.
      */
     void registerMediaSource(final MediaSource mediaSource) throws KinesisVideoException;
 
     /**
      * Un-Register a media source. The media source will stop binding to kinesis video producer stream
      * and it cannot send data via producer stream afterwards until register again.
+     * Sync call and could be block for 15 seconds if error happens when stopping stream.
      *
      * @param mediaSource media source to stop binding to kinesis video producer stream
-     * @throws KinesisVideoException
+     * @throws KinesisVideoException if unable to unregister media source.
      */
     void unregisterMediaSource(final MediaSource mediaSource) throws KinesisVideoException;
 
     /**
      * Start all registered media sources
+     *
+     * @throws KinesisVideoException if unable to start all media sources.
      */
     void startAllMediaSources() throws KinesisVideoException;
 
     /**
+     * Free a media source. Async call to clean up resources if error happens.
+     *
+     * @param mediaSource media source binding to kinesis video producer stream to be freed
+     * @throws KinesisVideoException if unable to free media source.
+     */
+    void freeMediaSource(@Nonnull final MediaSource mediaSource) throws KinesisVideoException;
+
+    /**
      * Stop all registered media sources
+     *
+     * @throws KinesisVideoException if unable to stop all media sources.
      */
     void stopAllMediaSources() throws KinesisVideoException;
 
@@ -70,6 +89,7 @@ public interface KinesisVideoClient {
      * the media source type, create the instance, and ensure that it is configured with working
      * parameters
      *
+     * @param streamName Stream name for the media source
      * @param mediaSourceConfiguration, configuration to create specific media source
      * @return configured and working media source
      * @throws UnsupportedConfigurationException is thrown when the configuration is not supported,
@@ -84,6 +104,8 @@ public interface KinesisVideoClient {
 
     /**
      * Stops the media sources and frees/releases the underlying objects
+     *
+     * @throws KinesisVideoException if unable to free resources.
      */
     void free() throws KinesisVideoException;
 }

@@ -8,12 +8,12 @@ package com.amazonaws.kinesisvideo.client.mediasource;
  * Later, if we need, we could add more state transitions to mimic lower-level encoders/hardware states for
  * more granularity if we need.
  *
- * Initialized -> Ready (allocate the buffers and configure the source)
- * Ready -> Running (start streaming)
- * Running -> Ready (pause stream. Doesn't de-allocate the buffers)
- * Running -> Stopped (stop the stream)
- * Ready -> Stopped (stop the stream)
- * Stopped -> NULL (need to re-initialize)
+ * Initialized - Ready (allocate the buffers and configure the source)
+ * Ready - Running (start streaming)
+ * Running - Ready (pause stream. Doesn't de-allocate the buffers)
+ * Running - Stopped (stop the stream)
+ * Ready - Stopped (stop the stream)
+ * Stopped - NULL (need to re-initialize)
  *
  *
  */

@@ -133,6 +133,10 @@ This should resolve native library loading issues.
 
 ## Release Notes
 
+### Release 1.9.0 (08 Feburary 2019)
+* Bug fix for KinesisVideoClient.unregisterMediaSource() accessing to freed native object issue.
+* Add KinesisVideoClient.freeMediaSource() clean-up function to handle async behavior.
+
 ### Release 1.8.0 (25th January 2019)
 * Fix duplicate stream error after unregistering media source when service call failed
 * Fix inputstream not closing after stopSync issue

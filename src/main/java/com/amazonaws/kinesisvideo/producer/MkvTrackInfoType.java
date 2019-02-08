@@ -1,6 +1,6 @@
 package com.amazonaws.kinesisvideo.producer;
 
-enum MkvTrackInfoType {
+public enum MkvTrackInfoType {
     VIDEO(0), AUDIO(1), UNKNOWN(-1);
     private final int mValue;
 
