@@ -59,7 +59,12 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
             if (streamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE) {
                 // The exception can be null indicating successful completion
                 final int statusCode = getStatusCodeFromException(object);
-
+                for (final StreamingInfo stream : mStreams) {
+                    if (stream.getStream().getStreamHandle() == streamHandle) {
+                        log.info("Complete callback triggered for "
+                                + stream.getStream().getStreamName() + " with statuscode " + statusCode);
+                    }
+                }
                 if (statusCode != HTTP_OK) {
                     try {
                         stream.streamTerminated(uploadHandle, statusCode);

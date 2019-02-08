@@ -49,6 +49,7 @@ public class KinesisVideoFrame {
      * The actual frame data
      */
     private final ByteBuffer mData;
+    private final int mSize;
 
     public KinesisVideoFrame(int index, int flags, long decodingTs, long presentationTs, long duration,
             @Nonnull ByteBuffer data, long trackId) {
@@ -59,6 +60,7 @@ public class KinesisVideoFrame {
         mDuration = duration;
         mData = requireNonNull(data);
         mTrackId = trackId;
+        mSize = data.remaining();
     }
 
     public KinesisVideoFrame(int index, int flags, long decodingTs, long presentationTs, long duration,
@@ -87,7 +89,7 @@ public class KinesisVideoFrame {
     }
 
     public int getSize() {
-        return mData.remaining();
+        return mSize;
     }
 
     @Nonnull
@@ -95,8 +97,10 @@ public class KinesisVideoFrame {
         ByteBuffer byteBuffer = mData;
         try {
             if (mData.hasArray()) {
-                byteBuffer = ByteBuffer.allocateDirect(mData.remaining());
+                byteBuffer = ByteBuffer.allocateDirect(mSize);
                 byteBuffer.put(mData);
+                mData.rewind();
+                byteBuffer.flip();
             }
         } catch(final Exception e) {
             // Some Android implementations throw when accessing hasArray() API. We will ignore it

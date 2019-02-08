@@ -8,6 +8,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.nio.ByteBuffer;
+import java.util.UUID;
+
 import static com.amazonaws.kinesisvideo.producer.MkvTrackInfoType.VIDEO;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_TRACK_ID;
 
@@ -134,6 +137,7 @@ public class StreamInfo {
     private final Tag[] mTags;
     private final NalAdaptationFlags mNalAdaptationFlags;
     private final TrackInfo[] mTrackInfoList;
+    private final UUID mSegmentUuid;
 
     /**
      * Generates a track name from a content type
@@ -209,6 +213,7 @@ public class StreamInfo {
                 recoverOnError, avgBandwidthBps, frameRate, bufferDuration, replayDuration,
                 connectionStalenessDuration, timecodeScale, recalculateMetrics, tags,
                 nalAdaptationFlags,
+                null,
                 new TrackInfo[] {new TrackInfo(DEFAULT_TRACK_ID, codecId, trackName, codecPrivateData, VIDEO)});
     }
     public StreamInfo(final int version, @Nullable final String name, @Nonnull final StreamingType streamingType,
@@ -220,6 +225,7 @@ public class StreamInfo {
                       final long replayDuration, final long connectionStalenessDuration, final long timecodeScale,
                       final boolean recalculateMetrics, @Nullable final Tag[] tags,
                       @Nonnull final NalAdaptationFlags nalAdaptationFlags,
+                      @Nullable final UUID segmentUuid,
                       @Nonnull final TrackInfo[] trackInfoList) {
         mVersion = version;
         mName = name;
@@ -244,6 +250,7 @@ public class StreamInfo {
         mRecalculateMetrics = recalculateMetrics;
         mTags = tags;
         mNalAdaptationFlags = nalAdaptationFlags;
+        mSegmentUuid = segmentUuid;
         mTrackInfoList = trackInfoList;
     }
 
@@ -332,6 +339,23 @@ public class StreamInfo {
 
     public boolean isRecalculateMetrics() {
         return mRecalculateMetrics;
+    }
+
+    @Nullable
+    public UUID getSegmentUuid() {
+        return mSegmentUuid;
+    }
+
+    @Nullable
+    public byte[] getSegmentUuidBytes() {
+        if (mSegmentUuid == null) {
+            return null;
+        }
+
+        final ByteBuffer tempBuffer = ByteBuffer.wrap(new byte[16]);
+        tempBuffer.putLong(mSegmentUuid.getMostSignificantBits());
+        tempBuffer.putLong(mSegmentUuid.getLeastSignificantBits());
+        return tempBuffer.array();
     }
 
     @Nonnull

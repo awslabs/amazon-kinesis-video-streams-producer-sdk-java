@@ -277,7 +277,10 @@ public final class PutMediaClient {
         /**
          * Allows writing the stream data into a localc file in addition to sending it to back-end.
          * <p>
-         * Useful for debugging
+         * @param fileOutputPath Output file path
+         * @return Builder object
+         *
+         * NOTE: Useful for debugging
          */
         public Builder fileOutputPath(final String fileOutputPath) {
             mFileOutputPath = fileOutputPath;
@@ -297,9 +300,9 @@ public final class PutMediaClient {
         /**
          * Add additional unsigned header. For testing use only.
          *
-         * @param name
-         * @param value
-         * @return
+         * @param name Header key
+         * @param value Header value
+         * @return Builder object.
          */
         public Builder unsignedHeader(final String name, final String value) {
             if (unsignedHeaders == null) {

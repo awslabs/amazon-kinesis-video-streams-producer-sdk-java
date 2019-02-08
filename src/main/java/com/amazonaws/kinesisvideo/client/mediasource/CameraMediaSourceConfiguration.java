@@ -204,6 +204,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Returns the ID of the camera
+     *
+     * @return ID of the camera
      */
     public String getCameraId() {
         return mBuilder.mCameraId;
@@ -211,6 +213,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the camera facing front or back.
+     *
+     * @return camera facing front or back.
      */
     public int getCameraFacing() {
         return mBuilder.mCameraFacing;
@@ -218,6 +222,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the orientation of the camera in degrees.
+     *
+     * @return orientation of the camera in degrees.
      */
     public int getCameraOrientation() {
         return mBuilder.mCameraOrientation;
@@ -225,6 +231,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the horizontal resolution.
+     *
+     * @return horizontal resolution
      */
     public int getHorizontalResolution() {
         return mBuilder.mHorizontalResolution;
@@ -232,6 +240,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the vertical resolution.
+     *
+     * @return vertical resolution
      */
     public int getVerticalResolution() {
         return mBuilder.mVerticalResolution;
@@ -239,6 +249,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the output file name.
+     *
+     * @return Output file name
      */
     public String getOutputFileName() {
         return mBuilder.mOutputFileName;
@@ -246,6 +258,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the frame rate of the camera.
+     *
+     * @return Frame rate
      */
     public int getFrameRate() {
         return mBuilder.mFrameRate;
@@ -253,6 +267,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the retention period in hours
+     *
+     * @return Retention period in hours
      */
     public int getRetentionPeriodInHours() {
         return mBuilder.mRetentionPeriodInHours;
@@ -260,6 +276,9 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the encoding bitrate.
+     *
+     * @return bit rate.
+     *
      */
     public int getBitRate() {
         return mBuilder.mEncodingBitrate;
@@ -267,6 +286,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the encoder mime type.
+     *
+     * @return encoder mime type
      */
     @Nonnull
     public String getEncoderMimeType() {
@@ -275,6 +296,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the GOP (group-of-pictures) duration in milliseconds.
+     *
+     * @return GOP duration
      */
     public int getGopDurationMillis() {
         return mBuilder.mGopDurationMillis;
@@ -282,6 +305,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Whether the encoder is hardware accelerated.
+     *
+     * @return true if encoder is hardware accelerated. false otherwise
      */
     public boolean isEndcoderHardwareAccelerated() {
         return mBuilder.mIsEncoderHardwareAccelerated;
@@ -289,6 +314,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the codec private data.
+     *
+     * @return Codec private data
      */
     @Nullable
     public byte[] getCodecPrivateData() {
@@ -297,6 +324,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Gets the timescale
+     *
+     * @return timescale
      */
     public long getTimeScale() {
         return mBuilder.mFrameTimescale;
@@ -304,6 +333,8 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Get the Nal Adaption Flag
+     *
+     * @return NAL Adaption flag
      */
     public StreamInfo.NalAdaptationFlags getNalAdaptationFlags() {
         return mBuilder.mNalAdaptationFlags;
@@ -311,7 +342,7 @@ public class CameraMediaSourceConfiguration implements MediaSourceConfiguration 
 
     /**
      * Get if timecode is absolute or not
-     * @return
+     * @return true if absolute. false otherwise.
      */
     public boolean getIsAbsoluteTimecode() {
         return mBuilder.mIsAbsoluteTimecode;

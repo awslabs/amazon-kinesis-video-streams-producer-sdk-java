@@ -57,7 +57,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * The expected library version.
      */
-    private static final String EXPECTED_LIBRARY_VERSION = "1.9";
+    private static final String EXPECTED_LIBRARY_VERSION = "1.11";
 
     /**
      * The manifest handle will be set after call to parse()
@@ -355,8 +355,9 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         try {
             // Block until ready
             stream.awaitReady();
-        } catch (final KinesisVideoException e) {
+        } catch (final ProducerException e) {
             freeStream(stream);
+            throw e;
         }
         return stream;
     }
@@ -405,11 +406,13 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         synchronized (mSyncObject) {
             final Collection<KinesisVideoProducerStream> streamCollection = mKinesisVideoHandleMap.values();
             for (final KinesisVideoProducerStream stream: streamCollection) {
-                // Remove from the map
-                mKinesisVideoHandleMap.remove(stream.getStreamHandle());
-
-                // Free the stream
-                freeStream(stream);
+                try {
+                    // Free the stream
+                    freeStream(stream);
+                } finally {
+                    // Remove from the map
+                    mKinesisVideoHandleMap.remove(stream.getStreamHandle());
+                }
             }
         }
     }
@@ -425,8 +428,10 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         }
 
         synchronized (mSyncObject) {
+            final long streamHandle = stream.getStreamHandle();
+            stream.streamFreed();
             // Stop the streams
-            freeKinesisVideoStream(mClientHandle, stream.getStreamHandle());
+            freeKinesisVideoStream(mClientHandle, streamHandle);
         }
     }
 
@@ -539,9 +544,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     }
 
     /**
-     * Get stream data from the buffer.
+     * Get stream data from the buffer for specific upload Handle.
+     * Each uploadHandle correspond to a PutMedia connection to
+     * Kinesis Video Streams.
      *
      * @param streamHandle     the handle of the stream
+     * @param uploadHandle     the client stream upload handle
      * @param fillBuffer    The buffer to fill
      * @param offset    The start of the buffer
      * @param length    The number of bytes to fill
@@ -549,6 +557,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @throws ProducerException
      */
     public void getStreamData(final long streamHandle,
+                              final long uploadHandle,
                               final @Nonnull byte[] fillBuffer,
                               final int offset,
                               final int length,
@@ -559,7 +568,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkNotNull(readResult);
 
         synchronized (mSyncObject) {
-            getKinesisVideoStreamData(mClientHandle, streamHandle, fillBuffer, offset, length, readResult);
+            getKinesisVideoStreamData(mClientHandle, streamHandle, uploadHandle, fillBuffer, offset, length,
+                    readResult);
         }
     }
 
@@ -621,6 +631,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
 
     /**
      * Reports stream underflow
+     *
+     * @param streamHandle     the handle of the stream
      */
     private void streamUnderflowReport(final long streamHandle) throws ProducerException
     {
@@ -690,6 +702,10 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
 
     /**
      * Reports received fragment ACK
+     *
+     * @param streamHandle the handle of the stream
+     * @param uploadHandle the client stream upload handle
+     * @param fragmentAck ACK for the fragment
      */
     private void fragmentAckReceived(final long streamHandle, final long uploadHandle, @Nonnull final KinesisVideoFragmentAck fragmentAck)
             throws ProducerException
@@ -1404,7 +1420,9 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param readResult the result of the read operation
      * @throws ProducerException
      */
-    private native void getKinesisVideoStreamData(long clientHandle, long streamHandle, final @Nonnull byte[] fillBuffer, int offset, int length, final @Nonnull ReadResult readResult)
+    private native void getKinesisVideoStreamData(long clientHandle, long streamHandle, long uploadHandle,
+                                                  final @Nonnull byte[] fillBuffer, int offset,
+                                                  int length, final @Nonnull ReadResult readResult)
             throws ProducerException;
 
     /**

@@ -78,6 +78,18 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
     }
 
     /**
+     * Free media source's binding producer stream
+     *
+     * @param mediaSource media source binding to kinesis video producer stream to be freed
+     * @throws KinesisVideoException if unable to free media source.
+     */
+    @Override
+    public void freeMediaSource(@Nonnull final MediaSource mediaSource) throws KinesisVideoException {
+        mMediaSources.remove(mediaSource);
+        mediaSource.stop();
+    }
+
+    /**
      * Pauses the processing
      */
     @Override
@@ -141,5 +153,6 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
     @Override
     public void unregisterMediaSource(@Nonnull final MediaSource mediaSource) throws KinesisVideoException {
         mMediaSources.remove(mediaSource);
+        mediaSource.stop();
     }
 }

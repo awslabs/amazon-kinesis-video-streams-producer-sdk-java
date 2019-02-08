@@ -4,6 +4,7 @@ import com.amazonaws.kinesisvideo.common.function.Consumer;
 import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
+import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
 import com.amazonaws.kinesisvideo.producer.ProducerException;
 
 import javax.annotation.Nonnull;
@@ -17,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 class AckConsumer implements Consumer<InputStream> {
     private static final long STOPPED_TIMEOUT_IN_MILLISECONDS = 15000;
     private static final int FOUR_KB = 4096;
-    private static final String END_OF_STREAM_MSG = "0";
+    private static final String END_OF_STREAM_MSG = "0\r\n\r\n";
     private final KinesisVideoProducerStream stream;
     private InputStream ackStream = null;
     private final CountDownLatch stoppedLatch;
@@ -64,7 +65,8 @@ class AckConsumer implements Consumer<InputStream> {
                 }
 
                 // Check for end-of-stream and 0 before processing
-                if (bytesRead == -1 || END_OF_STREAM_MSG.equals(bytesString)) {
+                if (stream.getStreamHandle() == NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE
+                        || bytesRead <= 0 || END_OF_STREAM_MSG.equals(bytesString)) {
                     // End-of-stream
                     log.debug("Received end-of-stream for ACKs.");
                     closed = true;
