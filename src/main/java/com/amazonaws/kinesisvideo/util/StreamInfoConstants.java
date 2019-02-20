@@ -28,12 +28,14 @@ public final class StreamInfoConstants {
     public static final boolean ABSOLUTE_TIMECODES = true;
     public static final boolean RELATIVE_TIMECODES = false;
     public static final boolean RECALCULATE_METRICS = true;
-    public static final int DEFAULT_TRACK_ID = 0;
+    public static final int DEFAULT_TRACK_ID = 1;
     public static final int VIDEO_TRACK_ID = DEFAULT_TRACK_ID;
-    public static final int AUDIO_TRACK_ID = 1;
+    public static final int AUDIO_TRACK_ID = DEFAULT_TRACK_ID + 1;
     public static final String VIDEO_CONTENT_TYPE = "video/h264";
     public static final String AUDIO_VIDEO_CONTENT_TYPE = "video/h264,audio/aac";
     public static final long FRAME_DURATION_0_MS = 0L;
+    public static final String VIDEO_CODEC_ID = "V_MPEG4/ISO/AVC";
+    public static final String AUDIO_CODEC_ID = "A_AAC";
 
     /**
      * Default buffer duration for a stream

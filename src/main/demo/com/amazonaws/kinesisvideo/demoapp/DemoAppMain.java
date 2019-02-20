@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.demoapp;
 
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
+import com.amazonaws.kinesisvideo.demoapp.contants.DemoTrackInfos;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
@@ -90,6 +91,7 @@ public final class DemoAppMain {
                         .withDir(FRAME_DIR)
                         .withRetentionPeriodInHours(RETENTION_ONE_HOUR)
                         .withAbsoluteTimecode(ABSOLUTE_TIMECODES)
+                        .withTrackInfoList(DemoTrackInfos.createTrackInfoList())
                         .build();
         final AudioVideoFileMediaSource mediaSource = new AudioVideoFileMediaSource(STREAM_NAME);
         mediaSource.configure(configuration);

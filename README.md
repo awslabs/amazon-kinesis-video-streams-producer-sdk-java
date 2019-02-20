@@ -133,6 +133,10 @@ This should resolve native library loading issues.
 
 ## Release Notes
 
+### Release 1.9.1 (19 Feburary 2019)
+* Bug fix for credentials not rotating issue when given credentials expire in less than 40 minutes.
+* Add audio video sample to support injesting multiple track data into Kinesis Video.
+
 ### Release 1.9.0 (08 Feburary 2019)
 * Bug fix for KinesisVideoClient.unregisterMediaSource() accessing to freed native object issue.
 * Add KinesisVideoClient.freeMediaSource() clean-up function to handle async behavior.
