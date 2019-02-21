@@ -132,6 +132,8 @@ export LD_LIBRARY_PATH=/<YOUR_PRODUCER_SDK_CPP_DOWNLOAD>/amazon-kinesis-video-st
 This should resolve native library loading issues.
 
 ## Release Notes
+### Release 1.9.2 (21 Feburary 2019)
+* Bug fix for broken MKV generated due to difference between trackInfoType in Java and C layer.
 
 ### Release 1.9.1 (19 Feburary 2019)
 * Bug fix for credentials not rotating issue when given credentials expire in less than 40 minutes.

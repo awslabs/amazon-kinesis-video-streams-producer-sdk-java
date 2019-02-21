@@ -6,7 +6,7 @@ import javax.annotation.Nonnull;
 
 public final class VersionUtil {
 
-    public static final String AWS_SDK_KVS_PRODUCER_VERSION_STRING = "1.9.1";
+    public static final String AWS_SDK_KVS_PRODUCER_VERSION_STRING = "1.9.2";
 
     private static final String DEFAULT_USER_AGENT_NAME = "AWS-SDK-KVS";
 

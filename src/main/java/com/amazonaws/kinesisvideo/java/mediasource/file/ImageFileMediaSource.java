@@ -18,6 +18,7 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.REQUEST_FRAGME
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RETENTION_ONE_HOUR;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.USE_FRAME_TIMECODES;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VERSION_ZERO;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_CODEC_ID;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_CONTENT_TYPE;
 
 import javax.annotation.Nonnull;
@@ -97,7 +98,7 @@ public class ImageFileMediaSource implements MediaSource {
                 RELATIVE_TIMECODES,
                 REQUEST_FRAGMENT_ACKS,
                 RECOVER_ON_FAILURE,
-                VIDEO_CONTENT_TYPE,
+                VIDEO_CODEC_ID,
                 "test-track",
                 DEFAULT_BITRATE,
                 imageFileMediaSourceConfiguration.getFps(),
