@@ -230,7 +230,8 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
             final long timeout,
             @Nullable final byte[] authData,
             final int authType,
-            final long customData) throws ProducerException {
+            final long streamHandle,
+            final KinesisVideoProducerStream stream) throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
         final long delay = calculateRelativeServiceCallAfter(callAfter);
@@ -255,7 +256,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 }
 
                 try {
-                    kinesisVideoProducer.describeStreamResult(customData, streamDescription, statusCode);
+                    kinesisVideoProducer.describeStreamResult(stream, streamHandle, streamDescription, statusCode);
                 } catch (final ProducerException e) {
                     throw new RuntimeException(e);
                 }
@@ -273,7 +274,8 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
             final long timeout,
             @Nullable final byte[] authData,
             final int authType,
-            final long customData) throws ProducerException {
+            final long streamHandle,
+            final KinesisVideoProducerStream stream) throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
         final long delay = calculateRelativeServiceCallAfter(callAfter);
@@ -301,7 +303,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 }
 
                 try {
-                    kinesisVideoProducer.getStreamingEndpointResult(customData, endpoint, statusCode);
+                    kinesisVideoProducer.getStreamingEndpointResult(stream, streamHandle, endpoint, statusCode);
                 } catch (final ProducerException e) {
                     throw new RuntimeException(e);
                 }
@@ -318,7 +320,8 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
             final long timeout,
             @Nullable final byte[] authData,
             final int authType,
-            final long customData) throws ProducerException {
+            final long streamHandle,
+            final KinesisVideoProducerStream stream) throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
         final long delay = calculateRelativeServiceCallAfter(callAfter);
@@ -363,7 +366,8 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
                 try {
                     kinesisVideoProducer.getStreamingTokenResult(
-                            customData,
+                            stream,
+                            streamHandle,
                             serializedCredentials,
                             expiration,
                             statusCode);
@@ -388,7 +392,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
             final long timeout,
             @Nullable final byte[] authData,
             final int authType,
-            final long customData) throws ProducerException {
+            final KinesisVideoProducerStream kinesisVideoProducerStream) throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
         final long delay = calculateRelativeServiceCallAfter(callAfter);
@@ -396,14 +400,6 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         final Runnable task = new Runnable() {
             @Override
             public void run() {
-                // find the right stream
-                KinesisVideoProducerStream kinesisVideoProducerStream = null;
-                for (final StreamingInfo streamingInfo : mStreams) {
-                    if (streamingInfo.getStream().getStreamHandle() == customData) {
-                        kinesisVideoProducerStream = streamingInfo.getStream();
-                        break;
-                    }
-                }
 
                 if (kinesisVideoProducerStream == null) {
                     throw new IllegalStateException("Couldn't find the correct stream");
@@ -448,7 +444,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
                 try {
                     log.info("putStreamResult uploadHandle " + clientUploadHandle + " status " + statusCode);
-                    kinesisVideoProducer.putStreamResult(customData, clientUploadHandle, statusCode);
+                    kinesisVideoProducer.putStreamResult(kinesisVideoProducerStream, clientUploadHandle, statusCode);
                 } catch (final ProducerException e) {
                     throw new RuntimeException(e);
                 }
@@ -465,7 +461,8 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                             final long timeout,
                             @Nullable final byte[] authData,
                             final int authType,
-                            final long customData) throws ProducerException {
+                            final long streamHandle,
+                            final KinesisVideoProducerStream stream) throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
         final long delay = calculateRelativeServiceCallAfter(callAfter);
@@ -502,7 +499,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 }
 
                 try {
-                    kinesisVideoProducer.tagResourceResult(customData, statusCode);
+                    kinesisVideoProducer.tagResourceResult(stream, streamHandle, statusCode);
                 } catch (final ProducerException e) {
                     throw new RuntimeException(e);
                 }

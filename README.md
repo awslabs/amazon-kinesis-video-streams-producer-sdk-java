@@ -132,6 +132,9 @@ export LD_LIBRARY_PATH=/<YOUR_PRODUCER_SDK_CPP_DOWNLOAD>/amazon-kinesis-video-st
 This should resolve native library loading issues.
 
 ## Release Notes
+### Release 1.9.3 (12 March 2019)
+* Bug fix to avoid crash due to access to freed native stream object.
+
 ### Release 1.9.2 (21 Feburary 2019)
 * Bug fix for broken MKV generated due to difference between trackInfoType in Java and C layer.
 
@@ -139,20 +142,20 @@ This should resolve native library loading issues.
 * Bug fix for credentials not rotating issue when given credentials expire in less than 40 minutes.
 * Add audio video sample to support injesting multiple track data into Kinesis Video.
 
-### Release 1.9.0 (08 Feburary 2019)
+### Release 1.9.0 (8 Feburary 2019)
 * Bug fix for KinesisVideoClient.unregisterMediaSource() accessing to freed native object issue.
 * Add KinesisVideoClient.freeMediaSource() clean-up function to handle async behavior.
 
-### Release 1.8.0 (25th January 2019)
+### Release 1.8.0 (25 January 2019)
 * Fix duplicate stream error after unregistering media source when service call failed
 * Fix inputstream not closing after stopSync issue
 * Updating the name and description of Java SDK to publish in maven
 
-### Release 1.7.0 (3rd December 2018)
+### Release 1.7.0 (3 December 2018)
 * Added support for uploading files(offline mode) to Kinesis Video Stream
 * Additional fixes
 
-### Release 1.6.0 (3rd December 2018)
+### Release 1.6.0 (3 December 2018)
 * Remove streamName parameter from KinesisVideoClient.registerMediaSource() as MediaSource already has the stream name in StreamInfo.
 * Add KinesisVideoClient.unregisterMediaSource() to remove MediaSource to KinesisVideoProducerStream binding from KinesisVideoClient. Customers can use unregisterMediaSource() after they stop streaming, so MediaSource data will not to be sent to Kinesis Video Streams.
 * Add getStreamInfo() to MediaSource instead of MediaSourceConfiguration. If customers have implemented their own MediaSource and MediaSourceConfiguration, they would need to provide stream information via MediaSource.getStreamInfo(). The MediaSourceConfiguration.getStreamInfo() will not work.
@@ -184,17 +187,17 @@ This should resolve native library loading issues.
  * BlockingAckConsumer
  * DefaultServiceCallbacksImpl
 
-### Release 1.5.0 (24th August 2018)
+### Release 1.5.0 (24 August 2018)
 * Windows native library available for Producer SDK
 * Intermittent producer support
 * Per-stream customized callback support
 
-### Release 1.3.1 (23rd July 2018)
+### Release 1.3.1 (23 July 2018)
 
 * Add reset connection function.
 * Fix key frame data-flag matching issue which could cause parsing issue in decoding process.
 
-### Release 1.3.0 (15th March 2018)
+### Release 1.3.0 (15 March 2018)
 
 * Provide pre-built KinesisVideoProducerJNI library for Mac (x64), Ubuntu (x64) and Raspian (x86).
 * Remove Lombok dependency on Java Producer SDK.

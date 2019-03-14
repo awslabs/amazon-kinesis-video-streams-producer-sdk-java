@@ -67,7 +67,8 @@ public interface ServiceCallbacks
      * @param timeout - Time out for the call - 100ns
      * @param authData - Authentication bits
      * @param authType - Authentication type - this is the AUTH_INFO_TYPE defined in /src/client/Include.h
-     * @param customData - Custom data to use to call the event functions
+     * @param streamHandle - stream handle returned by PIC
+     * @param stream - stream object for the result event callback
      * @throws ProducerException
      */
     void describeStream(final @Nonnull String streamName,
@@ -75,7 +76,8 @@ public interface ServiceCallbacks
             long timeout,
             final @Nullable byte[] authData,
             int authType,
-            long customData) throws ProducerException;
+            long streamHandle,
+            KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
      * Schedules a call to get streaming endpoint
@@ -85,16 +87,18 @@ public interface ServiceCallbacks
      * @param timeout - Time out for the call - 100ns
      * @param authData - Authentication bits
      * @param authType - Authentication type - this is the AUTH_INFO_TYPE defined in /src/client/Include.h
-     * @param customData - Custom data to use to call the event functions
+     * @param streamHandle - stream handle returned by PIC
+     * @param stream - stream object for the result event callback
      * @throws ProducerException
      */
     void getStreamingEndpoint(final @Nonnull String streamName,
-            final @Nonnull String apiName,
-            long callAfter,
-            long timeout,
-            final @Nullable byte[] authData,
-            int authType,
-            long customData) throws ProducerException;
+                              final @Nonnull String apiName,
+                              long callAfter,
+                              long timeout,
+                              final @Nullable byte[] authData,
+                              int authType,
+                              long streamHandle,
+                              KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
      * Schedules a call to get streaming token
@@ -103,15 +107,17 @@ public interface ServiceCallbacks
      * @param timeout - Time out for the call - 100ns
      * @param authData - Authentication bits
      * @param authType - Authentication type - this is the AUTH_INFO_TYPE defined in /src/client/Include.h
-     * @param customData - Custom data to use to call the event functions
+     * @param streamHandle - stream handle returned by PIC
+     * @param stream - stream object for the result event callback
      * @throws ProducerException
      */
     void getStreamingToken(final @Nonnull String streamName,
-            long callAfter,
-            long timeout,
-            final @Nullable byte[] authData,
-            int authType,
-            long customData) throws ProducerException;
+                           long callAfter,
+                           long timeout,
+                           final @Nullable byte[] authData,
+                           int authType,
+                           long streamHandle,
+                           KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
      * Schedules a call to put stream API
@@ -125,7 +131,7 @@ public interface ServiceCallbacks
      * @param timeout - Time out for the call - 100ns
      * @param authData - Authentication bits
      * @param authType - Authentication type - this is the AUTH_INFO_TYPE defined in /src/client/Include.h
-     * @param customData - Custom data to use to call the event functions
+     * @param stream - stream object for the result event callback
      * @throws ProducerException
      */
     void putStream(final @Nonnull String streamName,
@@ -138,7 +144,7 @@ public interface ServiceCallbacks
             long timeout,
             final @Nullable byte[] authData,
             int authType,
-            long customData) throws ProducerException;
+            KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
      * Schedules a call to tag resource API
@@ -148,7 +154,8 @@ public interface ServiceCallbacks
      * @param timeout - Time out for the call - 100ns
      * @param authData - Authentication bits
      * @param authType - Authentication type - this is the AUTH_INFO_TYPE defined in /src/client/Include.h
-     * @param customData - Custom data to use to call the event functions
+     * @param streamHandle - stream handle returned by PIC
+     * @param stream - stream object for the result event callback
      * @throws ProducerException
      */
     void tagResource(final @Nonnull String resourceArn,
@@ -157,7 +164,8 @@ public interface ServiceCallbacks
             long timeout,
             final @Nullable byte[] authData,
             int authType,
-            long customData) throws ProducerException;
+            long streamHandle,
+            KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
      * Schedules a call to create device
