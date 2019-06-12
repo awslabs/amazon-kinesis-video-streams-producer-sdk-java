@@ -2,7 +2,7 @@
 
 ## License
 
-This library is licensed under the Amazon Software License.
+This library is licensed under the Apache License, 2.0. 
 
 ## Introduction
 
@@ -14,7 +14,7 @@ The Amazon Kinesis Video Streams Producer SDK Java makes it easy to build an on-
 
 * [Developer Guide](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-sdk-javaapi.html) - For in-depth getting started and usage information.
 * [Release Notes](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/releases) - To see the latest features, bug fixes, and changes in the SDK
-* [Issues](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues) - Report issues and submit pull requests (see [Amazon Software License 1.0](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp/blob/master/LICENSE))
+* [Issues](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues) - Report issues and submit pull requests
 
 
 ### Prerequisites
