@@ -141,7 +141,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
         mediaSource.stop();
         super.unregisterMediaSource(mediaSource);
 
-        final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.get(mediaSource);;
+        final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.remove(mediaSource);
         try {
             // The following call will blocked till the stopped event completes
             producerStream.stopStreamSync();
@@ -156,7 +156,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
         Preconditions.checkNotNull(mediaSource);
         super.freeMediaSource(mediaSource);
 
-        final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.get(mediaSource);
+        final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.remove(mediaSource);
         try {
             // The following call will not blocked during the stopped event
             producerStream.streamClosed(INVALID_UPLOAD_HANDLE_VALUE);
@@ -169,13 +169,17 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
     @Override
     public void stopAllMediaSources() throws KinesisVideoException {
         super.stopAllMediaSources();
-        for (final MediaSource mediaSource : mMediaSources) {
-            final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.get(mediaSource);
-            try {
-                producerStream.stopStreamSync();
-            } catch (final KinesisVideoException e) {
-                mLog.exception(e, "Failed to stop media source %s due to Exception ", mediaSource);
+        try {
+            for (final MediaSource mediaSource : mMediaSources) {
+                final KinesisVideoProducerStream producerStream = mMediaSourceToStreamMap.get(mediaSource);
+                try {
+                    producerStream.stopStreamSync();
+                } catch (final KinesisVideoException e) {
+                    mLog.exception(e, "Failed to stop media source %s due to Exception ", mediaSource);
+                }
             }
+        } finally {
+            mMediaSourceToStreamMap.clear();
         }
     }
 

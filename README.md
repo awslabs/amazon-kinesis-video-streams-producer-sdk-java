@@ -14,7 +14,7 @@ The Amazon Kinesis Video Streams Producer SDK Java makes it easy to build an on-
 
 * [Developer Guide](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-sdk-javaapi.html) - For in-depth getting started and usage information.
 * [Release Notes](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/releases) - To see the latest features, bug fixes, and changes in the SDK
-* [Issues](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues) - Report issues and submit pull requests
+* [Issues](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues) - Report issues and submit pull requests 
 
 
 ### Prerequisites
@@ -132,6 +132,13 @@ export LD_LIBRARY_PATH=/<YOUR_PRODUCER_SDK_CPP_DOWNLOAD>/amazon-kinesis-video-st
 This should resolve native library loading issues.
 
 ## Release Notes
+### Release 1.9.4 (9 July 2019)
+* License update: KVS SDK is under Apache 2.0 license now.
+* Stablization updates in C layer.
+* Added internal retry logic to handle error case that SDK can recover, i.e. network unstability.
+* Skip over error fragments - SDK will continue skip any invalid fragments are ingested through SDK earlier and continue streaming.
+* Automatic CPD (codec private data) extraction from the stream when CPD is part of the first H264 AnnexB frame.
+
 ### Release 1.9.3 (12 March 2019)
 * Bug fix to avoid crash due to access to freed native stream object.
 

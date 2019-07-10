@@ -16,6 +16,16 @@ import javax.annotation.Nonnull;
 
 public class KinesisVideoFrame {
     /**
+     * Current version for the structure as defined in the native code
+     */
+    public static final int FRAME_CURRENT_VERSION = 0;
+
+    /**
+     * Version of frame structure
+     */
+    private final int mVersion;
+
+    /**
      * Index of the frame
      */
     private final int mIndex;
@@ -53,6 +63,7 @@ public class KinesisVideoFrame {
 
     public KinesisVideoFrame(int index, int flags, long decodingTs, long presentationTs, long duration,
             @Nonnull ByteBuffer data, long trackId) {
+        mVersion = FRAME_CURRENT_VERSION;
         mIndex = index;
         mFlags = flags;
         mDecodingTs = decodingTs;
@@ -119,5 +130,9 @@ public class KinesisVideoFrame {
                 .append(", mPresentationTs=").append(mPresentationTs).append(", mDuration=").append(mDuration)
                 .append(", mData=").append(mData).append(", mTrackId=").append(mTrackId).append("}")
                 .toString();
+    }
+
+    public int getVersion() {
+        return mVersion;
     }
 }

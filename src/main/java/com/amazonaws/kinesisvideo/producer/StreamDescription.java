@@ -9,7 +9,7 @@ public class StreamDescription {
     /**
      * Current version for the structure as defined in the native code
      */
-    public static final int STREAM_DESCRIPTION_CURRENT_VERSION = 0;
+    public static final int STREAM_DESCRIPTION_CURRENT_VERSION = 1;
 
     private final int mVersion;
     private final String mDeviceName;
@@ -19,8 +19,16 @@ public class StreamDescription {
     private final String mStreamArn;
     private final StreamStatus mStreamStatus;
     private final long mCreationTime;
+    private final long mRetention;
+    private final String mKmsKeyId;
 
     public StreamDescription(int version, String deviceName, String streamName, String contentType, String updateVersion, String streamArn, StreamStatus streamStatus, long creationTime) {
+        this(version, deviceName, streamName, contentType, updateVersion, streamArn, streamStatus, creationTime, 0,"");
+    }
+
+    public StreamDescription(int version, String deviceName, String streamName, String contentType,
+                             String updateVersion, String streamArn, StreamStatus streamStatus, long creationTime,
+                             long retention, String kmsKeyId) {
         this.mVersion = version;
         this.mDeviceName = deviceName;
         this.mStreamName = streamName;
@@ -29,6 +37,8 @@ public class StreamDescription {
         this.mStreamArn = streamArn;
         this.mStreamStatus = streamStatus;
         this.mCreationTime = creationTime;
+        this.mRetention = retention;
+        this.mKmsKeyId = kmsKeyId;
     }
 
     public int getVersion() {
@@ -61,5 +71,13 @@ public class StreamDescription {
 
     public long getCreationTime() {
         return mCreationTime;
+    }
+
+    public long getRetention() {
+        return mRetention;
+    }
+
+    public String getKmsKeyId() {
+        return mKmsKeyId;
     }
 }
