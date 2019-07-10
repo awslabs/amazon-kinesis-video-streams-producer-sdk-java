@@ -4,3 +4,6 @@
 .settings
 /eclipse-bin/
 .idea
+*.key
+*.gpg
+cm-file

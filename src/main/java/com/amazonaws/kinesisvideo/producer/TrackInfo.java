@@ -4,8 +4,19 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nullable;
 
+/**
+ * Track information object.
+ *
+ * NOTE: This should follow the structure defined in /mkvgen/Include.h
+ *
+ * NOTE: Suppressing Findbug error as this code will be accessed from native codebase.
+ */
 @SuppressFBWarnings("EI_EXPOSE_REP")
 public class TrackInfo {
+    public static final int TRACK_INFO_CURRENT_VERSION = 0;
+
+    private final int version;
+
     // Unique Identifier for TrackInfo
     private final long trackId;
 
@@ -23,11 +34,16 @@ public class TrackInfo {
 
     public TrackInfo(final long trackId, @Nullable final String codecId, @Nullable final String trackName,
                      @Nullable final byte[] codecPrivateData, final MkvTrackInfoType trackType) {
+        this.version = TRACK_INFO_CURRENT_VERSION;
         this.trackId = trackId;
         this.codecId = codecId;
         this.trackName = trackName;
         this.codecPrivateData = codecPrivateData;
         this.trackType = trackType;
+    }
+
+    public int getVersion() {
+        return version;
     }
 
     public long getTrackId() {

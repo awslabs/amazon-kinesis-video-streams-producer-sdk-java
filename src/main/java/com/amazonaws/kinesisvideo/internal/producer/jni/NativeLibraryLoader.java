@@ -10,7 +10,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * Static helper for loading libraries
  */
 @ThreadSafe
-class NativeLibraryLoader {
+public class NativeLibraryLoader {
 
     private final Log mLog;
 
