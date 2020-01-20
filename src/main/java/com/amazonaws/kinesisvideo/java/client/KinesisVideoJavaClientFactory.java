@@ -17,6 +17,7 @@ import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.Tag;
 import com.amazonaws.kinesisvideo.storage.DefaultStorageCallbacks;
 import com.amazonaws.regions.Regions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.Executors;
@@ -75,7 +76,8 @@ public final class KinesisVideoJavaClientFactory {
                 .withStorageCallbacks(new DefaultStorageCallbacks())
                 .build();
 
-        final ScheduledExecutorService executor = Executors.newScheduledThreadPool(NUMBER_OF_THREADS_IN_POOL);
+        final ScheduledExecutorService executor = Executors.newScheduledThreadPool(NUMBER_OF_THREADS_IN_POOL,
+                new ThreadFactoryBuilder().setNameFormat("KVS-JavaClientExecutor-%d").build());
 
         return createKinesisVideoClient(configuration,
                 getDeviceInfo(),

@@ -48,7 +48,7 @@ class BlockingAckConsumer implements Consumer<InputStream> {
             final int responseCode = responseStatus.getStatusCode();
             switch (responseCode) {
                 case HTTP_OK:
-                    log.debug(String.format("PutMedia call for stream %s return OK with request id %s",
+                    log.info(String.format("PutMedia call for stream %s return OK with request id %s",
                             kinesisVideoProducerStream.getStreamName(), ChunkDecoder.decodeHeaders(inputStream)));
                     break;
                 case HTTP_BAD_REQUEST:

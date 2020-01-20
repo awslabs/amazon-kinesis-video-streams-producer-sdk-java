@@ -118,20 +118,25 @@ This will provide details on missing libraries during linking; If the output sho
 rm -rf ./kinesis-video-native-build/CMakeCache.txt ./kinesis-video-native-build/CMakeFiles
 
 ```
-and run `./install-script` again.
+and run `./java-install-script` again.
 
 ```
-./install-script
+./java-install-script
 
 ```
 Also, set the `LD_LIBRARY_PATH` as below
 ```
-export LD_LIBRARY_PATH=/<YOUR_PRODUCER_SDK_CPP_DOWNLOAD>/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build/downloads/local/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/<YOUR_PRODUCER_SDK_CPP_DOWNLOAD>/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build:$LD_LIBRARY_PATH
 ```
 
 This should resolve native library loading issues.
 
 ## Release Notes
+### Release 1.9.5 (16 Jan 2020)
+* Remove finalized() function and require explicit call on free() to avoid dangling finalized() causing memory leak.
+* Performance improvement on sending data in multiple ongoing stream in one client.
+* Fix stream information mis-alignment due to missing retention in describeStreamResult
+
 ### Release 1.9.4 (9 July 2019)
 * License update: KVS SDK is under Apache 2.0 license now.
 * Stablization updates in C layer.

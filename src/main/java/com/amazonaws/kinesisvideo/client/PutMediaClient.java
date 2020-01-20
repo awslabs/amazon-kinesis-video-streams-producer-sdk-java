@@ -39,7 +39,7 @@ public final class PutMediaClient {
     private static final String CONNECTION = "connection";
     private static final String KEEP_ALIVE = "keep-alive";
     private static final String USER_AGENT = "user-agent";
-    private static final int BUFFER_SIZE = 1024 * 1024; // 1MB
+    private static final int BUFFER_SIZE = 4096; // 4KB
     private static final double MILLI_TO_SEC = 1000;
     private static final int LOGGING_INTERVAL = 250; // Rougly every 10 seconds in 25 fps
     private final Builder mBuilder;

@@ -3,6 +3,8 @@ package com.amazonaws.kinesisvideo.java.mediasource.file;
 
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_CONTENT_TYPE;
+
 public class ImageFileMediaSourceConfiguration implements MediaSourceConfiguration {
 
     private final int fps;
@@ -10,6 +12,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
     private final String filenameFormat;
     private final int startFileIndex;
     private final int endFileIndex;
+    private final String contentType;
 
     public ImageFileMediaSourceConfiguration(final Builder builder) {
         this.fps = builder.fps;
@@ -17,6 +20,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         this.filenameFormat = builder.filenameFormat;
         this.startFileIndex = builder.startFileIndex;
         this.endFileIndex = builder.endFileIndex;
+        this.contentType = builder.contentType;
     }
 
     public int getFps() {
@@ -39,6 +43,10 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         return endFileIndex;
     }
 
+    public String getContentType() {
+        return contentType;
+    }
+
     @Override
     public String getMediaSourceType() {
         return null;
@@ -55,6 +63,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         private String filenameFormat;
         private int startFileIndex;
         private int endFileIndex;
+        private String contentType = VIDEO_CONTENT_TYPE;
 
         public Builder fps(final int fps) {
             this.fps = fps;
@@ -81,6 +90,11 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
 
         public Builder endFileIndex(final int index) {
             this.endFileIndex = index;
+            return this;
+        }
+
+        public Builder contentType(final String contentType) {
+            this.contentType = contentType;
             return this;
         }
 

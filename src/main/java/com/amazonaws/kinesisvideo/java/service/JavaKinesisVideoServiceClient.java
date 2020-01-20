@@ -43,6 +43,7 @@ import java.util.Date;
 import java.util.Map;
 
 import static com.amazonaws.ClientConfiguration.DEFAULT_MAX_CONNECTIONS;
+import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_AN_HOUR;
 import static com.amazonaws.util.StringUtils.isNullOrEmpty;
 
 public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceClient {
@@ -266,7 +267,8 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withDeviceName(deviceName)
                 .withMediaType(contentType)
                 .withKmsKeyId(isNullOrEmpty(kmsKeyId) ? null : kmsKeyId)
-                .withDataRetentionInHours((int) retentionPeriodInHours);
+                .withDataRetentionInHours((int) retentionPeriodInHours)
+                .withTags(null);
 
         log.debug("calling create stream: " + createStreamRequest.toString());
 
@@ -459,6 +461,8 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 result.getStreamInfo().getVersion(),
                 result.getStreamInfo().getStreamARN(),
                 StreamStatus.valueOf(result.getStreamInfo().getStatus()),
-                result.getStreamInfo().getCreationTime().getTime());
+                result.getStreamInfo().getCreationTime().getTime(),
+                result.getStreamInfo().getDataRetentionInHours() * HUNDREDS_OF_NANOS_IN_AN_HOUR,
+                result.getStreamInfo().getKmsKeyId());
     }
 }

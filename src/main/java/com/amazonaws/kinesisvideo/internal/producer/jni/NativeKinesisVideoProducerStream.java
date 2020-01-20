@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStream
 {
+    final static long TIMEOUT_IN_MS = 30000; // 30 seconds
     private class NativeDataInputStream extends InputStream {
         /**
          * Whether the stream has been closed
@@ -69,11 +70,11 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
 
             while (!mStreamClosed) {
                 synchronized (mMonitor) {
-                    while (!mDataAvailable) {
+                    while (!mDataAvailable && !mStreamClosed) {
                         try {
                             mLog.debug("no data for stream %s with uploadHandle %d, waiting", mStreamInfo.getName(),
                                     mUploadHandle);
-                            mMonitor.wait();
+                            mMonitor.wait(TIMEOUT_IN_MS);
                         } catch (final InterruptedException e) {
                             mLog.exception(e, "Waiting for the data availability with uploadHandle %d"
                                     + "threw an interrupted exception. Continuing...", mUploadHandle);
@@ -327,7 +328,26 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         try {
             awaitStopped();
         } catch (final ProducerException e) {
+            Exception storedException = null;
+            for (NativeDataInputStream inputStream : mInputStreamMap.values()) {
+                try {
+                    inputStream.close();
+                } catch (final IOException e1) {
+                    storedException = e1;
+                }
+            }
             mLog.exception(e, "Stopping stream threw an exception. Force stopping the input stream.");
+            if (storedException != null) {
+                throw new ProducerException(storedException);
+            }
+        } finally {
+            for (final InputStream stream : mInputStreamMap.values()) {
+                try {
+                    stream.close();
+                } catch (final IOException e) {
+                    mLog.exception(e);
+                }
+            }
         }
     }
 

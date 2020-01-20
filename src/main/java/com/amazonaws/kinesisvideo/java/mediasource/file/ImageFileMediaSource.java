@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.java.mediasource.file;
 
 import static com.amazonaws.kinesisvideo.producer.StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE;
+import static com.amazonaws.kinesisvideo.producer.StreamInfo.codecIdFromContentType;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_BITRATE;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_BUFFER_DURATION;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_GOP_DURATION;
@@ -18,8 +19,6 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.REQUEST_FRAGME
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RETENTION_ONE_HOUR;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.USE_FRAME_TIMECODES;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VERSION_ZERO;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_CODEC_ID;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_CONTENT_TYPE;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -83,11 +82,11 @@ public class ImageFileMediaSource implements MediaSource {
     }
 
     @Override
-    public StreamInfo getStreamInfo() {
+    public StreamInfo getStreamInfo() throws KinesisVideoException {
         return new StreamInfo(VERSION_ZERO,
                 streamName,
                 StreamInfo.StreamingType.STREAMING_TYPE_REALTIME,
-                VIDEO_CONTENT_TYPE,
+                imageFileMediaSourceConfiguration.getContentType(),
                 NO_KMS_KEY_ID,
                 RETENTION_ONE_HOUR,
                 NOT_ADAPTIVE,
@@ -98,7 +97,7 @@ public class ImageFileMediaSource implements MediaSource {
                 RELATIVE_TIMECODES,
                 REQUEST_FRAGMENT_ACKS,
                 RECOVER_ON_FAILURE,
-                VIDEO_CODEC_ID,
+                codecIdFromContentType(imageFileMediaSourceConfiguration.getContentType()),
                 "test-track",
                 DEFAULT_BITRATE,
                 imageFileMediaSourceConfiguration.getFps(),

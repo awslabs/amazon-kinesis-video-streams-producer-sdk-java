@@ -145,7 +145,9 @@ public class Log {
      *         Arguments
      */
     public void log(final LogLevel logLevel, final String template, final Object... args) {
-        log(logLevel, String.format(template, args));
+        if (logLevel.getLogLevel() >= mCurrentLogLevel.getLogLevel()) {
+            log(logLevel, String.format(template, args));
+        }
     }
 
     /**

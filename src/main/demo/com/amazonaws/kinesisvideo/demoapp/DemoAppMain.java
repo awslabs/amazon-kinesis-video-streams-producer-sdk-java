@@ -73,6 +73,7 @@ public final class DemoAppMain {
                         .filenameFormat(IMAGE_FILENAME_FORMAT)
                         .startFileIndex(START_FILE_INDEX)
                         .endFileIndex(END_FILE_INDEX)
+                        //.contentType("video/hevc") // for h265
                         .build();
         final ImageFileMediaSource mediaSource = new ImageFileMediaSource(STREAM_NAME);
         mediaSource.configure(configuration);

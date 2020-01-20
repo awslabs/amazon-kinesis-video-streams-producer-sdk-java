@@ -176,7 +176,7 @@ public class StreamInfo {
         }
 
         if (0 == lowerCaseContentType.compareTo("video/hevc")) {
-            return "V_MPEG4/ISO/AP";
+            return "V_MPEGH/ISO/HEVC";
         }
 
         if (0 == lowerCaseContentType.compareTo("video/mp4v-es")) {

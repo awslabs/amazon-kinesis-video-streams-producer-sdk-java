@@ -24,6 +24,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -184,13 +185,6 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         mKinesisVideoMetrics = new KinesisVideoMetrics();
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        if (isInitialized()) {
-            free();
-        }
-    }
-
     /**
      * Creates the underlying Kinesis Video client object
      * @param deviceInfo {@link DeviceInfo} object
@@ -285,11 +279,9 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     public KinesisVideoMetrics getMetrics() throws ProducerException
     {
         Preconditions.checkState(isInitialized());
-        synchronized (mSyncObject) {
-            getKinesisVideoMetrics(mClientHandle, mKinesisVideoMetrics);
+        getKinesisVideoMetrics(mClientHandle, mKinesisVideoMetrics);
 
-            return mKinesisVideoMetrics;
-        }
+        return mKinesisVideoMetrics;
     }
 
     /**
@@ -404,7 +396,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkState(isInitialized());
         synchronized (mSyncObject) {
             try {
-                final Collection<KinesisVideoProducerStream> streamCollection = mKinesisVideoHandleMap.values();
+                final Collection<KinesisVideoProducerStream> streamCollection =
+                        new HashSet<KinesisVideoProducerStream>(mKinesisVideoHandleMap.values());
                 for (final KinesisVideoProducerStream stream : streamCollection) {
 
                     // Free the stream
@@ -470,9 +463,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     {
         Preconditions.checkState(isInitialized());
 
-        synchronized (mSyncObject) {
-            getKinesisVideoStreamMetrics(mClientHandle, streamHandle, streamMetrics);
-        }
+        getKinesisVideoStreamMetrics(mClientHandle, streamHandle, streamMetrics);
     }
 
     /**
@@ -487,9 +478,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkState(isInitialized());
         Preconditions.checkNotNull(kinesisVideoFrame);
 
-        synchronized (mSyncObject) {
-            putKinesisVideoFrame(mClientHandle, streamHandle, kinesisVideoFrame);
-        }
+        putKinesisVideoFrame(mClientHandle, streamHandle, kinesisVideoFrame);
     }
 
     /**
@@ -508,9 +497,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkNotNull(metadataName);
         Preconditions.checkNotNull(metadataValue);
 
-        synchronized (mSyncObject) {
-            putKinesisVideoFragmentMetadata(mClientHandle, streamHandle, metadataName, metadataValue, persistent);
-        }
+        putKinesisVideoFragmentMetadata(mClientHandle, streamHandle, metadataName, metadataValue, persistent);
     }
 
     /**
@@ -525,9 +512,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkState(isInitialized());
         Preconditions.checkNotNull(kinesisVideoFragmentAck);
 
-        synchronized (mSyncObject) {
-            kinesisVideoStreamFragmentAck(mClientHandle, streamHandle, uploadHandle, kinesisVideoFragmentAck);
-        }
+        kinesisVideoStreamFragmentAck(mClientHandle, streamHandle, uploadHandle, kinesisVideoFragmentAck);
     }
 
     /**
@@ -542,9 +527,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkState(isInitialized());
         Preconditions.checkNotNull(kinesisVideoFragmentAck);
 
-        synchronized (mSyncObject) {
-            kinesisVideoStreamParseFragmentAck(mClientHandle, streamHandle, uploadHandle, kinesisVideoFragmentAck);
-        }
+        kinesisVideoStreamParseFragmentAck(mClientHandle, streamHandle, uploadHandle, kinesisVideoFragmentAck);
     }
 
     /**
@@ -571,10 +554,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkNotNull(fillBuffer);
         Preconditions.checkNotNull(readResult);
 
-        synchronized (mSyncObject) {
-            getKinesisVideoStreamData(mClientHandle, streamHandle, uploadHandle, fillBuffer, offset, length,
-                    readResult);
-        }
+        getKinesisVideoStreamData(mClientHandle, streamHandle, uploadHandle, fillBuffer, offset, length,
+                readResult);
     }
 
     /**
@@ -615,9 +596,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     @Nullable
     private AuthInfo getSecurityToken()
     {
-        synchronized (mCallbackSyncObject) {
-            return mAuthCallbacks.getSecurityToken();
-        }
+        return mAuthCallbacks.getSecurityToken();
     }
 
     /**
@@ -628,9 +607,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     @Nullable
     private String getDeviceFingerprint()
     {
-        synchronized (mCallbackSyncObject) {
-            return mAuthCallbacks.getDeviceFingerprint();
-        }
+        return mAuthCallbacks.getDeviceFingerprint();
     }
 
     /**
@@ -640,14 +617,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private void streamUnderflowReport(final long streamHandle) throws ProducerException
     {
-        synchronized (mCallbackSyncObject) {
-            if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
-            }
-
-            final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
-            kinesisVideoProducerStream.streamUnderflowReport();
+        if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
+            throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
         }
+        final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        kinesisVideoProducerStream.streamUnderflowReport();
     }
 
     /**
@@ -655,23 +629,19 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private void storageOverflowPressure(final long remainingSize)
     {
-        synchronized (mCallbackSyncObject) {
-            mStorageCallbacks.storageOverflowPressure(remainingSize);
-        }
+        mStorageCallbacks.storageOverflowPressure(remainingSize);
     }
 
     /**
      * Reports buffer temporal overflow pressure
      */
     private void bufferDurationOverflowPressure(final long streamHandle, final long remainDuration) throws ProducerException {
-        synchronized (mCallbackSyncObject) {
-            if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
-            }
-
-            final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
-            kinesisVideoProducerStream.bufferDurationOverflowPressure(remainDuration);
+        if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
+            throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
         }
+
+        final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        kinesisVideoProducerStream.bufferDurationOverflowPressure(remainDuration);
     }
 
     /**
@@ -679,14 +649,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private void streamLatencyPressure(final long streamHandle, final long duration) throws ProducerException
     {
-        synchronized (mCallbackSyncObject) {
-            if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
-            }
-
-            final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
-            kinesisVideoProducerStream.streamLatencyPressure(duration);
+        if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
+            throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
         }
+
+        final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        kinesisVideoProducerStream.streamLatencyPressure(duration);
     }
 
     /**
@@ -694,14 +662,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private void streamConnectionStale(final long streamHandle, final long lastAckDuration) throws ProducerException
     {
-        synchronized (mCallbackSyncObject) {
-            if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
-            }
-
-            final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
-            kinesisVideoProducerStream.streamConnectionStale(lastAckDuration);
+        if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
+            throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
         }
+
+        final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        kinesisVideoProducerStream.streamConnectionStale(lastAckDuration);
     }
 
     /**
@@ -714,14 +680,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     private void fragmentAckReceived(final long streamHandle, final long uploadHandle, @Nonnull final KinesisVideoFragmentAck fragmentAck)
             throws ProducerException
     {
-        synchronized (mCallbackSyncObject) {
-            if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
-            }
-
-            final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
-            kinesisVideoProducerStream.fragmentAckReceived(uploadHandle, fragmentAck);
+        if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
+            throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
         }
+
+        final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        kinesisVideoProducerStream.fragmentAckReceived(uploadHandle, fragmentAck);
     }
 
     /**
@@ -729,14 +693,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private void droppedFrameReport(final long streamHandle, final long frameTimecode) throws ProducerException
     {
-        synchronized (mCallbackSyncObject) {
-            if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
-            }
-
-            final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
-            kinesisVideoProducerStream.droppedFrameReport(frameTimecode);
+        if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
+            throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
         }
+
+        final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        kinesisVideoProducerStream.droppedFrameReport(frameTimecode);
     }
 
     /**
@@ -744,14 +706,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private void droppedFragmentReport(final long streamHandle, final long fragmentTimecode) throws ProducerException
     {
-        synchronized (mCallbackSyncObject) {
-            if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
-            }
-
-            final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
-            kinesisVideoProducerStream.droppedFragmentReport(fragmentTimecode);
+        if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
+            throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
         }
+
+        final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        kinesisVideoProducerStream.droppedFragmentReport(fragmentTimecode);
     }
 
     /**
@@ -759,14 +719,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private void streamErrorReport(final long streamHandle, final long uploadHandle, final long fragmentTimecode, final long statusCode) throws ProducerException
     {
-        synchronized (mCallbackSyncObject) {
-            if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
-            }
-
-            final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
-            kinesisVideoProducerStream.streamErrorReport(uploadHandle, fragmentTimecode, statusCode);
+        if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
+            throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
         }
+
+        final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        kinesisVideoProducerStream.streamErrorReport(uploadHandle, fragmentTimecode, statusCode);
     }
 
     /**
@@ -774,14 +732,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private void streamDataAvailable(final long streamHandle, final String streamName, final long uploadHandle, final long duration, final long availableSize) throws ProducerException
     {
-        synchronized (mCallbackSyncObject) {
-            if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
-            }
-
-            final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
-            kinesisVideoProducerStream.streamDataAvailable(uploadHandle, duration, availableSize);
+        if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
+            throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
         }
+
+        final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        kinesisVideoProducerStream.streamDataAvailable(uploadHandle, duration, availableSize);
     }
 
     /**
@@ -896,15 +852,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             final int authType,
             final long streamHandle) throws ProducerException
     {
-
-        synchronized (mCallbackSyncObject) {
-            try {
-                mServiceCallbacks.describeStream(streamName, callAfter, timeout, authData, authType,
-                        streamHandle, mKinesisVideoHandleMap.get(streamHandle));
-                return STATUS_SUCCESS;
-            } catch (final ProducerException e) {
-                return e.getStatusCode();
-            }
+        try {
+            mServiceCallbacks.describeStream(streamName, callAfter, timeout, authData, authType,
+                    streamHandle, mKinesisVideoHandleMap.get(streamHandle));
+            return STATUS_SUCCESS;
+        } catch (final ProducerException e) {
+            return e.getStatusCode();
         }
     }
 

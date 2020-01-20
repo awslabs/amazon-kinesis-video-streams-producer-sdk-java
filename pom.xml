@@ -15,7 +15,7 @@
     <groupId>com.amazonaws</groupId>
     <artifactId>amazon-kinesis-video-streams-producer-sdk-java</artifactId>
     <name>Amazon Kinesis Video Streams Producer SDK Java</name>
-    <version>1.9.3</version>
+    <version>1.9.5</version>
     <description>The Amazon Kinesis Video Streams Producer SDK for Java enables Java developers to ingest data into
         Amazon Kinesis Video.
     </description>
@@ -52,7 +52,7 @@
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-bom</artifactId>
-                <version>1.11.487</version>
+                <version>1.11.602</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

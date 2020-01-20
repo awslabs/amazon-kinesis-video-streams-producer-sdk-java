@@ -56,9 +56,9 @@ public class NativeLibraryLoader {
                 mLog.verbose("Success! Directly loaded native library %s.", libraryFullPath);
                 return true;
             } catch (final UnsatisfiedLinkError e) {
-                mLog.warn("Unsatisfied link error. Directly loading native library %s.", libraryFullPath);
+                mLog.debug("Unsatisfied link error. Directly loading native library %s.", libraryFullPath);
             } catch (final SecurityException e) {
-                mLog.warn("Security exception. Directly loading native library %s.", libraryFullPath);
+                mLog.debug("Security exception. Directly loading native library %s.", libraryFullPath);
             }
         }
 
