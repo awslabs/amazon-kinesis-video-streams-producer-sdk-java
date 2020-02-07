@@ -66,7 +66,7 @@ $ mvn clean compile assembly:single
 
 Start the demo app
 ```
-$ java -classpath target/kinesisvideo-java-demo-1.0-SNAPSHOT-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Djava.library.path=<NativeLibraryPath> com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+$ java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.9.5-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Djava.library.path=<NativeLibraryPath> com.amazonaws.kinesisvideo.demoapp.DemoAppMain
 
 ```
 
