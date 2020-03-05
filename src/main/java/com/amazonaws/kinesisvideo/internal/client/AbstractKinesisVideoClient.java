@@ -143,6 +143,11 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
         mMediaSources.add(mediaSource);
     }
 
+    @Override
+    public void registerMediaSourceAsync(@Nonnull final MediaSource mediaSource) throws KinesisVideoException {
+        mMediaSources.add(mediaSource);
+    }
+
     /**
      * Un-Register a media source. The media source will stop binding to kinesis video producer stream
      * and it cannot send data via producer stream afterwards until register again.

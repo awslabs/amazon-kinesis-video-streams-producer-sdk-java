@@ -136,6 +136,21 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
     }
 
     @Override
+    public void registerMediaSourceAsync(@Nonnull final MediaSource mediaSource) throws KinesisVideoException {
+        Preconditions.checkNotNull(mediaSource);
+        StreamCallbacks streamCallbacks = mediaSource.getStreamCallbacks();
+        if (streamCallbacks == null) {
+            streamCallbacks = mStreamCallbacks;
+        }
+
+        final KinesisVideoProducerStream producerStream = kinesisVideoProducer.createStream(mediaSource.getStreamInfo(), streamCallbacks);
+        mediaSource.initialize(new ProducerStreamSink(producerStream));
+        mServiceCallbacks.addStream(producerStream);
+        mMediaSourceToStreamMap.put(mediaSource, producerStream);
+        super.registerMediaSource(mediaSource);
+    }
+
+    @Override
     public void unregisterMediaSource(@Nonnull final MediaSource mediaSource) throws KinesisVideoException {
         Preconditions.checkNotNull(mediaSource);
         mediaSource.stop();
