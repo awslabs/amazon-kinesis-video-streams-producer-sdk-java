@@ -137,6 +137,6 @@ public class ImageFrameSource {
 
 
     private void stopFrameGenerator() {
-
+        executor.shutdown();
     }
 }

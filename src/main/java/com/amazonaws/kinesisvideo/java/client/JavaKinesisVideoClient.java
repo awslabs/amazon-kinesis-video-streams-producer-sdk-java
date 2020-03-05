@@ -4,6 +4,7 @@ import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.internal.client.NativeKinesisVideoClient;
 import com.amazonaws.kinesisvideo.common.logging.Log;
+import com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.internal.service.DefaultServiceCallbacksImpl;
@@ -43,12 +44,25 @@ public final class JavaKinesisVideoClient extends NativeKinesisVideoClient {
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor,
             @Nonnull final StreamCallbacks streamCallbacks) {
+        this(log,
+                configuration,
+                new DefaultServiceCallbacksImpl(log, executor, configuration, serviceClient),
+                executor,
+                streamCallbacks);
+    }
+
+    public JavaKinesisVideoClient(
+            @Nonnull final Log log,
+            @Nonnull final KinesisVideoClientConfiguration configuration,
+            @Nonnull final ServiceCallbacks serviceCallbacks,
+            @Nonnull final ScheduledExecutorService executor,
+            @Nonnull final StreamCallbacks streamCallbacks) {
         super(log,
                 new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
                         executor,
                         log),
                 configuration.getStorageCallbacks(),
-                new DefaultServiceCallbacksImpl(log, executor, configuration, serviceClient),
+                serviceCallbacks,
                 streamCallbacks);
     }
 }

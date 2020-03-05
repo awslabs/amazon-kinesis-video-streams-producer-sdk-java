@@ -7,3 +7,4 @@
 *.key
 *.gpg
 cm-file
+.DS_Store

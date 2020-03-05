@@ -53,6 +53,16 @@ public interface KinesisVideoClient {
     void registerMediaSource(final MediaSource mediaSource) throws KinesisVideoException;
 
     /**
+     * Register a media source ASYNC. The media source will be binding to kinesis video producer stream
+     * via CreateStream and send out data from media source.
+     * Async call to create the stream and bind to media source.
+     *
+     * @param mediaSource media source binding to kinesis video producer stream
+     * @throws KinesisVideoException if unable to register media source.
+     */
+    void registerMediaSourceAsync(final MediaSource mediaSource) throws KinesisVideoException;
+
+    /**
      * Un-Register a media source. The media source will stop binding to kinesis video producer stream
      * and it cannot send data via producer stream afterwards until register again.
      * Sync call and could be block for 15 seconds if error happens when stopping stream.

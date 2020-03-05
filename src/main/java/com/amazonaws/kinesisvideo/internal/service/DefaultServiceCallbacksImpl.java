@@ -28,19 +28,19 @@ import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.ACCESS_DENIED;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_ACCESS_DENIED;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_BAD_REQUEST;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_NOT_FOUND;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_OK;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_RESOURCE_IN_USE;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RESOURCE_IN_USE;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RESOURCE_NOT_FOUND;
+
 /**
  * Implementation of {@link ServiceCallbacks}
  */
 public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
-    private static final int HTTP_OK = 200;
-    private static final int HTTP_BAD_REQUEST = 400;
-    private static final int HTTP_NOT_FOUND = 404;
-    private static final int HTTP_RESOURCE_IN_USE = 10003;
-    private static final int HTTP_ACCESS_DENIED = 403;
-    private static final String RESOURCE_NOT_FOUND = "ResourceNotFoundException";
-    private static final String RESOURCE_IN_USE = "ResourceInUseException";
-    private static final String ACCESS_DENIED = "AccessDeniedException";
-
     private class CompletionCallback implements Consumer<Exception> {
         private final KinesisVideoProducerStream stream;
         private final long uploadHandle;
@@ -103,27 +103,27 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     /**
      * Task executor to schedule long-running tasks in an async way.
      */
-    private final ScheduledExecutorService executor;
+    protected final ScheduledExecutorService executor;
 
     /**
      * Kinesis video service client to make the service calls with.
      */
-    private final KinesisVideoServiceClient kinesisVideoServiceClient;
+    protected final KinesisVideoServiceClient kinesisVideoServiceClient;
 
     /**
      * Log object to use
      */
-    private final Log log;
+    protected final Log log;
 
     /**
      * Store the configuration
      */
-    private final KinesisVideoClientConfiguration configuration;
+    protected final KinesisVideoClientConfiguration configuration;
 
     /**
      * Implementation of the {@link KinesisVideoProducer} object.
      */
-    private KinesisVideoProducer kinesisVideoProducer = null;
+    protected KinesisVideoProducer kinesisVideoProducer = null;
 
     /**
      * The list of streams for which the callbacks can be applied.
@@ -590,7 +590,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 System.currentTimeMillis() * Time.NANOS_IN_A_MILLISECOND);
     }
 
-    private long getUploadHandle() {
+    private synchronized long getUploadHandle() {
         return uploadHandle++;
     }
 
@@ -624,7 +624,8 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     }
 
     @Nullable
-    private static KinesisVideoCredentialsProvider getCredentialsProvider(@Nullable final byte[] authData, @Nonnull final Log log) {
+    protected static KinesisVideoCredentialsProvider getCredentialsProvider(@Nullable final byte[] authData,
+                                                                    @Nonnull final Log log) {
         if (null == authData) {
             log.warn("NULL credentials have been returned by the credentials provider.");
             return null;
@@ -661,7 +662,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
      * @param e {@link Throwable} which was thrown by the service client
      * @return status code corresponding to the exception
      */
-    private static int getStatusCodeFromException(@Nullable final Throwable e) {
+    protected static int getStatusCodeFromException(@Nullable final Throwable e) {
         // TODO: Implement this properly
         if (e == null) {
             return HTTP_OK;

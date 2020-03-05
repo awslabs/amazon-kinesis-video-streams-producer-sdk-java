@@ -748,7 +748,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         synchronized (mCallbackSyncObject) {
             synchronized (mSyncObject) {
                 if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                    throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
+                    mLog.info("Stream Ready for non-existing stream handle " + streamHandle);
+                    return;
                 }
 
                 final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);

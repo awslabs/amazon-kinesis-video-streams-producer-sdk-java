@@ -7,6 +7,15 @@ import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_SE
  * All the time unit used in this class is 100 ns (minimum unit used in producer SDK)
  */
 public final class StreamInfoConstants {
+    public static final int HTTP_OK = 200;
+    public static final int HTTP_BAD_REQUEST = 400;
+    public static final int HTTP_NOT_FOUND = 404;
+    public static final int HTTP_RESOURCE_IN_USE = 10003;
+    public static final int HTTP_ACCESS_DENIED = 403;
+    public static final String RESOURCE_NOT_FOUND = "ResourceNotFoundException";
+    public static final String RESOURCE_IN_USE = "ResourceInUseException";
+    public static final String ACCESS_DENIED = "AccessDeniedException";
+
     public static final boolean NOT_ADAPTIVE = false;
     public static final boolean KEYFRAME_FRAGMENTATION = true;
     public static final boolean SDK_GENERATES_TIMECODES = false;
