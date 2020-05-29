@@ -132,6 +132,13 @@ export LD_LIBRARY_PATH=/<YOUR_PRODUCER_SDK_CPP_DOWNLOAD>/amazon-kinesis-video-st
 This should resolve native library loading issues.
 
 ## Release Notes
+
+### Release 1.10.0 (29 May 2020)
+* Updated docker scripts to incorporate the changes in producer SDK
+* Provision of `CachedInfoMultiAuthServiceCallbacks` which implements caching layer and per-stream auth. Useful in the following scenarios:
+  - A single client object is used for multiple streams that are intended for different accounts
+  - For service proxy type of scenarios
+
 ### Release 1.9.5 (16 Jan 2020)
 * Remove finalized() function and require explicit call on free() to avoid dangling finalized() causing memory leak.
 * Performance improvement on sending data in multiple ongoing stream in one client.
