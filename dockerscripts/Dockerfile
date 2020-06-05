@@ -18,10 +18,6 @@ ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64/
 WORKDIR /opt
 # Checkout latest Kinesis Video Streams Producer SDK (CPP)
 RUN git clone https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp.git
-# Uncomment next two lines to debug any custom  install-script
-#WORKDIR /opt/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build/
-#COPY install-script /opt/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build/
-#
 # Build the Producer SDK (CPP)
 
 WORKDIR /opt/amazon-kinesis-video-streams-producer-sdk-cpp/

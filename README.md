@@ -31,12 +31,12 @@ Import the Maven project to your IDE, it will find dependency packages from Mave
 
 Run `DemoAppMain.java` in `./src/main/demo` with JVM arguments set to
 ```
--Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Djava.library.path=<NativeLibraryPath>
+-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Dkvs-stream=<YourKinesisVideoStreamName> -Djava.library.path=<NativeLibraryPath>
 ```
 for **non-temporary** AWS credential.
 
 ```
--Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Djava.library.path=<NativeLibraryPath>
+-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Dkvs-stream=<YourKinesisVideoStreamName> -Djava.library.path=<NativeLibraryPath>
 ```
 for *temporary* AWS credential.
 
@@ -66,7 +66,7 @@ $ mvn clean compile assembly:single
 
 Start the demo app
 ```
-$ java -classpath target/kinesisvideo-java-demo-1.0-SNAPSHOT-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Djava.library.path=<NativeLibraryPath> com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+$ java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.10.0-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Dkvs-stream=<KINESIS_VIDEO_STREAM_NAME> -Djava.library.path=<NativeLibraryPath> com.amazonaws.kinesisvideo.demoapp.DemoAppMain
 
 ```
 
@@ -76,15 +76,15 @@ Refer the **README.md** file in the  *dockerscripts* folder for running the buil
 
 #### Launching PutMediaDemo sample application
 
- Run `PutMediaDemo.java` to send sample mkv stream to Kinesis Video Streams. **Note:** ACCESS_KEY and SECRET_KEY are required for running this sample application as well. However, this demo application does not require JNI.
+ Run `PutMediaDemo.java` to send sample mkv stream to Kinesis Video Streams. **Note:** ACCESS_KEY, SECRET_KEY, and a KINESIS_VIDEO_STREAM are required for running this sample application as well. However, this demo application does not require JNI.
 
 ```
--Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey>
+-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Dkvs-stream=<YourKinesisVideoStreamName>
 ```
 for **non-temporary** AWS credential.
 
 ```
--Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken>
+-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Dkvs-stream=<YourKinesisVideoStreamName>
 ```
 #### Pre-built KinesisVideoProducerJNI library supported platforms
 * Mac OS X (El capitan 10.11 or above)
@@ -118,16 +118,14 @@ This will provide details on missing libraries during linking; If the output sho
 rm -rf ./kinesis-video-native-build/CMakeCache.txt ./kinesis-video-native-build/CMakeFiles
 
 ```
-and run `./java-install-script` again.
 
+Run the following from the build directory in CPP producer SDK:
 ```
-./java-install-script
+cmake .. -DBUILD_JNI=TRUE 
+make
+```
 
-```
-Also, set the `LD_LIBRARY_PATH` as below
-```
-export LD_LIBRARY_PATH=/<YOUR_PRODUCER_SDK_CPP_DOWNLOAD>/amazon-kinesis-video-streams-producer-sdk-cpp/kinesis-video-native-build:$LD_LIBRARY_PATH
-```
+Then, provide the path to the libKinesisVideoProducerJNI.dylib library.
 
 This should resolve native library loading issues.
 
