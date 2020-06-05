@@ -112,12 +112,7 @@ or in MacOS
 $ otool -L libKinesisVideoProducerJNI.dylib
 ```
 
-This will provide details on missing libraries during linking; If the output shows missing shared libraries, then run the following commands to clean the `CMakeCache` and link again.
-
-```
-rm -rf ./kinesis-video-native-build/CMakeCache.txt ./kinesis-video-native-build/CMakeFiles
-
-```
+This will provide details on missing libraries during linking; If the output shows missing shared libraries, then run the following commands to link:
 
 Run the following from the build directory in CPP producer SDK:
 ```
