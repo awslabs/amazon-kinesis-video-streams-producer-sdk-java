@@ -71,7 +71,7 @@
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
-            <version>4.0</version>
+            <version>4.2.3</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.hamcrest/hamcrest-all -->
         <dependency>
@@ -98,12 +98,6 @@
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
             <version>3.0.2</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>21.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.google.code.findbugs/annotations -->
         <dependency>
@@ -133,7 +127,7 @@
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-multibindings</artifactId>
-            <version>4.0</version>
+            <version>4.2.3</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
         <dependency>
