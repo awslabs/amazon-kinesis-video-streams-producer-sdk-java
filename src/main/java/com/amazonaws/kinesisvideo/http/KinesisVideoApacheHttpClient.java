@@ -4,8 +4,8 @@ import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.chec
 
 import java.io.IOException;
 import java.security.KeyManagementException;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Map;
 
 import org.apache.http.HttpEntity;
@@ -13,12 +13,13 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.config.SocketConfig;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.ssl.SSLContextBuilder;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 /**
  * Http Client which uses Apache HttpClient internally to make
@@ -53,13 +54,13 @@ public final class KinesisVideoApacheHttpClient extends HttpClientBase {
     }
 
     private CloseableHttpClient buildHttpClient() {
-        final SSLContextBuilder builder = new SSLContextBuilder();
         try {
-            builder.loadTrustMaterial(new TrustAllStrategy());
-            final SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(builder.build(),
-                    new String[] {"TLSv1.2"}, // TLS protocol, use 1.2 only
-                    null, // TLS ciphers, use default
-                    new NoopHostnameVerifier());
+            final SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+            sslContext.init(null, new X509ExtendedTrustManager[] {
+                    new HostnameVerifyingX509ExtendedTrustManager(true)}, new SecureRandom());
+
+            final SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(sslContext);
+
             return HttpClients.custom()
                     .setSSLSocketFactory(sslSocketFactory)
                     .setDefaultRequestConfig(RequestConfig.custom()
@@ -72,8 +73,6 @@ public final class KinesisVideoApacheHttpClient extends HttpClientBase {
         } catch (final KeyManagementException e) {
             throw new RuntimeException("Exception while building Apache http client", e);
         } catch (final NoSuchAlgorithmException e) {
-            throw new RuntimeException("Exception while building Apache http client", e);
-        } catch (final KeyStoreException e) {
             throw new RuntimeException("Exception while building Apache http client", e);
         }
     }
