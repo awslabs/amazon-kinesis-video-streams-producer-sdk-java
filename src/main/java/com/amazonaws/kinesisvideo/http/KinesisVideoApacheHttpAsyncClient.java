@@ -4,8 +4,8 @@ import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.chec
 
 import java.io.IOException;
 import java.security.KeyManagementException;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Map;
 
 import org.apache.http.HttpEntity;
@@ -13,7 +13,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.concurrent.FutureCallback;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
@@ -21,7 +21,9 @@ import org.apache.http.nio.client.methods.HttpAsyncMethods;
 import org.apache.http.nio.conn.ssl.SSLIOSessionStrategy;
 import org.apache.http.nio.protocol.HttpAsyncRequestProducer;
 import org.apache.http.nio.protocol.HttpAsyncResponseConsumer;
-import org.apache.http.ssl.SSLContextBuilder;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 /**
  * Http Async Client which uses Apache HttpAsyncClient internally to make
@@ -54,13 +56,13 @@ public final class KinesisVideoApacheHttpAsyncClient extends HttpClientBase {
     }
 
     private CloseableHttpAsyncClient buildHttpAsyncClient() {
-        final SSLContextBuilder builder = new SSLContextBuilder();
         try {
-            builder.loadTrustMaterial(new TrustAllStrategy());
-            final SSLIOSessionStrategy sslSessionStrategy = new SSLIOSessionStrategy(builder.build(),
-                    new String[] {"TLSv1.2"},
-                    null,
-                    new NoopHostnameVerifier());
+            final SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+            sslContext.init(null, new X509ExtendedTrustManager[] {
+                    new HostnameVerifyingX509ExtendedTrustManager(true)}, new SecureRandom());
+
+            final SSLIOSessionStrategy sslSessionStrategy = new SSLIOSessionStrategy(sslContext);
+
             return HttpAsyncClientBuilder.create()
                     .setSSLStrategy(sslSessionStrategy)
                     .setDefaultRequestConfig(RequestConfig.custom()
@@ -71,8 +73,6 @@ public final class KinesisVideoApacheHttpAsyncClient extends HttpClientBase {
         } catch (final KeyManagementException e) {
             throw new RuntimeException("Exception while building Apache http client", e);
         } catch (final NoSuchAlgorithmException e) {
-            throw new RuntimeException("Exception while building Apache http client", e);
-        } catch (final KeyStoreException e) {
             throw new RuntimeException("Exception while building Apache http client", e);
         }
     }
