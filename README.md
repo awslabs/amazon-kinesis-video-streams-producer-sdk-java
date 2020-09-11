@@ -126,7 +126,7 @@ This should resolve native library loading issues.
 
 ## Release Notes
 
-### Release 1.10.1 (11 September 2020)
+### Release 1.11.0 (11 September 2020)
 * Improve TLS validation by implementing hostname verification
 
 ### Release 1.10.0 (29 May 2020)
