@@ -126,6 +126,9 @@ This should resolve native library loading issues.
 
 ## Release Notes
 
+### Release 1.10.1 (11 September 2020)
+* Improve TLS validation by implementing hostname verification
+
 ### Release 1.10.0 (29 May 2020)
 * Updated docker scripts to incorporate the changes in producer SDK
 * Provision of `CachedInfoMultiAuthServiceCallbacks` which implements caching layer and per-stream auth. Useful in the following scenarios:
