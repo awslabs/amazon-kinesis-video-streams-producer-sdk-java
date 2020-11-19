@@ -126,6 +126,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     private final KinesisVideoMetrics mKinesisVideoMetrics;
 
     /**
+     * Used to store device info
+     */
+    private DeviceInfo mDeviceInfo;
+
+    /**
      * Public constructor.
      * @param authCallbacks Authentication callbacks
      * @param storageCallbacks Storage callbacks
@@ -218,6 +223,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkNotNull(deviceInfo);
         Preconditions.checkState(!isInitialized());
 
+        mDeviceInfo = deviceInfo;
         synchronized (mSyncObject) {
             if (!mLibraryInitialized) {
                 initializeLibrary(nativeLibraryPath);
@@ -321,7 +327,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
                     streamInfo,
                     streamHandle,
                     mLog,
-                    streamCallbacks);
+                    streamCallbacks, 
+                    mDeviceInfo);
 
             // Insert into the maps
             mKinesisVideoHandleMap.put(streamHandle, kinesisVideoProducerStream);
