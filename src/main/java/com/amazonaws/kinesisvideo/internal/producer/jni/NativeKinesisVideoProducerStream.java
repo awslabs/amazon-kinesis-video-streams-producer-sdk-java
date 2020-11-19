@@ -12,6 +12,8 @@ import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.internal.producer.ReadResult;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
+import com.amazonaws.kinesisvideo.producer.DeviceInfo;
+import com.amazonaws.kinesisvideo.producer.Time;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -184,6 +186,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     private final NativeKinesisVideoProducerJni mKinesisVideoProducerJni;
     private volatile long mStreamHandle;
     private final StreamInfo mStreamInfo;
+    private final DeviceInfo mDeviceInfo;
     private final StreamCallbacks mStreamCallbacks;
     private final CountDownLatch mReadyLatch;
     private final CountDownLatch mStoppedLatch;
@@ -195,7 +198,8 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                                             final @Nonnull StreamInfo streamInfo,
                                             final long streamHandle,
                                             final @Nonnull Log log,
-                                            final @Nullable StreamCallbacks streamCallbacks) {
+                                            final @Nullable StreamCallbacks streamCallbacks, 
+                                            final @Nullable DeviceInfo deviceInfo) {
         mKinesisVideoProducerJni = Preconditions.checkNotNull(kinesisVideoProducerJni);
         mStreamInfo = Preconditions.checkNotNull(streamInfo);
         Preconditions.checkState(streamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE);
@@ -206,6 +210,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         mLog = Preconditions.checkNotNull(log);
         mStreamMetrics = new KinesisVideoStreamMetrics();
         mInputStreamMap = new HashMap<Long, NativeDataInputStream>();
+        mDeviceInfo = deviceInfo;
     }
 
     @Override
@@ -529,9 +534,15 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     {
         // Block until client is stopped or it times out.
         try {
-            if (!mStoppedLatch.await(STOPPED_TIMEOUT_IN_MILLISECONDS, TimeUnit.MILLISECONDS)) {
+            // Default time unit precision supplied should be in milliseconds
+            long timeout = mDeviceInfo.getClientInfo().getStopStreamTimeout() / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
+            if (timeout == 0) {
+                timeout = STOPPED_TIMEOUT_IN_MILLISECONDS;
+            }
+            if (!mStoppedLatch.await(timeout, TimeUnit.MILLISECONDS)) {
                 throw new ProducerException("KinesisVideo producer stream stopping time out", ProducerException.STATUS_OPERATION_TIMED_OUT);
             }
+
         } catch (final InterruptedException e) {
             throw new ProducerException(e);
         }
