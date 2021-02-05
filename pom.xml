@@ -1,199 +1,205 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
 
-    <!-- Output to jar format -->
-    <packaging>jar</packaging>
-
-    <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-    </properties>
-
-    <groupId>com.amazonaws</groupId>
-    <artifactId>amazon-kinesis-video-streams-producer-sdk-java</artifactId>
-    <name>Amazon Kinesis Video Streams Producer SDK Java</name>
-    <version>1.11.0</version>
-    <description>The Amazon Kinesis Video Streams Producer SDK for Java enables Java developers to ingest data into
-        Amazon Kinesis Video.
-    </description>
-    <repositories>
-        <repository>
-            <id>lib</id>
-            <url>file://${project.basedir}/lib</url>
-        </repository>
-    </repositories>
-
-    <developers>
-        <developer>
-            <id>amazonwebservices</id>
-            <organization>Amazon Web Services</organization>
-            <organizationUrl>https://aws.amazon.com</organizationUrl>
-            <roles>
-                <role>developer</role>
-            </roles>
-        </developer>
-    </developers>
-    <url>https://aws.amazon.com/kinesis/video-streams</url>
-    <scm>
-        <url>https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java.git</url>
-    </scm>
-    <licenses>
-        <license>
-            <name>Apache License Version 2.0</name>
-            <url>http://aws.amazon.com/apache2.0/</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-bom</artifactId>
-                <version>1.11.602</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-kinesisvideo</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
-            <version>4.2.3</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.hamcrest/hamcrest-all -->
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-all</artifactId>
-            <version>1.3</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/junit/junit -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>2.18.3</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.google.code.findbugs/jsr305 -->
-        <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-            <version>3.0.2</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.google.code.findbugs/annotations -->
-        <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>annotations</artifactId>
-            <version>2.0.3</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>3.4</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.8.2</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/javax.measure/jsr-275 -->
-        <dependency>
-            <groupId>javax.measure</groupId>
-            <artifactId>jsr-275</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.google.inject.extensions/guice-multibindings -->
-        <dependency>
-            <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-multibindings</artifactId>
-            <version>4.2.3</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.4</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpasyncclient -->
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpasyncclient</artifactId>
-            <version>4.1.4</version>
-        </dependency>
-
-
-    </dependencies>
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>src/main/demo</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- Make this jar executable -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                    <!-- DO NOT include log4j.properties file in your Jar -->
-                    <excludes>
-                        <exclude>**/log4j.properties</exclude>
-                    </excludes>
-                    <archive>
-                        <manifest>
-                            <!-- Jar file entry point -->
-                            <mainClass>com.amazonaws.kinesisvideo.demoapp.DemoAppMain</mainClass>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>com.amazonaws.kinesisvideo.demoapp.DemoAppMain</mainClass>
-                        </manifest>
-                    </archive>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">  
+  <modelVersion>4.0.0</modelVersion>  
+  <!-- Output to jar format -->  
+  <packaging>jar</packaging>  
+  <properties> 
+    <maven.compiler.source>1.8</maven.compiler.source>  
+    <maven.compiler.target>1.8</maven.compiler.target> 
+  </properties>  
+  <groupId>com.amazonaws</groupId>  
+  <artifactId>amazon-kinesis-video-streams-producer-sdk-java</artifactId>  
+  <name>Amazon Kinesis Video Streams Producer SDK Java</name>  
+  <version>1.10.0</version>  
+  <description>The Amazon Kinesis Video Streams Producer SDK for Java enables Java developers to ingest data into Amazon Kinesis Video.</description>  
+  <repositories> 
+    <repository> 
+      <id>lib</id>  
+      <url>file://${project.basedir}/lib</url> 
+    </repository> 
+  </repositories>  
+  <developers> 
+    <developer> 
+      <id>amazonwebservices</id>  
+      <organization>Amazon Web Services</organization>  
+      <organizationUrl>https://aws.amazon.com</organizationUrl>  
+      <roles> 
+        <role>developer</role> 
+      </roles> 
+    </developer> 
+  </developers>  
+  <url>https://aws.amazon.com/kinesis/video-streams</url>  
+  <scm> 
+    <url>https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java.git</url> 
+  </scm>  
+  <licenses> 
+    <license> 
+      <name>Apache License Version 2.0</name>  
+      <url>http://aws.amazon.com/apache2.0/</url>  
+      <distribution>repo</distribution> 
+    </license> 
+  </licenses>  
+  <dependencyManagement> 
+    <dependencies> 
+      <dependency> 
+        <groupId>com.amazonaws</groupId>  
+        <artifactId>aws-java-sdk-bom</artifactId>  
+        <version>1.11.602</version>  
+        <type>pom</type>  
+        <scope>import</scope> 
+      </dependency> 
+    </dependencies> 
+  </dependencyManagement>  
+  <dependencies> 
+    <dependency> 
+      <groupId>com.amazonaws</groupId>  
+      <artifactId>aws-java-sdk-core</artifactId> 
+    </dependency>  
+    <dependency> 
+      <groupId>com.amazonaws</groupId>  
+      <artifactId>aws-java-sdk-kinesisvideo</artifactId>  
+      <exclusions> 
+        <exclusion> 
+          <groupId>com.amazonaws</groupId>  
+          <artifactId>jmespath-java</artifactId> 
+        </exclusion> 
+      </exclusions> 
+    </dependency>  
+    <dependency> 
+      <groupId>com.google.inject</groupId>  
+      <artifactId>guice</artifactId>  
+      <version>4.2.3</version>  
+      <exclusions> 
+        <exclusion> 
+          <groupId>javax.inject</groupId>  
+          <artifactId>javax.inject</artifactId> 
+        </exclusion>  
+        <exclusion> 
+          <groupId>com.google.errorprone</groupId>  
+          <artifactId>error_prone_annotations</artifactId> 
+        </exclusion>  
+        <exclusion> 
+          <groupId>com.google.guava</groupId>  
+          <artifactId>listenablefuture</artifactId> 
+        </exclusion>  
+        <exclusion> 
+          <groupId>org.codehaus.mojo</groupId>  
+          <artifactId>animal-sniffer-annotations</artifactId> 
+        </exclusion>  
+        <exclusion> 
+          <groupId>com.google.j2objc</groupId>  
+          <artifactId>j2objc-annotations</artifactId> 
+        </exclusion>  
+        <exclusion>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>jsr305</artifactId>
+        </exclusion>
+      </exclusions> 
+    </dependency>  
+    <!-- https://mvnrepository.com/artifact/org.hamcrest/hamcrest-all -->  
+    <dependency> 
+      <groupId>org.hamcrest</groupId>  
+      <artifactId>hamcrest-all</artifactId>  
+      <version>1.3</version>  
+      <scope>test</scope> 
+    </dependency>  
+    <!-- https://mvnrepository.com/artifact/junit/junit -->  
+    <dependency> 
+      <groupId>junit</groupId>  
+      <artifactId>junit</artifactId>  
+      <version>4.12</version>  
+      <scope>test</scope> 
+    </dependency>  
+    <dependency> 
+      <groupId>org.mockito</groupId>  
+      <artifactId>mockito-core</artifactId>  
+      <version>2.18.3</version>  
+      <scope>test</scope> 
+    </dependency>  
+    <!-- https://mvnrepository.com/artifact/com.google.code.findbugs/jsr305 -->  
+    <!-- https://mvnrepository.com/artifact/com.google.code.findbugs/annotations -->  
+    <dependency> 
+      <groupId>com.google.code.findbugs</groupId>  
+      <artifactId>annotations</artifactId>  
+      <version>2.0.3</version> 
+    </dependency>  
+    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->  
+    <dependency> 
+      <groupId>org.apache.commons</groupId>  
+      <artifactId>commons-lang3</artifactId>  
+      <version>3.4</version> 
+    </dependency>  
+    <!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->  
+    <dependency> 
+      <groupId>com.google.code.gson</groupId>  
+      <artifactId>gson</artifactId>  
+      <version>2.8.2</version> 
+    </dependency>  
+    <!-- https://mvnrepository.com/artifact/javax.measure/jsr-275 -->  
+    <!-- https://mvnrepository.com/artifact/com.google.inject.extensions/guice-multibindings -->  
+    <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->  
+    <dependency> 
+      <groupId>commons-io</groupId>  
+      <artifactId>commons-io</artifactId>  
+      <version>2.4</version> 
+    </dependency>  
+    <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpasyncclient -->  
+    <dependency> 
+      <groupId>org.apache.httpcomponents</groupId>  
+      <artifactId>httpasyncclient</artifactId>  
+      <version>4.1.4</version> 
+    </dependency> 
+  </dependencies>  
+  <build> 
+    <plugins> 
+      <plugin> 
+        <groupId>org.codehaus.mojo</groupId>  
+        <artifactId>build-helper-maven-plugin</artifactId>  
+        <executions> 
+          <execution> 
+            <phase>generate-sources</phase>  
+            <goals> 
+              <goal>add-source</goal> 
+            </goals>  
+            <configuration> 
+              <sources> 
+                <source>src/main/demo</source> 
+              </sources> 
+            </configuration> 
+          </execution> 
+        </executions> 
+      </plugin>  
+      <!-- Make this jar executable -->  
+      <plugin> 
+        <groupId>org.apache.maven.plugins</groupId>  
+        <artifactId>maven-jar-plugin</artifactId>  
+        <configuration> 
+          <!-- DO NOT include log4j.properties file in your Jar -->  
+          <excludes> 
+            <exclude>**/log4j.properties</exclude> 
+          </excludes>  
+          <archive> 
+            <manifest> 
+              <!-- Jar file entry point -->  
+              <mainClass>com.amazonaws.kinesisvideo.demoapp.DemoAppMain</mainClass> 
+            </manifest> 
+          </archive> 
+        </configuration> 
+      </plugin>  
+      <plugin> 
+        <artifactId>maven-assembly-plugin</artifactId>  
+        <configuration> 
+          <archive> 
+            <manifest> 
+              <mainClass>com.amazonaws.kinesisvideo.demoapp.DemoAppMain</mainClass> 
+            </manifest> 
+          </archive>  
+          <descriptorRefs> 
+            <descriptorRef>jar-with-dependencies</descriptorRef> 
+          </descriptorRefs> 
+        </configuration> 
+      </plugin> 
+    </plugins> 
+  </build> 
 </project>
-
