@@ -26,7 +26,7 @@ public class Time {
      * @return Current system time in Kinesis Video time units
      */
     public static final long getCurrentTime() {
-        return System.nanoTime() * 100;
+	return System.currentTimeMillis() * HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
     };
 
     /**
