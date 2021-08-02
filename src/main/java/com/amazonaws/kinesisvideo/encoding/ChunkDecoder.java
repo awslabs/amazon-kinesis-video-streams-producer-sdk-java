@@ -221,7 +221,7 @@ public final class ChunkDecoder {
         do {
             line = reader.readLine();
         }
-        while (line != null && line.isEmpty());
+        while (line == null || line.isEmpty());
 
         return line;
     }
