@@ -17,4 +17,4 @@ mvn -Dmdep.outputFile=$jar_files dependency:build-classpath
 export LD_LIBRARY_PATH=/opt/amazon-kinesis-video-streams-producer-sdk-cpp/open-source/local/lib:$LD_LIBRARY_PATH
 classpath_values=$(cat $jar_files)
 # Start the demo app
-java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.10.0.jar:$classpath_values -Daws.accessKeyId=${ACCESS_KEY} -Daws.secretKey=${SECRET_KEY} -Dkvs-stream=${KVS_STREAM} -Djava.library.path=/opt/amazon-kinesis-video-streams-producer-sdk-cpp/build/ com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.11.0.jar:$classpath_values -Daws.accessKeyId=${ACCESS_KEY} -Daws.secretKey=${SECRET_KEY} -Dkvs-stream=${KVS_STREAM} -Djava.library.path=/opt/amazon-kinesis-video-streams-producer-sdk-cpp/build/ com.amazonaws.kinesisvideo.demoapp.DemoAppMain
