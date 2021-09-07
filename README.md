@@ -124,6 +124,10 @@ Then, provide the path to the libKinesisVideoProducerJNI.dylib library.
 
 This should resolve native library loading issues.
 
+## Development
+
+The repository is using `develop` branch as the aggregation and all of the feature development is done in appropriate feature branches. The PRs (Pull Requests) are cut on a feature branch and once approved with all the checks passed they can be merged by a click of a button on the PR tool. The master branch should always be build-able and all the tests should be passing. We are welcoming any contribution to the code base. The master branch contains our most recent release cycle from `develop`.
+
 ## Release Notes
 
 ### Release 1.11.0 (11 September 2020)
