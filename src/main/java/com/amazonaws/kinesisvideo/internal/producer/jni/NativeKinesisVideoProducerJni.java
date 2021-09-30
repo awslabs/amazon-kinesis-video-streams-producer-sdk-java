@@ -1192,7 +1192,24 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     }
 
     public void logPrint(final @Nonnull int level, final @Nonnull String tag, final @Nonnull String fmt) {
-        System.out.println(level + "||" + tag + "||" + fmt);
+        String fmtLog = fmt.substring(6);
+        switch (level) {
+            case 1:
+                mLog.verbose("%s(): %s", tag, fmtLog);
+                break;
+            case 2:
+                mLog.debug("%s(): %s", tag, fmtLog);
+                break;
+            case 3:
+                mLog.info("%s(): %s", tag, fmtLog);
+                break;
+            case 4:
+                mLog.warn("%s(): %s", tag, fmtLog);
+                break;
+            default:
+                mLog.error("%s(): %s", tag, fmtLog);
+                break;
+        }
     }
 
     /**

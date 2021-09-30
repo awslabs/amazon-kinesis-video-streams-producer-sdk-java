@@ -229,7 +229,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
      * Used internally by {@link #initialize} and visible for testing.
      */
     @Nonnull
-    public KinesisVideoProducer initializeNewKinesisVideoProducer(final DeviceInfo deviceInfo) throws ProducerException {
+    KinesisVideoProducer initializeNewKinesisVideoProducer(final DeviceInfo deviceInfo) throws ProducerException {
         final KinesisVideoProducer kinesisVideoProducer = new NativeKinesisVideoProducerJni(
                 mAuthCallbacks,
                 mStorageCallbacks,
