@@ -192,8 +192,6 @@ public interface KinesisVideoProducer {
     void deviceCertToTokenResult(final long customData, final @Nullable byte[] token, long expiration, int httpStatusCode)
             throws ProducerException;
 
-    void enableFileLogging() throws ProducerException;
-    
     @Nonnull
     KinesisVideoMetrics getMetrics()
             throws ProducerException;

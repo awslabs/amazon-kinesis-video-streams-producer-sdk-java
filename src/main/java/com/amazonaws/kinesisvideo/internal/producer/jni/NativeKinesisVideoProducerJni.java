@@ -1167,12 +1167,6 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         }
     }
 
-    public void enableFileLogging() throws ProducerException {
-        if (mClientHandle != INVALID_CLIENT_HANDLE_VALUE) {
-            addFileLoggerPlatformCallbacksProvider(mClientHandle, 100 * 1024, 5, "./", false);
-        }
-    }
-
     /**
      * Awaits for the initialization/loading
      */
@@ -1195,6 +1189,10 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
                     String.format("FATAL DEPLOYMENT ERROR: This app is built "
                             + "to run with version %s of the lib%s.so library, but version %s was found on this device",
                     EXPECTED_LIBRARY_VERSION, PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion));
+    }
+
+    public void logPrint(final @Nonnull int level, final @Nonnull String tag, final @Nonnull String fmt) {
+        System.out.println(level + "||" + tag + "||" + fmt);
     }
 
     /**
@@ -1488,8 +1486,5 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private native void kinesisVideoStreamTerminated(long clientHandle, long streamHandle, long uploadHandle,
                                                      int statusCode)
-            throws ProducerException;
-
-    private native void addFileLoggerPlatformCallbacksProvider(long clientHandle, long stringBufferSize, long maxLogFileCount, String logFileDir, boolean printLog)
             throws ProducerException;
 }
