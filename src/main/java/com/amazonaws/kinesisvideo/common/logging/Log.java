@@ -47,12 +47,24 @@ public class Log {
      */
     private static Logger mLogger;
 
+    /**
+     * LoggerContext for log4j2
+     */
     private static LoggerContext mLoggerContext;
 
+    /**
+     * ConfigFile(XML) for log4j2
+     */
     private static File mConfigFile;
 
+    /**
+     * Logger configuration
+     */
     private static Configuration mConfiguration;
 
+    /**
+     * Log object (Static to maintain a single instance of the class throughout
+     */
     private static Log mLog;
 
     /**
@@ -60,7 +72,6 @@ public class Log {
      *
      * @param filePath path to the log4j2 config file
      */
-
     private Log(final @Nonnull String filePath) {
         mLogger = LogManager.getLogger();
         mLoggerContext = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
@@ -70,6 +81,11 @@ public class Log {
         setCurrentLogLevel(Level.INFO);
     }
 
+    /**
+     * Obtains an existing instance of the class if it exists, else creates a new instance
+     *
+     * @param tag for the log (can be set to null if it does not need an update)
+     */
     public static Log getLogInstance(@Nullable String tag) {
         if (mLog == null) {
             mLog = new Log("log4j2.xml");
@@ -225,6 +241,13 @@ public class Log {
         mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + MESSAGE_DELIMITER + e.getMessage(), e);
     }
 
+    /**
+     * Logs an exception
+     *
+     * @param e Exception to log
+     * @param template Parameterized string
+     * @param args     Arguments
+     */
     public void exception(final Throwable e, final String template, final Object... args) {
         mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + MESSAGE_DELIMITER + String.format(template, args) + MESSAGE_DELIMITER + e.getMessage(), e);
     }
