@@ -20,7 +20,7 @@ public final class ChunkDecoder {
     private static final String LINE_DELIMITER = "\r\n";
     private static final String PAYLOAD_DELIMITER = "\r\n\r\n";
     // TODO: Set to correct output channel
-    private static final Log LOG = new Log(Log.SYSTEM_OUT);
+    private static final Log LOG = Log.getLogInstance(null);
 
     private ChunkDecoder() {
     }

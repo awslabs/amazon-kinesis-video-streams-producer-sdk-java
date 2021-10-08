@@ -221,7 +221,7 @@ public final class PutMediaClient {
         private Long upstreamKbps;
         private Consumer<Exception> mCompletion;
         // TODO: Set to correct output channel
-        private Log mLog = new Log(Log.SYSTEM_OUT);
+        private Log mLog = Log.getLogInstance(null);
         private Map<String, String> unsignedHeaders;
 
         public Builder putMediaDestinationUri(final URI uri) {

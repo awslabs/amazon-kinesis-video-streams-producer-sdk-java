@@ -1,11 +1,17 @@
 package com.amazonaws.kinesisvideo.common.logging;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.LoggerConfig;
+
+import java.io.File;
 
 /**
  *
@@ -32,82 +38,58 @@ public class Log {
     private static final String MESSAGE_DELIMITER = ": ";
 
     /**
-     * Default string builder size
-     */
-    private static final int DEFAULT_MESSAGE_BUFFER = 1024;
-
-    /**
-     * OutputChannel implementation based on System.out. This can be useful in JUnit tests, since they run in an
-     * environment that lacks a working implementation of actual logging mechanism.
-     */
-    public static final OutputChannel SYSTEM_OUT = new OutputChannel() {
-        @Override
-        public void print(final int level, final String tag, final String message) {
-            System.out.println(
-                    String.format("%s%s%s\t%s", LogLevel.fromInt(level).toString(), MESSAGE_DELIMITER, tag, message));
-        }
-
-        @Override
-        public String toString() {
-            return "standard output console";
-        }
-    };
-
-    /**
-     * Output channel to use.
-     */
-    private final OutputChannel mOutputChannel;
-
-    /**
-     * Used to build the log message
-     */
-    private final StringBuilder mStringBuilder;
-
-    /**
      * Current tag value
      */
-    private String mTag;
+    private static String mTag;
 
     /**
-     * Specifies the current log level
+     * Logger for log4j2
      */
-    private LogLevel mCurrentLogLevel;
+    private static Logger mLogger;
 
-    /**
-     * Creates a new instance of the class using defaults
-     *
-     * @param outputChannel
-     *         An interface to {@link OutputChannel} to uze for messages.
-     */
-    public Log(final @Nonnull OutputChannel outputChannel) {
-        this(outputChannel, LogLevel.INFO, BASE_TAG);
-    }
+    private static LoggerContext mLoggerContext;
+
+    private static File mConfigFile;
+
+    private static Configuration mConfiguration;
+
+    private static Log mLog;
 
     /**
      * Creates a new instance of the class
      *
-     * @param outputChannel
-     *         An interface to {@link OutputChannel} to uze for messages.
-     * @param currentLogLevel
-     *         Current log level for logging
-     * @param tag
-     *         Base tag to use for messages
+     * @param filePath path to the log4j2 config file
      */
-    public Log(final @Nonnull OutputChannel outputChannel, final LogLevel currentLogLevel, final @Nonnull String tag) {
-        mOutputChannel = Preconditions.checkNotNull(outputChannel);
-        mTag = Preconditions.checkNotNull(tag);
-        mCurrentLogLevel = currentLogLevel;
-        mStringBuilder = new StringBuilder(DEFAULT_MESSAGE_BUFFER);
+
+    private Log(final @Nonnull String filePath) {
+        mLogger = LogManager.getLogger();
+        mLoggerContext = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
+        mConfigFile = new File(filePath);
+        mLoggerContext.setConfigLocation(mConfigFile.toURI());
+        mTag = BASE_TAG;
+        setCurrentLogLevel(Level.INFO);
+    }
+
+    public static Log getLogInstance(@Nullable String tag) {
+        if (mLog == null) {
+            mLog = new Log("log4j2.xml");
+        }
+        if (tag != null) {
+            mTag = tag;
+        }
+        return mLog;
     }
 
     /**
      * Sets the current logging level
      *
-     * @param logLevel
-     *         Log level to filter
+     * @param logLevel Log level to filter
      */
-    public void setCurrentLogLevel(final LogLevel logLevel) {
-        mCurrentLogLevel = logLevel;
+    public void setCurrentLogLevel(final Level logLevel) {
+        mConfiguration = mLoggerContext.getConfiguration();
+        LoggerConfig loggerConfig = mConfiguration.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+        loggerConfig.setLevel(logLevel);
+        mLoggerContext.updateLoggers();
     }
 
     /**
@@ -121,244 +103,129 @@ public class Log {
     }
 
     /**
-     * Basic logging function with a single string message
-     *
-     * @param logLevel
-     *         Log level
-     * @param message
-     *         Message to log
-     */
-    public void log(final LogLevel logLevel, final String message) {
-        if (logLevel.getLogLevel() >= mCurrentLogLevel.getLogLevel()) {
-            mOutputChannel.print(logLevel.getLogLevel(), mTag, message);
-        }
-    }
-
-    /**
-     * Parameterized versions of the logging functions
-     *
-     * @param logLevel
-     *         Log level
-     * @param template
-     *         String template
-     * @param args
-     *         Arguments
-     */
-    public void log(final LogLevel logLevel, final String template, final Object... args) {
-        if (logLevel.getLogLevel() >= mCurrentLogLevel.getLogLevel()) {
-            log(logLevel, String.format(template, args));
-        }
-    }
-
-    /**
      * Verbose logging
      *
-     * @param message
-     *         Message to log
+     * @param message Message to log
      */
     public void verbose(final String message) {
-        log(LogLevel.VERBOSE, message);
+        mLogger.log(Level.getLevel("VERBOSE"), "{}(): {}", mTag, message);
     }
 
     /**
      * Verbose level logging in a parameterized string
      *
-     * @param template
-     *         Parameterized string
-     * @param args
-     *         Arguments
+     * @param template Parameterized string
+     * @param args     Arguments
      */
     public void verbose(final String template, final Object... args) {
-        log(LogLevel.VERBOSE, template, args);
+        mLogger.log(Level.getLevel("VERBOSE"), "{}(): {}", mTag, String.format(template, args));
     }
 
     /**
      * Debug logging
      *
-     * @param message
-     *         Message to log
+     * @param message Message to log
      */
     public void debug(final String message) {
-        log(LogLevel.DEBUG, message);
+        mLogger.log(Level.DEBUG, "{}(): {}", mTag, message);
     }
 
     /**
      * Debug level logging in a parameterized string
      *
-     * @param template
-     *         Parameterized string
-     * @param args
-     *         Arguments
+     * @param template Parameterized string
+     * @param args     Arguments
      */
     public void debug(final String template, final Object... args) {
-        log(LogLevel.DEBUG, template, args);
+        mLogger.log(Level.DEBUG, "{}(): {}", mTag, String.format(template, args));
     }
 
     /**
      * Information level logging
      *
-     * @param message
-     *         Message to log
+     * @param message Message to log
      */
     public void info(final String message) {
-        log(LogLevel.INFO, message);
+        mLogger.log(Level.INFO, "{}(): {}", mTag, message);
     }
 
     /**
      * Information level logging in a parameterized string
      *
-     * @param template
-     *         Parameterized string
-     * @param args
-     *         Arguments
+     * @param template Parameterized string
+     * @param args     Arguments
      */
     public void info(final String template, final Object... args) {
-        log(LogLevel.INFO, template, args);
+        mLogger.log(Level.INFO, "{}(): {}", mTag, String.format(template, args));
     }
 
     /**
      * Warning level logging
      *
-     * @param message
-     *         Message to log
+     * @param message Message to log
      */
     public void warn(final String message) {
-        log(LogLevel.WARN, message);
+        mLogger.log(Level.WARN, "{}(): {}", mTag, message);
     }
 
     /**
      * Warning level logging in a parameterized string
      *
-     * @param template
-     *         Parameterized string
-     * @param args
-     *         Arguments
+     * @param template Parameterized string
+     * @param args     Arguments
      */
     public void warn(final String template, final Object... args) {
-        log(LogLevel.WARN, template, args);
+        mLogger.log(Level.WARN, "{}(): {}", mTag, String.format(template, args));
     }
 
     /**
      * Error level logging
      *
-     * @param message
-     *         Message to log
+     * @param message Message to log
      */
     public void error(final String message) {
-        log(LogLevel.ERROR, message);
+        mLogger.log(Level.ERROR, "{}(): {}", mTag, message);
     }
 
     /**
      * Error level logging in a parameterized string
      *
-     * @param template
-     *         Parameterized string
-     * @param args
-     *         Arguments
+     * @param template Parameterized string
+     * @param args     Arguments
      */
     public void error(final String template, final Object... args) {
-        log(LogLevel.ERROR, template, args);
+        mLogger.log(Level.ERROR, "{}(): {}", mTag, String.format(template, args));
     }
 
     /**
      * Assert level logging
      *
-     * @param message
-     *         Message to log
+     * @param message Message to log
      */
     public void assrt(final String message) {
-        log(LogLevel.ASSERT, message);
+        mLogger.log(Level.getLevel("ASSERT"), "{}(): {}", mTag, message);
     }
 
     /**
      * Assert level logging in a parameterized string
      *
-     * @param template
-     *         Parameterized string
-     * @param args
-     *         Arguments
+     * @param template Parameterized string
+     * @param args     Arguments
      */
     public void assrt(final String template, final Object... args) {
-        log(LogLevel.ASSERT, template, args);
+        mLogger.log(Level.getLevel("ASSERT"), "{}(): {}", mTag, String.format(template, args));
     }
 
     /**
      * Logs an exception
      *
-     * @param e
-     *         Exception to log
+     * @param e Exception to log
      */
     public void exception(final Throwable e) {
-        log(LogLevel.ERROR,
-                createMessage("EXCEPTION: ", e.getClass().getSimpleName(), MESSAGE_DELIMITER, e.getMessage()));
+        mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + MESSAGE_DELIMITER + e.getMessage(), e);
     }
 
     public void exception(final Throwable e, final String template, final Object... args) {
-        log(LogLevel.ERROR, createMessage("EXCEPTION: ", e.getClass().getSimpleName(), MESSAGE_DELIMITER,
-                String.format(template, args), MESSAGE_DELIMITER, e.getMessage()));
-    }
-
-    /**
-     * Creates the message for logging.
-     *
-     * @param args
-     *         Object array to log
-     * @return Formatted string
-     */
-    private String createMessage(final Object... args) {
-        // Fast path with single object
-        if (args.length == 1 && args[0] instanceof String) {
-            //return String.valueOf(args[0]);
-            return (String) args[0];
-        }
-
-        // Clear the buffer
-        mStringBuilder.setLength(0);
-
-        // Add the date
-        mStringBuilder.append(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z' ").format(new Date()));
-
-        // Add the thread
-        mStringBuilder.append("T").append(Thread.currentThread().getId()).append(MESSAGE_DELIMITER);
-
-        // Append the rest
-        addFlattenedArray(args);
-
-        return mStringBuilder.toString();
-    }
-
-    /**
-     * Converts an Object array to a flat string representation, recursively expanding subarrays,
-     * and appends the result to the StringBuilder.
-     */
-    private void addFlattenedArray(final Object[] args) {
-        for (final Object item : args) {
-            if (null == item) {
-                mStringBuilder.append("null");
-            } else if (item instanceof byte[]) {
-                addHexString((byte[]) item);
-            } else if (item instanceof Object[]) {
-                addFlattenedArray((Object[]) item);
-            } else {
-                mStringBuilder.append(item.toString());
-            }
-        }
-    }
-
-    /**
-     * Converts a byte array to hex string representation and appends it to the StringBuilder.
-     *
-     * @param bytes
-     *         Array of types to represent
-     */
-    private void addHexString(final byte[] bytes) {
-        for (int i = 0; i < bytes.length; i++) {
-            final int unsignedByte = bytes[i] & 0xff; // Need to cast up to int to preserve unsignedness of each byte
-            if (unsignedByte < 16) {
-                mStringBuilder.append('0'); // so we have two characters per digit
-            }
-
-            mStringBuilder.append(Integer.toHexString(unsignedByte));
-        }
+        mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + MESSAGE_DELIMITER + String.format(template, args) + MESSAGE_DELIMITER + e.getMessage(), e);
     }
 }

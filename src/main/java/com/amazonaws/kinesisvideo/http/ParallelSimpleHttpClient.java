@@ -215,7 +215,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         private Integer mTimeout;
         private Consumer<Exception> mCompletion;
         // TODO: Set to correct output channel
-        private Log mLog = new Log(Log.SYSTEM_OUT);
+        private Log mLog = Log.getLogInstance(null);
 
         private Builder() {
             mHeaders = new HashMap<String, String>();

@@ -1,7 +1,6 @@
 package com.amazonaws.kinesisvideo.client;
 
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
-import com.amazonaws.kinesisvideo.common.logging.OutputChannel;
 import com.amazonaws.kinesisvideo.producer.StorageCallbacks;
 
 /**
@@ -12,14 +11,12 @@ public final class KinesisVideoClientConfiguration {
     private final KinesisVideoCredentialsProvider credentialsProvider;
     private final StorageCallbacks storageCallbacks;
     private final String endpoint;
-    private final OutputChannel logChannel;
 
     private KinesisVideoClientConfiguration(final Builder builder) {
         this.region = builder.region;
         this.credentialsProvider = builder.credentialsProvider;
         this.storageCallbacks = builder.storageCallbacks;
         this.endpoint = builder.endpoint;
-        this.logChannel = builder.logChannel;
     }
 
     public static Builder builder() {
@@ -69,17 +66,12 @@ public final class KinesisVideoClientConfiguration {
         return this.endpoint;
     }
 
-    public OutputChannel getLogChannel() {
-        return this.logChannel;
-    }
-
     public static class Builder {
         private String region;
         private KinesisVideoCredentialsProvider credentialsProvider;
         private StorageCallbacks storageCallbacks =
                 KinesisVideoClientConfigurationDefaults.NO_OP_STORAGE_CALLBACKS;
         private String endpoint;
-        private OutputChannel logChannel;
 
         public Builder withRegion(final String region) {
             this.region = region;
@@ -98,11 +90,6 @@ public final class KinesisVideoClientConfiguration {
 
         public Builder withEndpoint(final String endpoint) {
             this.endpoint = endpoint;
-            return this;
-        }
-
-        public Builder withLogChannel(final OutputChannel logChannel) {
-            this.logChannel = logChannel;
             return this;
         }
 

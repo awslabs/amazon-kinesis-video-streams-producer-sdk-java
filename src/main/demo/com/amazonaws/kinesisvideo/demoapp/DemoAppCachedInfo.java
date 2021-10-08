@@ -4,13 +4,11 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.logging.Log;
-import com.amazonaws.kinesisvideo.common.logging.LogLevel;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
 import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsProviderImpl;
 import com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory;
-import com.amazonaws.kinesisvideo.java.logging.SysOutLogChannel;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSource;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.java.service.CachedInfoMultiAuthServiceCallbacksImpl;
@@ -25,6 +23,7 @@ import com.amazonaws.services.kinesisvideo.model.DescribeStreamResult;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointResult;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.logging.log4j.Level;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -61,10 +60,11 @@ public final class DemoAppCachedInfo {
             final KinesisVideoClientConfiguration configuration = KinesisVideoClientConfiguration.builder()
                     .withRegion(Regions.US_WEST_2.getName())
                     .withCredentialsProvider(new JavaCredentialsProviderImpl(awsCredentialsProvider))
-                    .withLogChannel(new SysOutLogChannel())
                     .withStorageCallbacks(new DefaultStorageCallbacks())
                     .build();
-            final Log log = new Log(configuration.getLogChannel(), LogLevel.DEBUG, "KinesisVideo");
+
+            final Log log = Log.getLogInstance("KinesisVideo");
+            log.setCurrentLogLevel(Level.getLevel("DEBUG"));
 
             // Create CachedInfoServiceCallback
             final CachedInfoMultiAuthServiceCallbacksImpl serviceCallbacks =

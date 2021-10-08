@@ -17,7 +17,6 @@ import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.logging.Log;
-import com.amazonaws.kinesisvideo.common.logging.LogLevel;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.mediasource.ProducerStreamSink;
 import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
@@ -74,7 +73,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor) {
-        this(new Log(configuration.getLogChannel(), LogLevel.VERBOSE, TAG),
+        this(Log.getLogInstance(TAG),
                 configuration,
                 serviceClient,
                 executor);

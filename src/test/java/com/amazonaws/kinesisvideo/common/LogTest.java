@@ -4,13 +4,12 @@ import static org.junit.Assert.*;
 
 import javax.annotation.Nonnull;
 
+import org.apache.logging.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.logging.Log;
-import com.amazonaws.kinesisvideo.common.logging.LogLevel;
-import com.amazonaws.kinesisvideo.common.logging.OutputChannel;
 
 /**
  * Log class tests
@@ -27,112 +26,103 @@ public class LogTest {
     private String mMessage;
     private Log mLog;
 
-    private final OutputChannel mOutputChannel = new OutputChannel() {
-        @Override
-        public void print(final int level, @Nonnull final String tag, @Nonnull final String message) {
-            mLogLevel = level;
-            mTag = tag;
-            mMessage = message;
-        }
-    };
-
     @Before
     public void setupLog() {
         mLogLevel = TEST_UNDEFINED_LOG_LEVEL;
         mTag = null;
         mMessage = null;
 
-        mLog = new Log(mOutputChannel);
+        mLog = Log.getLogInstance(TEST_DEFAULT_TAG_NAME);
     }
 
     @Test
     public void basicLogTest() {
-        mLog.log(LogLevel.INFO, TEST_LOG_MESSAGE + 1);
+        mLog.info(TEST_LOG_MESSAGE + 1);
         assertEquals(TEST_LOG_MESSAGE + 1, mMessage);
         assertEquals(TEST_DEFAULT_TAG_NAME, mTag);
-        assertEquals(LogLevel.INFO.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("INFO"), mLogLevel);
 
-        mLog.log(LogLevel.INFO, TEST_LOG_MESSAGE + 2);
+        mLog.info(TEST_LOG_MESSAGE + 2);
         assertEquals(TEST_LOG_MESSAGE + 2, mMessage);
-        assertEquals(LogLevel.INFO.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("INFO"), mLogLevel);
 
-        mLog.log(LogLevel.WARN, TEST_LOG_MESSAGE + 3);
+        mLog.warn(TEST_LOG_MESSAGE + 3);
         assertEquals(TEST_LOG_MESSAGE + 3, mMessage);
-        assertEquals(LogLevel.WARN.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("WARN"), mLogLevel);
 
-        mLog.log(LogLevel.ERROR, TEST_LOG_MESSAGE + 4);
+        mLog.error(TEST_LOG_MESSAGE + 4);
         assertEquals(TEST_LOG_MESSAGE + 4, mMessage);
-        assertEquals(LogLevel.ERROR.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ERROR"), mLogLevel);
 
-        mLog.log(LogLevel.ASSERT, TEST_LOG_MESSAGE + 5);
+        mLog.assrt(TEST_LOG_MESSAGE + 5);
         assertEquals(TEST_LOG_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
         // Ensure we are not logging lower pri messages
-        mLog.log(LogLevel.DEBUG, TEST_LOG_MESSAGE + 6);
+        mLog.assrt(TEST_LOG_MESSAGE + 6);
         assertEquals(TEST_LOG_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
-        mLog.log(LogLevel.VERBOSE, TEST_LOG_MESSAGE + 7);
+        mLog.verbose(TEST_LOG_MESSAGE + 7);
         assertEquals(TEST_LOG_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
         // Set the new level to debug
-        mLog.setCurrentLogLevel(LogLevel.DEBUG);
+        mLog.setCurrentLogLevel(Level.DEBUG);
 
         // Ensure debug is logged and verbose isn't
-        mLog.log(LogLevel.DEBUG, TEST_LOG_MESSAGE + 6);
+        mLog.debug(TEST_LOG_MESSAGE + 6);
         assertEquals(TEST_LOG_MESSAGE + 6, mMessage);
-        assertEquals(LogLevel.DEBUG.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("DEBUG"), mLogLevel);
 
-        mLog.log(LogLevel.VERBOSE, TEST_LOG_MESSAGE + 7);
+        mLog.verbose(TEST_LOG_MESSAGE + 7);
         assertEquals(TEST_LOG_MESSAGE + 6, mMessage);
-        assertEquals(LogLevel.DEBUG.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("DEBUG"), mLogLevel);
     }
 
     @Test
     public void basicParameterizedLogTest() {
-        mLog.log(LogLevel.INFO, TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 1);
+        mLog.info(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 1);
         assertEquals(TEST_LOGGED_MESSAGE + 1, mMessage);
         assertEquals(TEST_DEFAULT_TAG_NAME, mTag);
-        assertEquals(LogLevel.INFO.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("INFO"), mLogLevel);
 
-        mLog.log(LogLevel.INFO, TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 2);
+        mLog.info(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 2);
         assertEquals(TEST_LOGGED_MESSAGE + 2, mMessage);
-        assertEquals(LogLevel.INFO.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("INFO"), mLogLevel);
 
-        mLog.log(LogLevel.WARN, TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 3);
+        mLog.warn(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 3);
         assertEquals(TEST_LOGGED_MESSAGE + 3, mMessage);
-        assertEquals(LogLevel.WARN.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("WARN"), mLogLevel);
 
-        mLog.log(LogLevel.ERROR, TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 4);
+        mLog.error(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 4);
         assertEquals(TEST_LOGGED_MESSAGE + 4, mMessage);
-        assertEquals(LogLevel.ERROR.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ERROR"), mLogLevel);
 
-        mLog.log(LogLevel.ASSERT, TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 5);
+        mLog.assrt(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 5);
         assertEquals(TEST_LOGGED_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
         // Ensure we are not logging lower pri messages
-        mLog.log(LogLevel.DEBUG, TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 6);
+        mLog.debug(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 6);
         assertEquals(TEST_LOGGED_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
-        mLog.log(LogLevel.VERBOSE, TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 7);
+        mLog.verbose(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 7);
         assertEquals(TEST_LOGGED_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
         // Set the new level to debug
-        mLog.setCurrentLogLevel(LogLevel.DEBUG);
+        mLog.setCurrentLogLevel(Level.DEBUG);
 
         // Ensure debug is logged and verbose isn't
-        mLog.log(LogLevel.DEBUG, TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 6);
+        mLog.debug(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 6);
         assertEquals(TEST_LOGGED_MESSAGE + 6, mMessage);
-        assertEquals(LogLevel.DEBUG.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("DEBUG"), mLogLevel);
 
-        mLog.log(LogLevel.VERBOSE, TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 7);
+        mLog.verbose(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 7);
         assertEquals(TEST_LOGGED_MESSAGE + 6, mMessage);
-        assertEquals(LogLevel.DEBUG.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("DEBUG"), mLogLevel);
     }
 
     @Test
@@ -140,44 +130,44 @@ public class LogTest {
         mLog.info(TEST_LOG_MESSAGE + 1);
         assertEquals(TEST_LOG_MESSAGE + 1, mMessage);
         assertEquals(TEST_DEFAULT_TAG_NAME, mTag);
-        assertEquals(LogLevel.INFO.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("INFO"), mLogLevel);
 
         mLog.info(TEST_LOG_MESSAGE + 2);
         assertEquals(TEST_LOG_MESSAGE + 2, mMessage);
-        assertEquals(LogLevel.INFO.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("INFO"), mLogLevel);
 
         mLog.warn(TEST_LOG_MESSAGE + 3);
         assertEquals(TEST_LOG_MESSAGE + 3, mMessage);
-        assertEquals(LogLevel.WARN.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("WARN"), mLogLevel);
 
         mLog.error(TEST_LOG_MESSAGE + 4);
         assertEquals(TEST_LOG_MESSAGE + 4, mMessage);
-        assertEquals(LogLevel.ERROR.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ERROR"), mLogLevel);
 
         mLog.assrt(TEST_LOG_MESSAGE + 5);
         assertEquals(TEST_LOG_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
         // Ensure we are not logging lower pri messages
         mLog.debug(TEST_LOG_MESSAGE + 6);
         assertEquals(TEST_LOG_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
         mLog.verbose(TEST_LOG_MESSAGE + 7);
         assertEquals(TEST_LOG_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
         // Set the new level to debug
-        mLog.setCurrentLogLevel(LogLevel.DEBUG);
+        mLog.setCurrentLogLevel(Level.DEBUG);
 
         // Ensure debug is logged and verbose isn't
         mLog.debug(TEST_LOG_MESSAGE + 6);
         assertEquals(TEST_LOG_MESSAGE + 6, mMessage);
-        assertEquals(LogLevel.DEBUG.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("DEBUG"), mLogLevel);
 
         mLog.verbose(TEST_LOG_MESSAGE + 7);
         assertEquals(TEST_LOG_MESSAGE + 6, mMessage);
-        assertEquals(LogLevel.DEBUG.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("DEBUG"), mLogLevel);
     }
 
     @Test
@@ -185,44 +175,44 @@ public class LogTest {
         mLog.info(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 1);
         assertEquals(TEST_LOGGED_MESSAGE + 1, mMessage);
         assertEquals(TEST_DEFAULT_TAG_NAME, mTag);
-        assertEquals(LogLevel.INFO.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("INFO"), mLogLevel);
 
         mLog.info(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 2);
         assertEquals(TEST_LOGGED_MESSAGE + 2, mMessage);
-        assertEquals(LogLevel.INFO.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("INFO"), mLogLevel);
 
         mLog.warn(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 3);
         assertEquals(TEST_LOGGED_MESSAGE + 3, mMessage);
-        assertEquals(LogLevel.WARN.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("WARN"), mLogLevel);
 
         mLog.error(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 4);
         assertEquals(TEST_LOGGED_MESSAGE + 4, mMessage);
-        assertEquals(LogLevel.ERROR.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ERROR"), mLogLevel);
 
         mLog.assrt(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 5);
         assertEquals(TEST_LOGGED_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
         // Ensure we are not logging lower pri messages
         mLog.debug(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 6);
         assertEquals(TEST_LOGGED_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
         mLog.verbose(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 7);
         assertEquals(TEST_LOGGED_MESSAGE + 5, mMessage);
-        assertEquals(LogLevel.ASSERT.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ASSERT"), mLogLevel);
 
         // Set the new level to debug
-        mLog.setCurrentLogLevel(LogLevel.DEBUG);
+        mLog.setCurrentLogLevel(Level.DEBUG);
 
         // Ensure debug is logged and verbose isn't
         mLog.debug(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 6);
         assertEquals(TEST_LOGGED_MESSAGE + 6, mMessage);
-        assertEquals(LogLevel.DEBUG.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("DEBUG"), mLogLevel);
 
         mLog.verbose(TEST_PARAMETERIZED_LOG_MESSAGE, TEST_DEFAULT_TAG_NAME, 7);
         assertEquals(TEST_LOGGED_MESSAGE + 6, mMessage);
-        assertEquals(LogLevel.DEBUG.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("DEBUG"), mLogLevel);
     }
 
     @Test
@@ -230,10 +220,10 @@ public class LogTest {
         mLog.exception(new KinesisVideoException(TEST_LOG_MESSAGE));
         assertNotEquals(null, mMessage);
         assertEquals(TEST_DEFAULT_TAG_NAME, mTag);
-        assertEquals(LogLevel.ERROR.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("ERROR"), mLogLevel);
 
         // Set the new level to assert
-        mLog.setCurrentLogLevel(LogLevel.ASSERT);
+        mLog.setCurrentLogLevel(Level.getLevel("ASSERT"));
 
         // Ensure exception isn't logged
         mMessage = null;
@@ -247,6 +237,6 @@ public class LogTest {
         mLog.info(TEST_LOG_MESSAGE);
         assertEquals(TEST_LOG_MESSAGE, mMessage);
         assertEquals(TEST_DEFAULT_TAG_NAME + ".LogTest", mTag);
-        assertEquals(LogLevel.INFO.getLogLevel(), mLogLevel);
+        assertEquals(Level.getLevel("INFO"), mLogLevel);
     }
 }

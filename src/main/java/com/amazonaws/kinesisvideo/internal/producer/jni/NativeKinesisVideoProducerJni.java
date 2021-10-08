@@ -2,7 +2,6 @@ package com.amazonaws.kinesisvideo.internal.producer.jni;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.logging.Log;
-import com.amazonaws.kinesisvideo.common.logging.LogLevel;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.*;
 import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
@@ -144,7 +143,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         this(authCallbacks,
                 storageCallbacks,
                 serviceCallbacks,
-                new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE, "Producer JNI"));
+                Log.getLogInstance("Producer JNI"));
     }
 
     /**
@@ -1191,23 +1190,23 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
                     EXPECTED_LIBRARY_VERSION, PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion));
     }
 
-    public void logPrint(final @Nonnull int level, final @Nonnull String tag, final @Nonnull String fmt) {
-        String fmtLog = fmt.substring(6);
+    public void logPrint(final @Nonnull int level, final @Nonnull String tag, final @Nonnull String fmt, final @Nonnull String print) {
+        String toPrint = String.format("[PIC Layer] %s(): %s", tag, print);
         switch (level) {
             case 1:
-                mLog.verbose("%s(): %s", tag, fmtLog);
+                mLog.verbose(toPrint);
                 break;
             case 2:
-                mLog.debug("%s(): %s", tag, fmtLog);
+                mLog.debug(toPrint);
                 break;
             case 3:
-                mLog.info("%s(): %s", tag, fmtLog);
+                mLog.info(toPrint);
                 break;
             case 4:
-                mLog.warn("%s(): %s", tag, fmtLog);
+                mLog.warn(toPrint);
                 break;
             default:
-                mLog.error("%s(): %s", tag, fmtLog);
+                mLog.error(toPrint);
                 break;
         }
     }

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+
+    <CustomLevels>
+        <CustomLevel name="ASSERT" intLevel="250" />
+        <CustomLevel name="EXCEPTION" intLevel="350" />
+        <CustomLevel name="VERBOSE" intLevel="550" />
+    </CustomLevels>
+
+    <Appenders>
+
+        <RollingFile name="RollingFile" fileName="logs/app.log" filePattern="logs/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz">
+            <PatternLayout pattern="%d [%t] %-5level - %msg%n%throwable"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="1 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+
+        <Console name="ConsoleAppender" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d [%t] %-5level - %msg%n%throwable"/>
+        </Console>
+
+    </Appenders>
+
+    <Loggers>
+        <Root level="VERBOSE">
+            <AppenderRef ref="ConsoleAppender"/>
+            <AppenderRef ref="RollingFile"/>
+        </Root>
+    </Loggers>
+</Configuration>

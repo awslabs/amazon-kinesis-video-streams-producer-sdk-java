@@ -34,7 +34,7 @@ public class HostnameVerifyingX509ExtendedTrustManager extends X509ExtendedTrust
 
     private static final DefaultHostnameVerifier DEFAULT_HOSTNAME_VERIFIER = new DefaultHostnameVerifier(
             PublicSuffixMatcherLoader.getDefault());
-    private Log log = new Log(Log.SYSTEM_OUT);
+    private Log log = Log.getLogInstance(null);
     private final boolean clientSideHostnameVerificationEnabled;
 
     private final X509ExtendedTrustManager x509ExtendedTrustManager;
