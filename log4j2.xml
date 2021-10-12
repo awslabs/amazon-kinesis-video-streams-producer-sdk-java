@@ -9,7 +9,7 @@
 
     <Appenders>
 
-        <RollingFile name="RollingFile" fileName="logs/app.log" filePattern="logs/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz">
+        <RollingFile name="RollingFile" fileName="logs/kvs.log" filePattern="logs/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz">
             <PatternLayout pattern="%d [%t] %-5level %logger{36} - %msg%n%throwable"/>
             <Policies>
                 <TimeBasedTriggeringPolicy />
@@ -25,7 +25,7 @@
     </Appenders>
 
     <Loggers>
-        <Root level="VERBOSE">
+        <Root level="WARN">
             <AppenderRef ref="ConsoleAppender"/>
             <AppenderRef ref="RollingFile"/>
         </Root>
