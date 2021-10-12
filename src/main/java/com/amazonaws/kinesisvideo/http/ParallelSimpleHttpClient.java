@@ -266,14 +266,6 @@ public final class ParallelSimpleHttpClient implements HttpClient {
             return this;
         }
 
-        public Builder log( final Logger logger) {
-            if (logger == null) {
-                throw new NullPointerException("log");
-            }
-            mLogger = logger;
-            return this;
-        }
-
         public ParallelSimpleHttpClient build() {
             checkNotNull(mUri);
             return new ParallelSimpleHttpClient(this);

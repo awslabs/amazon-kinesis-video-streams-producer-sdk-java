@@ -3,7 +3,6 @@ package com.amazonaws.kinesisvideo.client;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
-import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.encoding.ChunkEncoder;
 import com.amazonaws.kinesisvideo.http.ParallelSimpleHttpClient;
 import com.amazonaws.kinesisvideo.signing.KinesisVideoSigner;
@@ -67,7 +66,6 @@ public final class PutMediaClient {
     private void putMediaWithSender(final Consumer<OutputStream> sender) {
         final ParallelSimpleHttpClient.Builder clientBuilder = ParallelSimpleHttpClient.builder()
             .uri(mBuilder.mUri).method(POST)
-            .log(logger)
             .header(STREAM_NAME_HEADER, mBuilder.mStreamName)
             .header(TRANSFER_ENCODING, CHUNKED)
             .header(CONNECTION, KEEP_ALIVE)
@@ -290,11 +288,6 @@ public final class PutMediaClient {
 
         public Builder upstreamKbps(final long kbps) {
             upstreamKbps = kbps;
-            return this;
-        }
-
-        public Builder log(final Logger logger) {
-            mLogger = Preconditions.checkNotNull(logger);
             return this;
         }
 
