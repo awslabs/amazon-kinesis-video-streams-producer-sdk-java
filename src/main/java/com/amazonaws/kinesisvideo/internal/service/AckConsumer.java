@@ -1,7 +1,8 @@
 package com.amazonaws.kinesisvideo.internal.service;
 
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Level;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
@@ -22,16 +23,16 @@ class AckConsumer implements Consumer<InputStream> {
     private final KinesisVideoProducerStream stream;
     private InputStream ackStream = null;
     private final CountDownLatch stoppedLatch;
-    private final Log log;
+    private final Logger logger;
     private final long uploadHandle;
     private volatile boolean closed = false;
 
     public AckConsumer(final long uploadHandle,
                        @Nonnull final KinesisVideoProducerStream stream,
-                       @Nonnull final Log log) {
+                       @Nonnull final Logger logger) {
         this.stream = Preconditions.checkNotNull(stream);
         this.uploadHandle = uploadHandle;
-        this.log = Preconditions.checkNotNull(log);
+        this.logger = Preconditions.checkNotNull(logger);
         this.stoppedLatch = new CountDownLatch(1);
     }
 
@@ -53,7 +54,7 @@ class AckConsumer implements Consumer<InputStream> {
 
         final byte[] buffer = new byte[FOUR_KB];
         int bytesRead;
-        log.info("Starting ACK processing");
+        logger.info("Starting ACK processing");
         try {
             while (!closed) {
                 // This is a blocking operation
@@ -68,23 +69,23 @@ class AckConsumer implements Consumer<InputStream> {
                 if (stream.getStreamHandle() == NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE
                         || bytesRead <= 0 || END_OF_STREAM_MSG.equals(bytesString)) {
                     // End-of-stream
-                    log.debug("Received end-of-stream for ACKs.");
+                    logger.debug("Received end-of-stream for ACKs.");
                     closed = true;
                 } else if (bytesRead != 0) {
-                    log.debug("Received ACK bits: " + bytesString);
+                    logger.debug("Received ACK bits: " + bytesString);
                     try {
                         stream.parseFragmentAck(uploadHandle, bytesString);
                     } catch (final ProducerException e) {
                         // Log the exception
-                        log.exception(e, "Processing ACK threw an exception. Logging and continuing. ");
+                        logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Processing ACK threw an exception. Logging and continuing. " + e.getMessage(), e);
                     }
                 }
             }
 
-            log.debug("Finished reading ACKs stream");
+            logger.debug("Finished reading ACKs stream");
         } catch (final IOException e) {
             // Log and exit
-            log.exception(e);
+            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
         } finally {
             stoppedLatch.countDown();
         }

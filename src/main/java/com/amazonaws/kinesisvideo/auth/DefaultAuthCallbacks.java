@@ -1,7 +1,8 @@
 package com.amazonaws.kinesisvideo.auth;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
 import com.amazonaws.kinesisvideo.producer.AuthInfo;
@@ -41,7 +42,7 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
     /**
      * Used for logging
      */
-    private final Log log;
+    private final Logger logger;
 
     /**
      * Stores the serialized credentials
@@ -55,10 +56,10 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
 
     public DefaultAuthCallbacks(@Nonnull KinesisVideoCredentialsProvider credentialsProvider,
                                 @Nonnull final ScheduledExecutorService executor,
-                                @Nonnull Log log) {
+                                @Nonnull Logger logger) {
         this.credentialsProvider = Preconditions.checkNotNull(credentialsProvider);
         this.executor = Preconditions.checkNotNull(executor);
-        this.log = Preconditions.checkNotNull(log);
+        this.logger = Preconditions.checkNotNull(logger);
     }
 
     @Nullable
@@ -89,19 +90,19 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
                     // return null
                     serializedCredentials = null;
                     expiration = 0;
-                    log.exception(e, "Exception was thrown trying to get updated credentials");
+                    logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Exception was thrown trying to get updated credentials" + e.getMessage(), e);
                 } catch (final KinesisVideoException e) {
                     // return null
                     serializedCredentials = null;
                     expiration = 0;
-                    log.exception(e, "Exception was thrown trying to get updated credentials");
+                    logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Exception was thrown trying to get updated credentials" + e.getMessage(), e);
                 } finally {
                     try {
                         byteArrayOutputStream.close();
                     }
                     catch(final IOException e) {
                         // Do nothing
-                        log.exception(e, "Closing the byte array stream threw an exception");
+                        logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Closing the byte array stream threw an exception" + e.getMessage(), e);
                     }
                 }
             }
@@ -113,11 +114,11 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
         try {
             future.get(CREDENTIALS_UPDATE_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
         } catch (final InterruptedException e) {
-            log.exception(e, "Awaiting for the credentials update threw an exception");
+            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Awaiting for the credentials update threw an exception" + e.getMessage(), e);
         } catch (final ExecutionException e) {
-            log.exception(e, "Awaiting for the credentials update threw an exception");
+            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Awaiting for the credentials update threw an exception" + e.getMessage(), e);
         } catch (final TimeoutException e) {
-            log.exception(e, "Awaiting for the credentials update threw an exception");
+            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Awaiting for the credentials update threw an exception" + e.getMessage(), e);
         }
 
         return new AuthInfo(

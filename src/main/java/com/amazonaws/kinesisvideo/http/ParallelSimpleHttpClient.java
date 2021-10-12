@@ -1,7 +1,9 @@
 package com.amazonaws.kinesisvideo.http;
 
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.socket.SocketFactory;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
@@ -37,7 +39,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
             // No op;
         }
     };
-    private final Log log;
+    private final Logger logger;
     private final Builder mBuilder;
     private Socket mSocket;
     private InputStream mInputStream;
@@ -47,7 +49,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
     private ParallelSimpleHttpClient(final Builder builder) {
         mBuilder = builder;
-        log = mBuilder.mLog;
+        logger = mBuilder.mLogger;
     }
 
     public static Builder builder() {
@@ -92,7 +94,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private void sendInitRequest() throws Exception {
         final Writer outputWriter = new BufferedWriter(new OutputStreamWriter(mOutputStream, Charset.defaultCharset()));
         final String initRequest = new StringBuilder().append(getHttpRequestString()).append(getHeadersString()).append(CLRF).toString();
-        log.debug("Request: " + initRequest);
+        logger.debug("Request: " + initRequest);
         outputWriter.write(initRequest);
         outputWriter.flush();
     }
@@ -142,11 +144,12 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                     Exception storedException = null;
                     try {
                         // This is needed to get the thread Id.
-                        log.debug("Start sending data.");
+                        logger.debug("Start sending data.");
                         mBuilder.mSender.accept(mOutputStream);
-                        log.debug("End sending data. Sent all data, close.");
+                        logger.debug("End sending data. Sent all data, close.");
                     } catch (final Exception e) {
-                        log.exception(e, "Exception thrown on sending thread");
+                        logger.log(Level.getLevel("EXCEPTION"), 
+                            e.getClass().getSimpleName() + ": Exception thrown on sending thread" + e.getMessage(), e);
                         storedException = e;
                     } finally {
                         //Only call completion if there is an exception, otherwise sender will call completion
@@ -168,11 +171,12 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                 public void run() {
                     Exception storedException = null;
                     try {
-                        log.debug("Starting receiving data");
+                        logger.debug("Starting receiving data");
                         mBuilder.mReceiver.accept(mInputStream);
-                        log.debug("Received all data, close");
+                        logger.debug("Received all data, close");
                     } catch (final Exception e) {
-                        log.exception(e, "Exception thrown on receiving thread");
+                        logger.log(Level.getLevel("EXCEPTION"), 
+                            e.getClass().getSimpleName() + ": Exception thrown on receiving thread" + e.getMessage(), e);
                         storedException = e;
                     } finally {
                         mBuilder.mCompletion.accept(storedException);
@@ -215,7 +219,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         private Integer mTimeout;
         private Consumer<Exception> mCompletion;
         // TODO: Set to correct output channel
-        private Log mLog = Log.getLogInstance(null);
+        private Logger mLogger = LogManager.getLogger("KinesisVideo");
 
         private Builder() {
             mHeaders = new HashMap<String, String>();
@@ -262,11 +266,11 @@ public final class ParallelSimpleHttpClient implements HttpClient {
             return this;
         }
 
-        public Builder log( final Log log) {
-            if (log == null) {
+        public Builder log( final Logger logger) {
+            if (logger == null) {
                 throw new NullPointerException("log");
             }
-            mLog = log;
+            mLogger = logger;
             return this;
         }
 

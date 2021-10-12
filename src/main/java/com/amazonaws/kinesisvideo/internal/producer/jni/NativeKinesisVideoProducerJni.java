@@ -1,7 +1,9 @@
 package com.amazonaws.kinesisvideo.internal.producer.jni;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.*;
 import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
@@ -107,7 +109,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Logger interface
      */
-    private final Log mLog;
+    private final Logger mLogger;
 
     /**
      * Helper class for loading the native libraries
@@ -143,7 +145,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         this(authCallbacks,
                 storageCallbacks,
                 serviceCallbacks,
-                Log.getLogInstance("Producer JNI"));
+                LogManager.getLogger("Producer JNI"));
     }
 
     /**
@@ -151,17 +153,17 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param authCallbacks Authentication callbacks
      * @param storageCallbacks Storage callbacks
      * @param serviceCallbacks Service call callbacks
-     * @param log Log object to use for logging
+     * @param logger logger object to use for logging
      * @throws ProducerException
      */
     public NativeKinesisVideoProducerJni(final @Nonnull AuthCallbacks authCallbacks,
                                          final @Nonnull StorageCallbacks storageCallbacks,
                                          final @Nonnull ServiceCallbacks serviceCallbacks,
-                                         final @Nonnull Log log) throws ProducerException {
+                                         final @Nonnull Logger logger) throws ProducerException {
         this(authCallbacks,
                 storageCallbacks,
                 serviceCallbacks,
-                log,
+                logger,
                 new CountDownLatch(1));
     }
 
@@ -170,21 +172,21 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param authCallbacks Authentication callbacks
      * @param storageCallbacks Storage callbacks
      * @param serviceCallbacks Service call callbacks
-     * @param log Log objet to use for logging
+     * @param logger logger objet to use for logging
      * @param readyLatch Ready latch for synch creation
      * @throws ProducerException
      */
     public NativeKinesisVideoProducerJni(final @Nonnull AuthCallbacks authCallbacks,
                                          final @Nonnull StorageCallbacks storageCallbacks,
                                          final @Nonnull ServiceCallbacks serviceCallbacks,
-                                         final @Nonnull Log log,
+                                         final @Nonnull Logger logger,
                                          final @Nonnull CountDownLatch readyLatch) throws ProducerException {
-        mLog = Preconditions.checkNotNull(log);
+        mLogger = Preconditions.checkNotNull(logger);
         mAuthCallbacks = Preconditions.checkNotNull(authCallbacks);
         mStorageCallbacks = Preconditions.checkNotNull(storageCallbacks);
         mServiceCallbacks = Preconditions.checkNotNull(serviceCallbacks);
         mReadyLatch = Preconditions.checkNotNull(readyLatch);
-        mLibraryLoader = new NativeLibraryLoader(mLog);
+        mLibraryLoader = new NativeLibraryLoader(mLogger);
         mServiceCallbacks.initialize(this);
         mKinesisVideoMetrics = new KinesisVideoMetrics();
     }
@@ -325,7 +327,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             final KinesisVideoProducerStream kinesisVideoProducerStream = new NativeKinesisVideoProducerStream(this,
                     streamInfo,
                     streamHandle,
-                    mLog,
+                    mLogger,
                     streamCallbacks, 
                     mDeviceInfo);
 
@@ -754,7 +756,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         synchronized (mCallbackSyncObject) {
             synchronized (mSyncObject) {
                 if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                    mLog.info("Stream Ready for non-existing stream handle " + streamHandle);
+                    mLogger.info("Stream Ready for non-existing stream handle " + streamHandle);
                     return;
                 }
 
@@ -1182,7 +1184,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         // Get the compile time for reporting purposes
         final String compileTime = getNativeCodeCompileTime();
 
-        mLog.verbose("%s library: version %s, compile time %s", PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion, compileTime);
+        mLogger.log(Level.getLevel("VERBOSE"),"{} library: version {}, compile time {}", PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion, compileTime);
 
         Preconditions.checkState(libraryVersion.equals(EXPECTED_LIBRARY_VERSION),
                     String.format("FATAL DEPLOYMENT ERROR: This app is built "
@@ -1190,23 +1192,31 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
                     EXPECTED_LIBRARY_VERSION, PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion));
     }
 
-    public void logPrint(final @Nonnull int level, final @Nonnull String tag, final @Nonnull String fmt, final @Nonnull String print) {
-        String toPrint = String.format("[PIC Layer] %s(): %s", tag, print);
+    /**
+     * Logs PIC logs
+     *
+     * @param level - log level from PIC
+     * @param tag - tag from PIC
+     * @param picFmt - fmt from PIC
+     * @param print - the string to be logged
+     */
+    public void logPrint(final @Nonnull int level, final @Nonnull String tag, final @Nonnull String picFmt, final @Nonnull String print) {
+        String toPrint = "[PIC] " + tag + " - " + print;
         switch (level) {
             case 1:
-                mLog.verbose(toPrint);
+                mLogger.log(Level.getLevel("VERBOSE"),toPrint);
                 break;
             case 2:
-                mLog.debug(toPrint);
+                mLogger.debug(toPrint);
                 break;
             case 3:
-                mLog.info(toPrint);
+                mLogger.info(toPrint);
                 break;
             case 4:
-                mLog.warn(toPrint);
+                mLogger.warn(toPrint);
                 break;
             default:
-                mLog.error(toPrint);
+                mLogger.error(toPrint);
                 break;
         }
     }

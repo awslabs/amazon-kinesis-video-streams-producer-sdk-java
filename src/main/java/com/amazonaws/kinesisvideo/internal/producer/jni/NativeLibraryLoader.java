@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.internal.producer.jni;
 
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 
 import javax.annotation.Nonnull;
@@ -12,10 +13,10 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class NativeLibraryLoader {
 
-    private final Log mLog;
+    private final Logger mLogger;
 
-    public NativeLibraryLoader(final @Nonnull Log log) {
-        mLog = Preconditions.checkNotNull(log);
+    public NativeLibraryLoader(final @Nonnull Logger logger) {
+        mLogger = Preconditions.checkNotNull(logger);
     }
 
     /**
@@ -53,12 +54,12 @@ public class NativeLibraryLoader {
         if (libraryFullPath != null && !libraryFullPath.isEmpty()) {
             try {
                 System.load(libraryFullPath);
-                mLog.verbose("Success! Directly loaded native library %s.", libraryFullPath);
+                mLogger.log(Level.getLevel("VERBOSE"), "Success! Directly loaded native library {}.", libraryFullPath);
                 return true;
             } catch (final UnsatisfiedLinkError e) {
-                mLog.debug("Unsatisfied link error. Directly loading native library %s.", libraryFullPath);
+                mLogger.debug("Unsatisfied link error. Directly loading native library {}.", libraryFullPath);
             } catch (final SecurityException e) {
-                mLog.debug("Security exception. Directly loading native library %s.", libraryFullPath);
+                mLogger.debug("Security exception. Directly loading native library {}.", libraryFullPath);
             }
         }
 
@@ -74,12 +75,12 @@ public class NativeLibraryLoader {
     private boolean loadNativeLibraryIndirect(final @Nonnull String libraryName) {
         try {
             System.loadLibrary(libraryName);
-            mLog.verbose("Success! Indirectly loaded native library %s.", libraryName);
+            mLogger.log(Level.getLevel("VERBOSE"), "Success! Indirectly loaded native library {}.", libraryName);
             return true;
         } catch (final UnsatisfiedLinkError e) {
-            mLog.exception(e, "Unsatisfied link error. Loading native library %s failed with %s", libraryName, e.toString());
+            mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + "Unsatisfied link error. Loading native library " + libraryName + " failed with " + e.toString() + e.getMessage(), e);
         } catch (final SecurityException e) {
-            mLog.exception(e, "Security exception. Loading native library %s failed with %s", libraryName, e.toString());
+            mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + "Security exception. Loading native library " + libraryName + " failed with " + e.toString() + e.getMessage(), e);
         }
 
         // This is the error return case.

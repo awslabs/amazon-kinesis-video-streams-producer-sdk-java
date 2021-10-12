@@ -16,7 +16,9 @@ import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.mediasource.ProducerStreamSink;
 import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
@@ -73,34 +75,34 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor) {
-        this(Log.getLogInstance(TAG),
+        this(LogManager.getLogger(TAG),
                 configuration,
                 serviceClient,
                 executor);
     }
 
     public NativeKinesisVideoClient(
-            @Nonnull final Log log,
+            @Nonnull final Logger logger,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor) {
-        this(log,
+        this(logger,
                 new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
                         executor,
-                        log),
+                        logger),
                 configuration.getStorageCallbacks(),
-                new DefaultServiceCallbacksImpl(log, executor, configuration, serviceClient),
+                new DefaultServiceCallbacksImpl(logger, executor, configuration, serviceClient),
                 new DefaultStreamCallbacks());
     }
 
     public NativeKinesisVideoClient(
-            @Nonnull final Log log,
+            @Nonnull final Logger logger,
             @Nonnull final AuthCallbacks authCallbacks,
             @Nonnull final StorageCallbacks storageCallbacks,
             @Nonnull final ServiceCallbacks serviceCallbacks,
             @Nonnull final StreamCallbacks streamCallbacks) {
 
-        super(log);
+        super(logger);
 
         mAuthCallbacks = checkNotNull(authCallbacks);
         mStorageCallbacks = checkNotNull(storageCallbacks);
@@ -189,7 +191,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
                 try {
                     producerStream.stopStreamSync();
                 } catch (final KinesisVideoException e) {
-                    mLog.exception(e, "Failed to stop media source %s due to Exception ", mediaSource);
+                    mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + "Failed to stop media source" + mediaSource + "due to Exception. " + e.getMessage(), e);
                 }
             }
         } finally {
@@ -233,7 +235,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
                 mAuthCallbacks,
                 mStorageCallbacks,
                 mServiceCallbacks,
-                mLog);
+                mLogger);
         kinesisVideoProducer.createSync(deviceInfo);
         return kinesisVideoProducer;
     }

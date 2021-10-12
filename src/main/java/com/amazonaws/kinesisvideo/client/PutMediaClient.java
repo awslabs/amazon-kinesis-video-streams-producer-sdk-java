@@ -1,7 +1,8 @@
 package com.amazonaws.kinesisvideo.client;
 
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.encoding.ChunkEncoder;
 import com.amazonaws.kinesisvideo.http.ParallelSimpleHttpClient;
@@ -43,12 +44,12 @@ public final class PutMediaClient {
     private static final double MILLI_TO_SEC = 1000;
     private static final int LOGGING_INTERVAL = 250; // Rougly every 10 seconds in 25 fps
     private final Builder mBuilder;
-    private final Log log;
+    private final Logger logger;
     private ParallelSimpleHttpClient httpClient;
 
     private PutMediaClient(final Builder builder) {
         mBuilder = builder;
-        log = mBuilder.mLog;
+        logger = mBuilder.mLogger;
     }
 
     public static Builder builder() {
@@ -66,7 +67,7 @@ public final class PutMediaClient {
     private void putMediaWithSender(final Consumer<OutputStream> sender) {
         final ParallelSimpleHttpClient.Builder clientBuilder = ParallelSimpleHttpClient.builder()
             .uri(mBuilder.mUri).method(POST)
-            .log(log)
+            .log(logger)
             .header(STREAM_NAME_HEADER, mBuilder.mStreamName)
             .header(TRANSFER_ENCODING, CHUNKED)
             .header(CONNECTION, KEEP_ALIVE)
@@ -117,10 +118,10 @@ public final class PutMediaClient {
                         mkvBytesRead = mBuilder.mMkvStream.read(buffer);
                         counter++;
                         if (counter % LOGGING_INTERVAL == 0) {
-                            log.debug("Sending data, counter : " + counter);
+                            logger.debug("Sending data, counter : " + counter);
                         }
                         if (mkvBytesRead == -1) {
-                            log.info("End-of-stream is reported. Terminating...");
+                            logger.info("End-of-stream is reported. Terminating...");
                             continueLoop = false;
                         } else {
                             throttledOutputStream.write(ChunkEncoder.encode(buffer, mkvBytesRead));
@@ -132,9 +133,9 @@ public final class PutMediaClient {
                     }
                     throttledOutputStream.write(ChunkEncoder.encode(buffer, 0));
                     rawOutputStream.flush();
-                    log.debug("Data sent. counter : " + counter);
+                    logger.debug("Data sent. counter : " + counter);
                 } catch (final Exception e) {
-                    log.debug("Exception while sending data.", e);
+                    logger.debug("Exception while sending data.", e);
                     throw new RuntimeException("Exception while sending encoded chunk in MKV stream ! ", e);
                 } finally {
                     tryCloseOutputFileStream(outputFileStream);
@@ -198,7 +199,7 @@ public final class PutMediaClient {
         try {
             outputFileStream.close();
         } catch (final IOException e) {
-            log.error(e.getMessage());
+            logger.error(e.getMessage());
         }
     }
 
@@ -221,7 +222,7 @@ public final class PutMediaClient {
         private Long upstreamKbps;
         private Consumer<Exception> mCompletion;
         // TODO: Set to correct output channel
-        private Log mLog = Log.getLogInstance(null);
+        private Logger mLogger = LogManager.getLogger("KinesisVideo");
         private Map<String, String> unsignedHeaders;
 
         public Builder putMediaDestinationUri(final URI uri) {
@@ -292,8 +293,8 @@ public final class PutMediaClient {
             return this;
         }
 
-        public Builder log(final Log log) {
-            mLog = Preconditions.checkNotNull(log);
+        public Builder log(final Logger logger) {
+            mLogger = Preconditions.checkNotNull(logger);
             return this;
         }
 

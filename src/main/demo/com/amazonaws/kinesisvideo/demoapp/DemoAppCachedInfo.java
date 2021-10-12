@@ -3,7 +3,8 @@ package com.amazonaws.kinesisvideo.demoapp;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
@@ -23,7 +24,6 @@ import com.amazonaws.services.kinesisvideo.model.DescribeStreamResult;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointResult;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.logging.log4j.Level;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -63,16 +63,15 @@ public final class DemoAppCachedInfo {
                     .withStorageCallbacks(new DefaultStorageCallbacks())
                     .build();
 
-            final Log log = Log.getLogInstance("KinesisVideo");
-            log.setCurrentLogLevel(Level.getLevel("DEBUG"));
+            final Logger logger = LogManager.getLogger("KinesisVideo");
 
             // Create CachedInfoServiceCallback
             final CachedInfoMultiAuthServiceCallbacksImpl serviceCallbacks =
-                    new CachedInfoMultiAuthServiceCallbacksImpl(log, executor,
-                            configuration, new JavaKinesisVideoServiceClient(log));
+                    new CachedInfoMultiAuthServiceCallbacksImpl(logger, executor,
+                            configuration, new JavaKinesisVideoServiceClient(logger));
             // create Kinesis Video high level client
             final KinesisVideoClient kinesisVideoClient = KinesisVideoJavaClientFactory
-                    .createKinesisVideoClient(log, configuration, executor, null, serviceCallbacks);
+                    .createKinesisVideoClient(logger, configuration, executor, null, serviceCallbacks);
 
 
             final String streamName1 = STREAM_NAME + "-account-1";

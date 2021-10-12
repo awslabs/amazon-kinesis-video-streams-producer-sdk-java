@@ -6,7 +6,8 @@ import com.amazonaws.kinesisvideo.auth.StaticCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Level;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
@@ -61,7 +62,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 final int statusCode = getStatusCodeFromException(object);
                 for (final StreamingInfo stream : mStreams) {
                     if (stream.getStream().getStreamHandle() == streamHandle) {
-                        log.info("Complete callback triggered for "
+                        logger.info("Complete callback triggered for "
                                 + stream.getStream().getStreamName() + " with statuscode " + statusCode);
                     }
                 }
@@ -69,7 +70,8 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     try {
                         stream.streamTerminated(uploadHandle, statusCode);
                     } catch (final ProducerException e) {
-                        log.exception(e, "Reporting stream termination threw an exception");
+                        logger.log(Level.getLevel("EXCEPTION"), 
+                        e.getClass().getSimpleName() + ": Reporting stream termination threw an exception" + e.getMessage(), e);
                     }
                 }
             }
@@ -88,10 +90,11 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
         public void stop() {
             try {
-                log.debug("Stopping the kinesis video producer stream");
+                logger.debug("Stopping the kinesis video producer stream");
                 stream.stopStreamSync();
             } catch (final ProducerException e) {
-                log.exception(e, "Stopping stream threw an exception.");
+                logger.log(Level.getLevel("EXCEPTION"), 
+                        e.getClass().getSimpleName() + ": Stopping stream threw an exception." + e.getMessage(), e);
             }
         }
 
@@ -111,9 +114,9 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     protected final KinesisVideoServiceClient kinesisVideoServiceClient;
 
     /**
-     * Log object to use
+     * Logger to use
      */
-    protected final Log log;
+    protected final Logger logger;
 
     /**
      * Store the configuration
@@ -136,13 +139,13 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     private long uploadHandle;
 
     public DefaultServiceCallbacksImpl(
-            @Nonnull final Log log,
+            @Nonnull final Logger logger,
             @Nonnull final ScheduledExecutorService executor,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient kinesisVideoServiceClient) {
         this.executor = Preconditions.checkNotNull(executor);
         this.kinesisVideoServiceClient = Preconditions.checkNotNull(kinesisVideoServiceClient);
-        this.log = Preconditions.checkNotNull(log);
+        this.logger = Preconditions.checkNotNull(logger);
         this.configuration = Preconditions.checkNotNull(configuration);
 
         this.uploadHandle = 0;
@@ -150,7 +153,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         try {
             this.kinesisVideoServiceClient.initialize(configuration);
         } catch (final KinesisVideoException e) {
-            log.exception(e);
+            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
         }
     }
 
@@ -192,7 +195,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 int statusCode;
                 String streamArn = null;
 
-                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, log);
+                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, logger);
                 final long retentionInHours = retentionPeriod / Time.HUNDREDS_OF_NANOS_IN_AN_HOUR;
                 final long timeoutInMillis = timeout / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
 
@@ -208,7 +211,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     statusCode = HTTP_OK;
                 } catch (final KinesisVideoException e) {
                     statusCode = getStatusCodeFromException(e);
-                    log.error("Kinesis Video service client returned an error " + e.getMessage() + ". Reporting to Kinesis Video PIC.");
+                    logger.error("Kinesis Video service client returned an error " + e.getMessage() + ". Reporting to Kinesis Video PIC.");
                 }
 
                 try {
@@ -242,7 +245,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 int statusCode;
                 StreamDescription streamDescription = null;
 
-                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, log);
+                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, logger);
                 final long timeoutInMillis = timeout / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
 
                 try {
@@ -252,7 +255,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     statusCode = HTTP_OK;
                 } catch (final KinesisVideoException e) {
                     statusCode = getStatusCodeFromException(e);
-                    log.error("Kinesis Video service client returned an error " + e.getMessage() + ". Reporting to Kinesis Video PIC.");
+                    logger.error("Kinesis Video service client returned an error " + e.getMessage() + ". Reporting to Kinesis Video PIC.");
                 }
 
                 try {
@@ -283,7 +286,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         final Runnable task = new Runnable() {
             @Override
             public void run() {
-                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, log);
+                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, logger);
                 final long timeoutInMillis = timeout / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
                 int statusCode = HTTP_OK;
                 String endpoint = "";
@@ -293,7 +296,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                             timeoutInMillis,
                             credentialsProvider);
                 } catch (final KinesisVideoException e) {
-                    log.error("Kinesis Video service client returned an error " + e.getMessage() + ". Reporting to Kinesis Video PIC.");
+                    logger.error("Kinesis Video service client returned an error " + e.getMessage() + ". Reporting to Kinesis Video PIC.");
                     statusCode = getStatusCodeFromException(e);
                 }
 
@@ -351,9 +354,9 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     serializedCredentials = byteArrayOutputStream.toByteArray();
                     outputStream.close();
                 } catch (final IOException e) {
-                    log.exception(e);
+                    logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
                 } catch (final KinesisVideoException e) {
-                    log.exception(e);
+                    logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
                 } finally {
                     try {
                         byteArrayOutputStream.close();
@@ -410,14 +413,14 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
                 int statusCode = HTTP_OK;
 
-                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, log);
+                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, logger);
 
                 final long clientUploadHandle = getUploadHandle();
 
                 try {
                     final InputStream dataStream = kinesisVideoProducerStream.getDataStream(clientUploadHandle);
-                    final AckConsumer ackConsumer = new AckConsumer(clientUploadHandle, kinesisVideoProducerStream, log);
-                    final BlockingAckConsumer blockingAckConsumer = new BlockingAckConsumer(ackConsumer, log,
+                    final AckConsumer ackConsumer = new AckConsumer(clientUploadHandle, kinesisVideoProducerStream, logger);
+                    final BlockingAckConsumer blockingAckConsumer = new BlockingAckConsumer(ackConsumer, logger,
                             kinesisVideoProducerStream);
                     final CompletionCallback completionCallback = new CompletionCallback(kinesisVideoProducerStream,
                             clientUploadHandle);
@@ -439,11 +442,11 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     blockingAckConsumer.awaitResponse();
                 } catch (final KinesisVideoException e) {
                     statusCode = getStatusCodeFromException(e);
-                    log.error("Kinesis Video service client returned an error " + e.getMessage() + ". Reporting to Kinesis Video PIC.");
+                    logger.error("Kinesis Video service client returned an error " + e.getMessage() + ". Reporting to Kinesis Video PIC.");
                 }
 
                 try {
-                    log.info("putStreamResult uploadHandle " + clientUploadHandle + " status " + statusCode);
+                    logger.info("putStreamResult uploadHandle " + clientUploadHandle + " status " + statusCode);
                     kinesisVideoProducer.putStreamResult(kinesisVideoProducerStream, clientUploadHandle, statusCode);
                 } catch (final ProducerException e) {
                     throw new RuntimeException(e);
@@ -470,7 +473,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         final Runnable task = new Runnable() {
             @Override
             public void run() {
-                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, log);
+                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, logger);
                 final long timeoutInMillis = timeout / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
                 int statusCode = HTTP_OK;
 
@@ -489,7 +492,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                             timeoutInMillis,
                             credentialsProvider);
                 } catch (final KinesisVideoException e) {
-                    log.error("Kinesis Video service client returned an error " + e.getMessage() + ". Reporting to Kinesis Video PIC.");
+                    logger.error("Kinesis Video service client returned an error " + e.getMessage() + ". Reporting to Kinesis Video PIC.");
                     statusCode = getStatusCodeFromException(e);
                 }
 
@@ -625,9 +628,9 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
     @Nullable
     protected static KinesisVideoCredentialsProvider getCredentialsProvider(@Nullable final byte[] authData,
-                                                                    @Nonnull final Log log) {
+                                                                    @Nonnull final Logger logger) {
         if (null == authData) {
-            log.warn("NULL credentials have been returned by the credentials provider.");
+            logger.warn("NULL credentials have been returned by the credentials provider.");
             return null;
         }
 
@@ -639,16 +642,16 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
             credentials = (KinesisVideoCredentials) objectInput.readObject();
             objectInput.close();
         } catch (final IOException e) {
-            log.exception(e);
+            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
             return null;
         } catch (final ClassNotFoundException e) {
-            log.exception(e);
+            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
             return null;
         } finally {
             try {
                 byteArrayInputStream.close();
             } catch (final IOException e) {
-                log.exception(e);
+                logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
             }
         }
 

@@ -10,16 +10,16 @@
     <Appenders>
 
         <RollingFile name="RollingFile" fileName="logs/app.log" filePattern="logs/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz">
-            <PatternLayout pattern="%d [%t] %-5level - %msg%n%throwable"/>
+            <PatternLayout pattern="%d [%t] %-5level %logger{36} - %msg%n%throwable"/>
             <Policies>
                 <TimeBasedTriggeringPolicy />
-                <SizeBasedTriggeringPolicy size="1 MB"/>
+                <SizeBasedTriggeringPolicy size="3 MB"/>
             </Policies>
             <DefaultRolloverStrategy max="5"/>
         </RollingFile>
 
         <Console name="ConsoleAppender" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d [%t] %-5level - %msg%n%throwable"/>
+            <PatternLayout pattern="%d [%t] %-5level %logger{36} - %msg%n%throwable"/>
         </Console>
 
     </Appenders>

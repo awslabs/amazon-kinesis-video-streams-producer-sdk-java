@@ -3,7 +3,8 @@ package com.amazonaws.kinesisvideo.internal.client;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.DeviceInfo;
 
@@ -35,10 +36,10 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
     /**
      * Logging through this object
      */
-    protected final Log mLog;
+    protected final Logger mLogger;
 
-    public AbstractKinesisVideoClient(@Nonnull final Log log) {
-        mLog = Preconditions.checkNotNull(log);
+    public AbstractKinesisVideoClient(@Nonnull final Logger logger) {
+        mLogger = Preconditions.checkNotNull(logger);
     }
 
     /**
@@ -55,7 +56,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
     @Override
     public void initialize(@Nonnull final DeviceInfo deviceInfo) throws KinesisVideoException
     {
-        mLog.info("Initializing Kinesis Video client");
+        mLogger.info("Initializing Kinesis Video client");
 
         // Make sure we are not yet initialized
         checkState(!mIsInitialized, "Already initialized");
@@ -69,7 +70,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
      */
     @Override
     public void startAllMediaSources() throws KinesisVideoException {
-        mLog.verbose("Resuming Kinesis Video client");
+        mLogger.log(Level.getLevel("VERBOSE"), "Resuming Kinesis Video client");
 
         checkState(isInitialized(), "Must initialize first.");
         for (final MediaSource mediaSource : mMediaSources) {
@@ -94,7 +95,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
      */
     @Override
     public void stopAllMediaSources() throws KinesisVideoException {
-        mLog.verbose("Pausing Kinesis Video client");
+        mLogger.log(Level.getLevel("VERBOSE"),"Pausing Kinesis Video client");
 
         if (!isInitialized()) {
             // Idempotent call
@@ -111,7 +112,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
      */
     @Override
     public void free() throws KinesisVideoException {
-        mLog.verbose("Releasing Kinesis Video client");
+        mLogger.log(Level.getLevel("VERBOSE"),"Releasing Kinesis Video client");
 
         if (!isInitialized()) {
             // Idempotent call

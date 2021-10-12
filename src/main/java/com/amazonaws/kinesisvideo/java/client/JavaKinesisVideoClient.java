@@ -3,7 +3,7 @@ package com.amazonaws.kinesisvideo.java.client;
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.internal.client.NativeKinesisVideoClient;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
@@ -28,39 +28,39 @@ import java.util.concurrent.ScheduledExecutorService;
 public final class JavaKinesisVideoClient extends NativeKinesisVideoClient {
 
     public JavaKinesisVideoClient(
-            @Nonnull final Log log,
+            @Nonnull final Logger logger,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor) {
-        super(log,
+        super(logger,
                 configuration,
                 serviceClient,
                 executor);
     }
 
     public JavaKinesisVideoClient(
-            @Nonnull final Log log,
+            @Nonnull final Logger logger,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor,
             @Nonnull final StreamCallbacks streamCallbacks) {
-        this(log,
+        this(logger,
                 configuration,
-                new DefaultServiceCallbacksImpl(log, executor, configuration, serviceClient),
+                new DefaultServiceCallbacksImpl(logger, executor, configuration, serviceClient),
                 executor,
                 streamCallbacks);
     }
 
     public JavaKinesisVideoClient(
-            @Nonnull final Log log,
+            @Nonnull final Logger logger,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final ServiceCallbacks serviceCallbacks,
             @Nonnull final ScheduledExecutorService executor,
             @Nonnull final StreamCallbacks streamCallbacks) {
-        super(log,
+        super(logger,
                 new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
                         executor,
-                        log),
+                        logger),
                 configuration.getStorageCallbacks(),
                 serviceCallbacks,
                 streamCallbacks);

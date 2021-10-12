@@ -5,7 +5,8 @@ import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
@@ -37,10 +38,10 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_BAD_REQUE
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_OK;
 
 public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallbacksImpl {
-    public CachedInfoMultiAuthServiceCallbacksImpl(@Nonnull Log log, @Nonnull ScheduledExecutorService executor,
+    public CachedInfoMultiAuthServiceCallbacksImpl(@Nonnull Logger logger, @Nonnull ScheduledExecutorService executor,
                                                    @Nonnull KinesisVideoClientConfiguration configuration,
                                                    @Nonnull KinesisVideoServiceClient kinesisVideoServiceClient) {
-        super(log, executor, configuration, kinesisVideoServiceClient);
+        super(logger, executor, configuration, kinesisVideoServiceClient);
     }
 
     /**
@@ -173,9 +174,9 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
             serializedCredentials = byteArrayOutputStream.toByteArray();
             outputStream.close();
         } catch (final IOException e) {
-            log.exception(e);
+            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
         } catch (final KinesisVideoException e) {
-            log.exception(e);
+            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
         } finally {
             try {
                 byteArrayOutputStream.close();
@@ -231,7 +232,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
         final Runnable task = new Runnable() {
             @Override
             public void run() {
-                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, log);
+                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, logger);
                 final long timeoutInMillis = timeout / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
                 int statusCode = HTTP_OK;
 
@@ -250,7 +251,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
                             timeoutInMillis,
                             credentialsProvider);
                 } catch (final KinesisVideoException e) {
-                    log.error("Kinesis Video service client returned an error " + e.getMessage()
+                    logger.error("Kinesis Video service client returned an error " + e.getMessage()
                             + ". Reporting to Kinesis Video PIC.");
                     statusCode = getStatusCodeFromException(e);
                 }
