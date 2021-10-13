@@ -1,14 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
-
-    <CustomLevels>
-        <CustomLevel name="ASSERT" intLevel="250" />
-        <CustomLevel name="EXCEPTION" intLevel="350" />
-        <CustomLevel name="VERBOSE" intLevel="550" />
-    </CustomLevels>
-
     <Appenders>
-
         <RollingFile name="RollingFile" fileName="logs/kvs.log" filePattern="logs/$${date:yyyy-MM}/kvs-%d{MM-dd-yyyy}-%i.log.gz">
             <PatternLayout pattern="%d [%t] %-5level %logger{36} - %msg%n%throwable"/>
             <Policies>
@@ -21,11 +13,10 @@
         <Console name="ConsoleAppender" target="SYSTEM_OUT">
             <PatternLayout pattern="%d [%t] %-5level %logger{36} - %msg%n%throwable"/>
         </Console>
-
     </Appenders>
 
     <Loggers>
-        <Root level="WARN">
+        <Root level="TRACE">
             <AppenderRef ref="ConsoleAppender"/>
             <AppenderRef ref="RollingFile"/>
         </Root>

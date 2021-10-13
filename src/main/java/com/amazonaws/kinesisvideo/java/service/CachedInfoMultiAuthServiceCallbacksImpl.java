@@ -5,7 +5,6 @@ import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
@@ -174,9 +173,9 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
             serializedCredentials = byteArrayOutputStream.toByteArray();
             outputStream.close();
         } catch (final IOException e) {
-            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+            logger.error(e);
         } catch (final KinesisVideoException e) {
-            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+            logger.error(e);
         } finally {
             try {
                 byteArrayOutputStream.close();
@@ -251,8 +250,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
                             timeoutInMillis,
                             credentialsProvider);
                 } catch (final KinesisVideoException e) {
-                    logger.error("Kinesis Video service client returned an error " + e.getMessage()
-                            + ". Reporting to Kinesis Video PIC.");
+                    logger.error("Kinesis Video service client returned an error. Reporting to Kinesis Video PIC.", e);
                     statusCode = getStatusCodeFromException(e);
                 }
 

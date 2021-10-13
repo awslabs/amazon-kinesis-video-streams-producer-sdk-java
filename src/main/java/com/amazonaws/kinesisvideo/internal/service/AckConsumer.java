@@ -2,7 +2,6 @@ package com.amazonaws.kinesisvideo.internal.service;
 
 import com.amazonaws.kinesisvideo.common.function.Consumer;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Level;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
@@ -72,12 +71,12 @@ class AckConsumer implements Consumer<InputStream> {
                     logger.debug("Received end-of-stream for ACKs.");
                     closed = true;
                 } else if (bytesRead != 0) {
-                    logger.debug("Received ACK bits: " + bytesString);
+                    logger.debug("Received ACK bits: {}", bytesString);
                     try {
                         stream.parseFragmentAck(uploadHandle, bytesString);
                     } catch (final ProducerException e) {
                         // Log the exception
-                        logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Processing ACK threw an exception. Logging and continuing. " + e.getMessage(), e);
+                        logger.error("Processing ACK threw an exception. Logging and continuing.", e);
                     }
                 }
             }
@@ -85,7 +84,7 @@ class AckConsumer implements Consumer<InputStream> {
             logger.debug("Finished reading ACKs stream");
         } catch (final IOException e) {
             // Log and exit
-            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+            logger.error(e);
         } finally {
             stoppedLatch.countDown();
         }

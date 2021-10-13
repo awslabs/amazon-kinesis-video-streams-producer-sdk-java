@@ -2,7 +2,6 @@ package com.amazonaws.kinesisvideo.internal.producer.jni;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.*;
@@ -145,7 +144,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         this(authCallbacks,
                 storageCallbacks,
                 serviceCallbacks,
-                LogManager.getLogger("Producer JNI"));
+                LogManager.getLogger(NativeKinesisVideoProducerJni.class));
     }
 
     /**
@@ -756,7 +755,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         synchronized (mCallbackSyncObject) {
             synchronized (mSyncObject) {
                 if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                    mLogger.info("Stream Ready for non-existing stream handle " + streamHandle);
+                    mLogger.info("Stream Ready for non-existing stream handle {}", streamHandle);
                     return;
                 }
 
@@ -1184,7 +1183,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         // Get the compile time for reporting purposes
         final String compileTime = getNativeCodeCompileTime();
 
-        mLogger.log(Level.getLevel("VERBOSE"),"{} library: version {}, compile time {}", PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion, compileTime);
+        mLogger.trace("{} library: version {}, compile time {}", PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion, compileTime);
 
         Preconditions.checkState(libraryVersion.equals(EXPECTED_LIBRARY_VERSION),
                     String.format("FATAL DEPLOYMENT ERROR: This app is built "
@@ -1204,7 +1203,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         String toPrint = "[PIC] " + tag + " - " + print;
         switch (level) {
             case 1:
-                mLogger.log(Level.getLevel("VERBOSE"),toPrint);
+                mLogger.trace(toPrint);
                 break;
             case 2:
                 mLogger.debug(toPrint);

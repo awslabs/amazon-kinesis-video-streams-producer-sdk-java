@@ -21,7 +21,7 @@ public final class ChunkDecoder {
     private static final String LINE_DELIMITER = "\r\n";
     private static final String PAYLOAD_DELIMITER = "\r\n\r\n";
     // TODO: Set to correct output channel
-    private static final Logger logger = LogManager.getLogger("KinesisVideo");
+    private static final Logger logger = LogManager.getLogger(ChunkDecoder.class);
 
     private ChunkDecoder() {
     }
@@ -184,7 +184,7 @@ public final class ChunkDecoder {
             line = skipEmptyLines(reader);
 
             // Parse chunk data
-            logger.debug("Chunk size: " + line);
+            logger.debug("Chunk size: {}", line);
             do {
                 chunkSize = Integer.parseInt(line.trim(), HEX_RADIX);
                 if (chunkSize == 0) {
@@ -204,11 +204,11 @@ public final class ChunkDecoder {
 
                 // send the ack string to ack consumer with the exact number of bytes
                 final String chunk = new String(buff, 0, chunkSize);
-                logger.debug("Chunk: " + chunk);
+                logger.debug("Chunk: {}", chunk);
                 ackTimestampConsumer.accept(chunk);
 
                 line = reader.readLine();
-                logger.debug("Chunk size: " + line);
+                logger.debug("Chunk size: {}", line);
             } while (line != null);
         } catch (final Throwable e) {
             throw new RuntimeException("Exception while decoding Ack in response ! ", e);
@@ -242,11 +242,11 @@ public final class ChunkDecoder {
         String line;
 
         line = skipEmptyLines(reader);
-        logger.debug("Skip header: " + line);
+        logger.debug("Skip header: {}", line);
         if (isStatusLine(line)) {
             do {
                 line = reader.readLine();
-                logger.debug("Skip header: " + line);
+                logger.debug("Skip header: {}", line);
             }
             while (isNotBlank(line));
         }

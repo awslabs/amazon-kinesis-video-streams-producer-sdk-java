@@ -48,7 +48,7 @@ public final class PutMediaClient {
 
     private PutMediaClient(final Builder builder) {
         mBuilder = builder;
-        logger = mBuilder.mLogger;
+        logger = LogManager.getLogger(PutMediaClient.class);
     }
 
     public static Builder builder() {
@@ -116,7 +116,7 @@ public final class PutMediaClient {
                         mkvBytesRead = mBuilder.mMkvStream.read(buffer);
                         counter++;
                         if (counter % LOGGING_INTERVAL == 0) {
-                            logger.debug("Sending data, counter : " + counter);
+                            logger.debug("Sending data, counter: {}", counter);
                         }
                         if (mkvBytesRead == -1) {
                             logger.info("End-of-stream is reported. Terminating...");
@@ -131,7 +131,7 @@ public final class PutMediaClient {
                     }
                     throttledOutputStream.write(ChunkEncoder.encode(buffer, 0));
                     rawOutputStream.flush();
-                    logger.debug("Data sent. counter : " + counter);
+                    logger.debug("Data sent. counter: {}", counter);
                 } catch (final Exception e) {
                     logger.debug("Exception while sending data.", e);
                     throw new RuntimeException("Exception while sending encoded chunk in MKV stream ! ", e);
@@ -220,7 +220,6 @@ public final class PutMediaClient {
         private Long upstreamKbps;
         private Consumer<Exception> mCompletion;
         // TODO: Set to correct output channel
-        private Logger mLogger = LogManager.getLogger("KinesisVideo");
         private Map<String, String> unsignedHeaders;
 
         public Builder putMediaDestinationUri(final URI uri) {

@@ -35,7 +35,7 @@ public class HostnameVerifyingX509ExtendedTrustManager extends X509ExtendedTrust
 
     private static final DefaultHostnameVerifier DEFAULT_HOSTNAME_VERIFIER = new DefaultHostnameVerifier(
             PublicSuffixMatcherLoader.getDefault());
-    private Logger logger = LogManager.getLogger("KinesisVideo");
+    private Logger logger = LogManager.getLogger(HostnameVerifyingX509ExtendedTrustManager.class);
     private final boolean clientSideHostnameVerificationEnabled;
 
     private final X509ExtendedTrustManager x509ExtendedTrustManager;
@@ -162,7 +162,7 @@ public class HostnameVerifyingX509ExtendedTrustManager extends X509ExtendedTrust
         } catch (SSLException addressVerificationException) {
             try {
                 logger.debug(
-                        "Failed to verify host address: {} attempting to verify host name with reverse dns lookup",
+                        "Failed to verify host address: {} attempting to verify host name with reverse dns lookup {}",
                         hostAddress,
                         addressVerificationException);
                 DEFAULT_HOSTNAME_VERIFIER.verify(hostName, certificate);

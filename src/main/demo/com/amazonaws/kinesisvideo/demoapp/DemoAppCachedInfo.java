@@ -63,7 +63,7 @@ public final class DemoAppCachedInfo {
                     .withStorageCallbacks(new DefaultStorageCallbacks())
                     .build();
 
-            final Logger logger = LogManager.getLogger("KinesisVideo");
+            final Logger logger = LogManager.getLogger(DemoAppCachedInfo.class);
 
             // Create CachedInfoServiceCallback
             final CachedInfoMultiAuthServiceCallbacksImpl serviceCallbacks =

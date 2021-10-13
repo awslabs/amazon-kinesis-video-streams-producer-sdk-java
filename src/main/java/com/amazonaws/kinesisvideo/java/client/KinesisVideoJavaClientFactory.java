@@ -99,7 +99,7 @@ public final class KinesisVideoJavaClientFactory {
         Preconditions.checkNotNull(deviceInfo);
         Preconditions.checkNotNull(executor);
 
-        final Logger logger = LogManager.getLogger("KinesisVideo");
+        final Logger logger = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
         final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(logger);
 
@@ -127,7 +127,7 @@ public final class KinesisVideoJavaClientFactory {
         Preconditions.checkNotNull(deviceInfo);
         Preconditions.checkNotNull(executor);
 
-        final Logger logger =  LogManager.getLogger("KinesisVideo");
+        final Logger logger =  LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
         final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(logger);
 

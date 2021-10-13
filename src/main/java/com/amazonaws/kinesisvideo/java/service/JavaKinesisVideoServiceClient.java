@@ -14,7 +14,6 @@ import com.amazonaws.kinesisvideo.client.PutMediaClient;
 import com.amazonaws.kinesisvideo.client.signing.KinesisVideoAWS4Signer;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.StreamDescription;
@@ -198,7 +197,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                         };
                     }
                 } catch (final KinesisVideoException e) {
-                    logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Getting credentials threw an exception." + e.getMessage(), e);
+                    logger.error("Getting credentials threw an exception.", e);
                     awsCredentials = null;
                 }
 
@@ -211,7 +210,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                     credentialsProvider.getUpdatedCredentials();
                 } catch (final KinesisVideoException e) {
                     // Do nothing
-                    logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Refreshing credentials threw and exception." + e.getMessage(), e);
+                    logger.error("Refreshing credentials threw and exception.", e);
                 }
             }
         };
@@ -271,18 +270,18 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withDataRetentionInHours((int) retentionPeriodInHours)
                 .withTags(null);
 
-        logger.debug("calling create stream: " + createStreamRequest.toString());
+        logger.debug("calling create stream: {}", createStreamRequest.toString());
 
         final CreateStreamResult createStreamResult;
         try {
             createStreamResult = serviceClient.createStream(createStreamRequest);
         } catch (final AmazonClientException e) {
             // Wrap into an KinesisVideoException object
-            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Service call failed." + e.getMessage(), e);
+            logger.error("Service call failed.", e);
             throw new KinesisVideoException(e);
         }
 
-        logger.debug("create stream result: " + createStreamResult.toString());
+        logger.debug("create stream result: {}", createStreamResult.toString());
 
         return createStreamResult.getStreamARN();
     }
@@ -300,13 +299,13 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
         final DescribeStreamRequest describeStreamRequest = new DescribeStreamRequest()
                 .withStreamName(streamName);
 
-        logger.debug("calling describe stream: " + describeStreamRequest.toString());
+        logger.debug("calling describe stream: {}", describeStreamRequest.toString());
 
         final DescribeStreamResult describeStreamResult;
         try {
             describeStreamResult = serviceClient.describeStream(describeStreamRequest);
         } catch (final AmazonClientException e) {
-            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Service call failed." + e.getMessage(), e);
+            logger.error("Service call failed.", e);
             throw new KinesisVideoException(e);
         }
 
@@ -315,7 +314,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
             return null;
         }
 
-        logger.debug("describe stream result: " + describeStreamResult.toString());
+        logger.debug("describe stream result: {}", describeStreamResult.toString());
         return toStreamDescription(describeStreamResult);
     }
 
@@ -336,17 +335,17 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withStreamARN(streamDescription.getStreamArn())
                 .withCurrentVersion(streamDescription.getUpdateVersion());
 
-        logger.debug("calling delete stream: " + deleteStreamRequest.toString());
+        logger.debug("calling delete stream: {}", deleteStreamRequest.toString());
 
         final DeleteStreamResult deleteStreamResult;
         try {
             deleteStreamResult = serviceClient.deleteStream(deleteStreamRequest);
         } catch (final AmazonClientException e) {
-            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Service call failed." + e.getMessage(), e);
+            logger.error("Service call failed.", e);
             throw new KinesisVideoException(e);
         }
 
-        logger.debug("delete stream result: " + deleteStreamResult.toString());
+        logger.debug("delete stream result: {}", deleteStreamResult.toString());
     }
 
     @Override
@@ -364,17 +363,17 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withStreamARN(streamArn)
                 .withTags(tags);
 
-        logger.debug("calling tag resource: " + tagStreamRequest.toString());
+        logger.debug("calling tag resource: {}", tagStreamRequest.toString());
 
         final TagStreamResult tagStreamResult;
         try {
             tagStreamResult = serviceClient.tagStream(tagStreamRequest);
         } catch (final AmazonClientException e) {
-            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Service call failed." + e.getMessage(), e);
+            logger.error("Service call failed.", e);
             throw new KinesisVideoException(e);
         }
 
-        logger.debug("tag resource result: " + tagStreamResult.toString());
+        logger.debug("tag resource result: {}", tagStreamResult.toString());
     }
 
     @Override
@@ -392,18 +391,18 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withStreamName(streamName)
                 .withAPIName(apiName);
 
-        logger.debug("calling get data endpoint: " + getDataEndpointRequest.toString());
+        logger.debug("calling get data endpoint: {}", getDataEndpointRequest.toString());
 
         final GetDataEndpointResult getDataEndpointResult;
 
         try {
             getDataEndpointResult = serviceClient.getDataEndpoint(getDataEndpointRequest);
         } catch (final AmazonClientException e) {
-            logger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Service call failed." + e.getMessage(), e);
+            logger.error("Service call failed.", e);
             throw new KinesisVideoException(e);
         }
 
-        logger.debug("get data endpoint result: " + getDataEndpointResult.toString());
+        logger.debug("get data endpoint result: {}", getDataEndpointResult.toString());
 
         return getDataEndpointResult.getDataEndpoint();
     }

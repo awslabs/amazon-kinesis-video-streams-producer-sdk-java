@@ -17,7 +17,6 @@ import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.mediasource.ProducerStreamSink;
@@ -75,7 +74,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor) {
-        this(LogManager.getLogger(TAG),
+        this(LogManager.getLogger(NativeKinesisVideoClient.class),
                 configuration,
                 serviceClient,
                 executor);
@@ -191,7 +190,8 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
                 try {
                     producerStream.stopStreamSync();
                 } catch (final KinesisVideoException e) {
-                    mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + "Failed to stop media source" + mediaSource + "due to Exception. " + e.getMessage(), e);
+                    mLogger.error("Failed to stop media source {} due to Exception.", mediaSource);
+                    mLogger.error(e);
                 }
             }
         } finally {

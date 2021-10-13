@@ -1,6 +1,5 @@
 package com.amazonaws.kinesisvideo.internal.producer.jni;
 
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.FrameFlags;
@@ -79,9 +78,8 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                                     mUploadHandle);
                             mMonitor.wait(TIMEOUT_IN_MS);
                         } catch (final InterruptedException e) {
-                            mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + 
-                                "Waiting for the data availability with uploadHandle " + String.valueOf(mUploadHandle) +
-                                 " threw an interrupted exception. Continuing..." + e.getMessage(), e);
+                            mLogger.error("Waiting for the data availability with uploadHandle {}", mUploadHandle);
+                            mLogger.error(e);
                         }
                     }
 
@@ -128,7 +126,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                         }
                     }
                 } catch (final ProducerException e) {
-                    mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Reader threw an exception" + e.getMessage(), e);
+                    mLogger.error("Reader threw an exception", e);
                     throw new IOException(e);
                 }
             }
@@ -343,7 +341,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                     storedException = e1;
                 }
             }
-            mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": Stopping stream threw an exception. Force stopping the input stream." + e.getMessage(), e);
+            mLogger.error("Stopping stream threw an exception. Force stopping the input stream.", e);
             if (storedException != null) {
                 throw new ProducerException(storedException);
             }
@@ -352,7 +350,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                 try {
                     stream.close();
                 } catch (final IOException e) {
-                    mLogger.log(Level.getLevel("EXCEPTION"), e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+                    mLogger.error(e);
                 }
             }
         }
