@@ -97,7 +97,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                 try {
                     mKinesisVideoProducerJni.getStreamData(mStreamHandle, mUploadHandle, b, off, len, mReadResult);
                     bytesRead = mReadResult.getReadBytes();
-                    mLogger.debug("getStreamData fill {} bytes for stream {} with uploadHandle {}", bytesRead,
+                    mLogger.trace("getStreamData fill {} bytes for stream {} with uploadHandle {}", bytesRead,
                             mStreamInfo.getName(), mUploadHandle);
 
                     if (mReadResult.isEndOfStream()) {

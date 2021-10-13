@@ -2,7 +2,7 @@
 <Configuration status="WARN">
     <Appenders>
         <RollingFile name="RollingFile" fileName="logs/kvs.log" filePattern="logs/$${date:yyyy-MM}/kvs-%d{MM-dd-yyyy}-%i.log.gz">
-            <PatternLayout pattern="%d [%t] %-5level %logger{36} - %msg%n%throwable"/>
+            <PatternLayout pattern="%d [%t] %-5level %c{1.} - %msg%n%throwable"/>
             <Policies>
                 <TimeBasedTriggeringPolicy />
                 <SizeBasedTriggeringPolicy size="3 MB"/>
@@ -11,12 +11,12 @@
         </RollingFile>
 
         <Console name="ConsoleAppender" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d [%t] %-5level %logger{36} - %msg%n%throwable"/>
+            <PatternLayout pattern="%d [%t] %-5level %c{1.} - %msg%n%throwable"/>
         </Console>
     </Appenders>
 
     <Loggers>
-        <Root level="WARN">
+        <Root level="TRACE">
             <AppenderRef ref="ConsoleAppender"/>
             <AppenderRef ref="RollingFile"/>
         </Root>
