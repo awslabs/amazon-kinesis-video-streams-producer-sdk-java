@@ -39,7 +39,12 @@ public class ProducerTestBase {
     public static final long TEST_LATENCY = 6000L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND; // 60 seconds
     public static final int FRAME_FLAG_KEY_FRAME = 1;
     public static final int FRAME_FLAG_NONE = 0;
-    public static final int MAX_FRAME_SIZE_BYTES_1024 = 1024;
+    public static final int TEST_FRAME_SIZE_BYTES_1000 = 1000;
+    public static final int TEST_FPS = 20;
+    public static final int TEST_KEY_FRAME_INTERVAL = 20;
+    public static final int TEST_MEDIA_DURATION_SECONDS = 60;
+    public static final int TEST_TOTAL_FRAME_COUNT = TEST_FPS * TEST_MEDIA_DURATION_SECONDS;
+    public static final long TEST_FRAME_DURATION = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / TEST_FPS;
 
     private static final int NUMBER_OF_THREADS_IN_POOL = 2;
     private static final int NUMBER_OF_STREAMS = 10;
@@ -67,8 +72,15 @@ public class ProducerTestBase {
     private NativeKinesisVideoClient kinesisVideoClient;
     private AuthCallbacks authCallbacks;
     private StorageCallbacks storageCallbacks;
-
     private KinesisVideoProducer kinesisVideoProducer;
+
+    protected boolean stopCalled;
+    protected boolean frameDropped;
+    protected boolean bufferDurationPressure;
+    protected boolean storageOverflow;
+    protected boolean bufferingAckInSequence;
+    protected int errorStatus;
+    protected int latencyPressureCount;
 
 
     public StorageInfo getStorageInfo() {

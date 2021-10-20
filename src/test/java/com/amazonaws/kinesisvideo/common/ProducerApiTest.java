@@ -22,6 +22,7 @@ public class ProducerApiTest {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
         producerTestBase.createProducer();
         String testStreamName;
+
         for(int i = 0 ; i < TEST_STREAM_COUNT ; i++) {
             testStreamName = "JavaProducerApiTestStream_createFreeStream" + i;
             kinesisVideoProducerStreams[i] = producerTestBase.createTestStream(testStreamName,
@@ -51,14 +52,17 @@ public class ProducerApiTest {
     public void createProduceStartStopStream() {
         ProducerTestBase producerTestBase = new ProducerTestBase();
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
-        int fps = 25, keyFrameInterval = 50, flags;
-        long currentTimeMs, frameDuration = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps;
-        byte[][] framesData = new byte[][]{
-                new byte[ProducerTestBase.MAX_FRAME_SIZE_BYTES_1024]
-        };
-
         KinesisVideoFrame frame;
         String testStreamName;
+
+        int flags;
+        long currentTimeMs;
+        int fps = 25;
+        int keyFrameInterval = 50;
+        long frameDuration = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps;
+        byte[][] framesData = new byte[][]{
+                new byte[ProducerTestBase.TEST_FRAME_SIZE_BYTES_1000]
+        };
 
         producerTestBase.createProducer();
 
@@ -103,14 +107,18 @@ public class ProducerApiTest {
     public void createProduceStartStopStreamEndpointCached() {
         ProducerTestBase producerTestBase = new ProducerTestBase();
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
-        int fps = 25, keyFrameInterval = 50, flags;
-        long currentTimeMs, frameDuration = 1000 *  Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps;
-        byte[][] framesData = new byte[][]{
-                new byte[ProducerTestBase.MAX_FRAME_SIZE_BYTES_1024]
-        };
-
         KinesisVideoFrame frame;
         String testStreamName;
+
+        int flags;
+        long currentTimeMs;
+
+        int fps = 25;
+        int keyFrameInterval = 50;
+        long frameDuration = 1000 *  Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps;
+        byte[][] framesData = new byte[][]{
+                new byte[ProducerTestBase.TEST_FRAME_SIZE_BYTES_1000]
+        };
 
         producerTestBase.createProducer();
 
@@ -156,14 +164,18 @@ public class ProducerApiTest {
     public void createProduceStartStopStreamAllCached() {
         ProducerTestBase producerTestBase = new ProducerTestBase();
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
-        int fps = 25, keyFrameInterval = 50, flags;
-        long currentTimeMs, frameDuration = 1000 *  Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps;
-        byte[][] framesData = new byte[][]{
-                new byte[ProducerTestBase.MAX_FRAME_SIZE_BYTES_1024]
-        };
-
         KinesisVideoFrame frame;
         String testStreamName;
+
+        int flags;
+        long currentTimeMs;
+
+        int fps = 25;
+        int keyFrameInterval = 50;
+        long frameDuration = 1000 *  Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps;
+        byte[][] framesData = new byte[][]{
+                new byte[ProducerTestBase.TEST_FRAME_SIZE_BYTES_1000]
+        };
 
         producerTestBase.createProducer();
 

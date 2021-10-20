@@ -7,14 +7,13 @@ import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.StorageInfo;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.fail;
 
 import java.nio.ByteBuffer;
 
 public class ProducerFunctionalityTest {
-
-    private final int TEST_TOTAL_FRAME_COUNT = 60 * 20;
 
     @Test
     public void startStopSyncTerminate() {
@@ -36,12 +35,11 @@ public class ProducerFunctionalityTest {
     public void offlineUploadLimitedBufferDuration() {
         ProducerTestBase producerTestBase = new ProducerTestBase();
         KinesisVideoProducerStream kinesisVideoProducerStream;
-        int fps = 25, keyFrameInterval = 50;
+
         int flags;
         long currentTimeMs = 0;
-        long frameDuration = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps;
         byte[][] framesData = new byte[][]{
-                new byte[ProducerTestBase.MAX_FRAME_SIZE_BYTES_1024],
+                new byte[ProducerTestBase.TEST_FRAME_SIZE_BYTES_1000],
         };
 
         KinesisVideoFrame frame;
@@ -49,18 +47,18 @@ public class ProducerFunctionalityTest {
         kinesisVideoProducerStream = producerTestBase.createTestStream("JavaFuncTest_offlineUploadLimitedBufferDuration",
                 StreamInfo.StreamingType.STREAMING_TYPE_OFFLINE, ProducerTestBase.TEST_LATENCY, 400L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND);
 
-        for(int index = 0; index < TEST_TOTAL_FRAME_COUNT; index++) {
+        for(int index = 0; index < ProducerTestBase.TEST_TOTAL_FRAME_COUNT; index++) {
 
-            flags = index % keyFrameInterval == 0 ? ProducerTestBase.FRAME_FLAG_KEY_FRAME : ProducerTestBase.FRAME_FLAG_NONE;
+            flags = index % ProducerTestBase.TEST_KEY_FRAME_INTERVAL == 0 ? ProducerTestBase.FRAME_FLAG_KEY_FRAME : ProducerTestBase.FRAME_FLAG_NONE;
             frame = new KinesisVideoFrame(index, flags, currentTimeMs, currentTimeMs,
-                    frameDuration, ByteBuffer.wrap(framesData[index % framesData.length]));
+                    ProducerTestBase.TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
             try {
                 kinesisVideoProducerStream.putFrame(frame);
             } catch(ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
-            currentTimeMs += frameDuration;
+            currentTimeMs += ProducerTestBase.TEST_FRAME_DURATION;
         }
         try {
             Thread.sleep(5000);
@@ -78,17 +76,16 @@ public class ProducerFunctionalityTest {
         producerTestBase.freeStreams();
     }
 
+    @Ignore
     @Test
     public void offlineUploadLimitedStorage() {
         ProducerTestBase producerTestBase = new ProducerTestBase();
         KinesisVideoProducerStream kinesisVideoProducerStream;
-        int fps = 25;
-        int keyFrameInterval = 50;
+
         int flags;
-        long currentTimeMs = 0;
-        long frameDuration = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps;
+        long currentTimeMs = System.currentTimeMillis() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
         byte[][] framesData = new byte[][]{
-                new byte[12500]
+                new byte[ProducerTestBase.TEST_FRAME_SIZE_BYTES_1000]
         };
 
         producerTestBase.setStorageInfo(0,
@@ -101,19 +98,18 @@ public class ProducerFunctionalityTest {
         producerTestBase.createProducer();
         kinesisVideoProducerStream = producerTestBase.createTestStream("JavaFuncTest_offlineUploadLimitedStorage",
                 StreamInfo.StreamingType.STREAMING_TYPE_OFFLINE, ProducerTestBase.TEST_LATENCY, ProducerTestBase.TEST_BUFFER_DURATION);
+        for(int index = 0; index < ProducerTestBase.TEST_TOTAL_FRAME_COUNT; index++) {
 
-        for(int index = 0; index < TEST_TOTAL_FRAME_COUNT; index++) {
-
-            flags = index % keyFrameInterval == 0 ? ProducerTestBase.FRAME_FLAG_KEY_FRAME : ProducerTestBase.FRAME_FLAG_NONE;
+            flags = index % ProducerTestBase.TEST_KEY_FRAME_INTERVAL == 0 ? ProducerTestBase.FRAME_FLAG_KEY_FRAME : ProducerTestBase.FRAME_FLAG_NONE;
             frame = new KinesisVideoFrame(index, flags, currentTimeMs, currentTimeMs,
-                    frameDuration, ByteBuffer.wrap(framesData[index % framesData.length]));
+                    ProducerTestBase.TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
             try {
                 kinesisVideoProducerStream.putFrame(frame);
             } catch(ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
-            currentTimeMs += frameDuration;
+            currentTimeMs += ProducerTestBase.TEST_FRAME_DURATION;
         }
         try {
             Thread.sleep(5000);
@@ -136,18 +132,15 @@ public class ProducerFunctionalityTest {
         ProducerTestBase producerTestBase = new ProducerTestBase();
         KinesisVideoProducerStream kinesisVideoProducerStream;
 
-        int fps = 25;
-        int keyFrameInterval = 50;
         int flags;
         long currentTimeMs = 0;
-        long frameDuration = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps;
         byte[][] framesData = new byte[][]{
-                new byte[ProducerTestBase.MAX_FRAME_SIZE_BYTES_1024]
+                new byte[ProducerTestBase.TEST_FRAME_SIZE_BYTES_1000]
         };
 
         int clipDurationSeconds = 15;
         int clipCount = 20;
-        int framesPerClip = clipDurationSeconds * fps;
+        int framesPerClip = clipDurationSeconds * ProducerTestBase.TEST_FPS;
         int totalFrames = framesPerClip * clipCount;
         int[] pauseBetweenclipSeconds = new int[]{2, 15};
 
@@ -160,16 +153,16 @@ public class ProducerFunctionalityTest {
 
             for(int index = 0; index < totalFrames; index++) {
 
-                flags = index % keyFrameInterval == 0 ? ProducerTestBase.FRAME_FLAG_KEY_FRAME : ProducerTestBase.FRAME_FLAG_NONE;
+                flags = index % ProducerTestBase.TEST_KEY_FRAME_INTERVAL == 0 ? ProducerTestBase.FRAME_FLAG_KEY_FRAME : ProducerTestBase.FRAME_FLAG_NONE;
                 frame = new KinesisVideoFrame(index, flags, currentTimeMs, currentTimeMs,
-                        frameDuration, ByteBuffer.wrap(framesData[index % framesData.length]));
+                        ProducerTestBase.TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
                 try {
                     kinesisVideoProducerStream.putFrame(frame);
                 } catch(ProducerException e) {
                     e.printStackTrace();
                     fail();
                 }
-                currentTimeMs += frameDuration;
+                currentTimeMs += ProducerTestBase.TEST_FRAME_DURATION;;
 
                 if(index > 0 && (index + 1) % framesPerClip == 0) {
                     try {
@@ -198,16 +191,17 @@ public class ProducerFunctionalityTest {
         }
     }
 
+    @Ignore
     @Test
     public void offlineModeTokenRotationBlockOnSpace() {
         ProducerTestBase producerTestBase = new ProducerTestBase();
         KinesisVideoProducerStream kinesisVideoProducerStream;
-        int fps = 25, keyFrameInterval = 50, flags;
+
+        int flags;
         int testFrameTotalCount = 10 * 1000;
-        long currentTimeMs = 0;
-        long frameDuration = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps;
+        long currentTimeMs = System.currentTimeMillis() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
         byte[][] framesData = new byte[][]{
-                new byte[ProducerTestBase.MAX_FRAME_SIZE_BYTES_1024]
+                new byte[ProducerTestBase.TEST_FRAME_SIZE_BYTES_1000]
         };
 
         producerTestBase.setStorageInfo(0,
@@ -223,16 +217,16 @@ public class ProducerFunctionalityTest {
 
         for(int index = 0; index < testFrameTotalCount; index++) {
 
-            flags = index % keyFrameInterval == 0 ? ProducerTestBase.FRAME_FLAG_KEY_FRAME : ProducerTestBase.FRAME_FLAG_NONE;
+            flags = index % ProducerTestBase.TEST_KEY_FRAME_INTERVAL == 0 ? ProducerTestBase.FRAME_FLAG_KEY_FRAME : ProducerTestBase.FRAME_FLAG_NONE;
             frame = new KinesisVideoFrame(index, flags, currentTimeMs, currentTimeMs,
-                    frameDuration, ByteBuffer.wrap(framesData[index % framesData.length]));
+                    ProducerTestBase.TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
             try {
                 kinesisVideoProducerStream.putFrame(frame);
             } catch(ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
-            currentTimeMs += frameDuration;
+            currentTimeMs += ProducerTestBase.TEST_FRAME_DURATION;
         }
         try {
             Thread.sleep(5000);
@@ -254,12 +248,12 @@ public class ProducerFunctionalityTest {
     public void realtimeIntermittentNoLatencyPressureEofr() {
         ProducerTestBase producerTestBase = new ProducerTestBase();
         KinesisVideoProducerStream kinesisVideoProducerStream;
-        int fps = 25, keyFrameInterval = 60, flags;
+        int keyFrameInterval = 60;
+        int flags;
         int testFrameTotalCount = 6 * keyFrameInterval;
         long currentTimeMs = 0;
-        long frameDuration = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
         byte[][] framesData = new byte[][]{
-                new byte[ProducerTestBase.MAX_FRAME_SIZE_BYTES_1024]
+                new byte[ProducerTestBase.TEST_FRAME_SIZE_BYTES_1000]
         };
         byte[][] eofrData = new byte[][]{ new byte[0] };
 
@@ -294,14 +288,14 @@ public class ProducerFunctionalityTest {
             }
 
             frame = new KinesisVideoFrame(index, flags, currentTimeMs, currentTimeMs,
-                    frameDuration, ByteBuffer.wrap(framesData[index % framesData.length]));
+                    ProducerTestBase.TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
             try {
                 kinesisVideoProducerStream.putFrame(frame);
             } catch(ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
-            currentTimeMs += frameDuration;
+            currentTimeMs += ProducerTestBase.TEST_FRAME_DURATION;
 
             try {
                 Thread.sleep(30);
@@ -331,32 +325,32 @@ public class ProducerFunctionalityTest {
     public void highFragmentRateFileUpload() {
         ProducerTestBase producerTestBase = new ProducerTestBase();
         KinesisVideoProducerStream kinesisVideoProducerStream;
-        int fps = 25;
         int keyFrameInterval = 4;
         int flags;
         long currentTimeMs = 0;
-        long frameDuration = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps;
         byte[][] framesData = new byte[][]{
-                new byte[ProducerTestBase.MAX_FRAME_SIZE_BYTES_1024]
+                new byte[ProducerTestBase.TEST_FRAME_SIZE_BYTES_1000]
         };
 
         KinesisVideoFrame frame;
         producerTestBase.createProducer();
         kinesisVideoProducerStream = producerTestBase.createTestStream("JavaFuncTest_highFragmentRateFileUpload",
-                StreamInfo.StreamingType.STREAMING_TYPE_OFFLINE, ProducerTestBase.TEST_LATENCY, ProducerTestBase.TEST_BUFFER_DURATION);
+                StreamInfo.StreamingType.STREAMING_TYPE_OFFLINE, ProducerTestBase.TEST_LATENCY,
+                ProducerTestBase.TEST_BUFFER_DURATION);
 
-        for(int index = 0; index < TEST_TOTAL_FRAME_COUNT; index++) {
+        for(int index = 0; index < ProducerTestBase.TEST_TOTAL_FRAME_COUNT; index++) {
            
-            flags = index % keyFrameInterval == 0 ? ProducerTestBase.FRAME_FLAG_KEY_FRAME : ProducerTestBase.FRAME_FLAG_NONE;
+            flags = index % keyFrameInterval == 0 ? ProducerTestBase.FRAME_FLAG_KEY_FRAME :
+                    ProducerTestBase.FRAME_FLAG_NONE;
             frame = new KinesisVideoFrame(index, flags, currentTimeMs, currentTimeMs,
-                    frameDuration, ByteBuffer.wrap(framesData[index % framesData.length]));
+                    ProducerTestBase.TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
             try {
                 kinesisVideoProducerStream.putFrame(frame);
             } catch(ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
-            currentTimeMs += frameDuration;
+            currentTimeMs += ProducerTestBase.TEST_FRAME_DURATION;
         }
         try {
             Thread.sleep(5000);
@@ -374,25 +368,32 @@ public class ProducerFunctionalityTest {
         producerTestBase.freeStreams();
     }
 
+    @Ignore
     @Test
-    public void realtimeIntermittentLatencyPressure() {
+    public void realtimeAutoIntermittentLatencyPressure() {
         ProducerTestBase producerTestBase = new ProducerTestBase();
         KinesisVideoProducerStream kinesisVideoProducerStream;
-        int keyFrameInterval = 60, flags;
+
+        int keyFrameInterval = 60;
+        int totalFrameCount = 6 * ProducerTestBase.TEST_KEY_FRAME_INTERVAL;
+        long frameDuration = 16 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
+
+
+        int flags;
         long currentTimeMs;
         long delta = 0;
-        long frameDuration = 16 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
         byte[][] framesData = new byte[][]{
-                new byte[ProducerTestBase.MAX_FRAME_SIZE_BYTES_1024]
+                new byte[ProducerTestBase.TEST_FRAME_SIZE_BYTES_1000]
         };
 
         KinesisVideoFrame frame;
 
         producerTestBase.createProducer();
-        kinesisVideoProducerStream = producerTestBase.createTestStream("JavaFuncTest_realtimeIntermittentLatencyPressure",
-                StreamInfo.StreamingType.STREAMING_TYPE_REALTIME, 1500L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND, ProducerTestBase.TEST_BUFFER_DURATION);
+        kinesisVideoProducerStream = producerTestBase.createTestStream("JavaFuncTest_realtimeAutoIntermittentLatencyPressure",
+                StreamInfo.StreamingType.STREAMING_TYPE_REALTIME, 1500L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND,
+                ProducerTestBase.TEST_BUFFER_DURATION);
 
-        for(int index = 0; index < TEST_TOTAL_FRAME_COUNT; index++) {
+        for(int index = 0; index < totalFrameCount; index++) {
             flags = index % keyFrameInterval == 0 ? ProducerTestBase.FRAME_FLAG_KEY_FRAME : ProducerTestBase.FRAME_FLAG_NONE;
 
             if(index == 5 * keyFrameInterval) {
