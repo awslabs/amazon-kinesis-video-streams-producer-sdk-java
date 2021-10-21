@@ -1,5 +1,10 @@
 package com.amazonaws.kinesisvideo.common;
 
+import java.util.HashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import static org.junit.Assert.fail;
+
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
@@ -25,11 +30,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import static com.amazonaws.kinesisvideo.producer.StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.*;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RECALCULATE_METRICS;
-
-import java.util.HashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import static org.junit.Assert.fail;
 
 public class ProducerTestBase {
     protected static final long TEST_BUFFER_DURATION = 12000L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND; // 120 seconds
@@ -64,6 +64,7 @@ public class ProducerTestBase {
     protected DeviceInfo deviceInfo_ = new DeviceInfo(DEVICE_VERSION,
             DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null);
 
+    // flags that are updated in case of various events like overflow, error, pressure, etc.
     protected boolean stopCalled_;
     protected boolean frameDropped_;
     protected boolean bufferDurationPressure_;
@@ -73,6 +74,7 @@ public class ProducerTestBase {
     protected int latencyPressureCount_;
     protected HashMap<Long, Long> previousBufferingAckTimestamp_ = new HashMap<>();
 
+    // set by the createProducer method to be used throughout
     private StreamCallbacks streamCallbacks;
     private KinesisVideoClientConfiguration configuration;
     private AWSCredentialsProvider awsCredentialsProvider;
@@ -84,7 +86,7 @@ public class ProducerTestBase {
     private StorageCallbacks storageCallbacks;
     private KinesisVideoProducer kinesisVideoProducer;
 
-    private void reset() {
+    protected void reset() {
         stopCalled_ = false;
         frameDropped_ = false;
         bufferDurationPressure_ = false;
@@ -103,9 +105,12 @@ public class ProducerTestBase {
         return keyFrameInterval_ * frameDuration_ / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
     }
 
+    /**
+     * This method is used to create a KinesisVideoProducer which is used by the later methods
+     */
     protected void createProducer() {
 
-        reset();
+        reset(); // reset all flags to initial values so that they can be modified by the stream and storage callbacks
 
         executor = Executors.newScheduledThreadPool(NUMBER_OF_THREADS_IN_POOL,
                 new ThreadFactoryBuilder().setNameFormat("KVS-JavaClientExecutor-%d").build());
@@ -123,6 +128,9 @@ public class ProducerTestBase {
         authCallbacks = new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
                 executor,
                 log);
+        // use TestStorageCallbacks and TestStreamCallbacks to override the callbacks to update the flags in case of
+        // overflow, errors and other events. The current ProducerTestBase object is passed to their constructors so
+        // that they can access the flags to be updated
         storageCallbacks = new TestStorageCallbacks(this);
         streamCallbacks = new TestStreamCallBacks(this);
 
@@ -142,6 +150,15 @@ public class ProducerTestBase {
         }
     }
 
+    /**
+     * This method is used to create a stream with the specified information using the producer created as a part of
+     * the createProducer method
+     * @param streamName the name of the stream to be created
+     * @param streamingType the type of the stream - realtime, offline
+     * @param maxLatency the maxLatency for the streamInfo
+     * @param bufferDuration the bufferDuration for the streamInfo
+     * @return KinesisVideoProducerStream the created stream
+     */
     protected KinesisVideoProducerStream createTestStream(String streamName, StreamInfo.StreamingType streamingType,
                                                        long maxLatency, long bufferDuration) {
         KinesisVideoProducerStream kinesisVideoProducerStream = null;
@@ -193,6 +210,10 @@ public class ProducerTestBase {
         return kinesisVideoProducerStream;
     }
 
+    /**
+     * This method is used to free the specified kinesisVideoProducerStream from the producer
+     * @param kinesisVideoProducerStream the stream to be freed
+     */
     protected void freeTestStream(KinesisVideoProducerStream kinesisVideoProducerStream) {
         try {
             kinesisVideoProducer.freeStream(kinesisVideoProducerStream);
@@ -202,6 +223,9 @@ public class ProducerTestBase {
         }
     }
 
+    /**
+     * This method is used to free all the streams associated with the producer
+     */
     protected void freeStreams() {
         try {
             kinesisVideoProducer.freeStreams();
@@ -211,7 +235,16 @@ public class ProducerTestBase {
         }
     }
 
-    protected void cacheStreamingEndpoint(boolean all, String testStreamName) {
+    /**
+     * This method is used to cache stream-info, stream-endpoint and credentials-provider for a stream. It can be called
+     * for an existing stream only. It cannot be used to create a stream
+     * @param cacheAll boolean set to true if all -
+     *                 credential-provider, stream-info and stream-endpoint need to be cached
+     *                 set to false if only stream-endpoint needs to be cached
+     * @param testStreamName String name of the stream for which the caching has to take place
+     *
+     */
+    protected void cacheStreamingInfo(boolean cacheAll, String testStreamName) {
 
         CachedInfoMultiAuthServiceCallbacksImpl cacheServiceCallbacks = new CachedInfoMultiAuthServiceCallbacksImpl(log,
                 executor, configuration, serviceClient);
@@ -226,7 +259,7 @@ public class ProducerTestBase {
                 .withCredentials(awsCredentialsProvider)
                 .build();
 
-        if(all) {
+        if(cacheAll) {
             cacheServiceCallbacks.addCredentialsProviderToCache(testStreamName, awsCredentialsProvider);
             DescribeStreamResult streamInfo = kvsClient.describeStream(new DescribeStreamRequest()
                     .withStreamName(testStreamName));
@@ -238,5 +271,4 @@ public class ProducerTestBase {
                         .withStreamName(testStreamName));
         cacheServiceCallbacks.addStreamingEndpointToCache(testStreamName, dataEndpoint.getDataEndpoint());
     }
-
 }

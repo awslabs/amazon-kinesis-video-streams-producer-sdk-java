@@ -17,6 +17,10 @@ public class ProducerApiTest extends ProducerTestBase{
     private static final int TEST_STREAM_COUNT = 10;
     private static final int TEST_START_STOP_ITERATION_COUNT = 200;
 
+    /**
+     * This test attempts to create multiple streams, free them, re-create them, free them,
+     * and, re-create them
+     */
     @Test
     public void createFreeStream() {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
@@ -48,6 +52,9 @@ public class ProducerApiTest extends ProducerTestBase{
         }
     }
 
+    /**
+     * This test attempts to create multiple streams, sends frame across them and ultimately stop successfully
+     */
     @Test
     public void createProduceStartStopStream() {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
@@ -67,6 +74,7 @@ public class ProducerApiTest extends ProducerTestBase{
         frameDuration_ = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps_;
 
         for(int i = 0; i < 3; i++) {
+            stopCalled_ = false; // set to false for each stream so that it is updated as a part of the callback
             testStreamName = "JavaProducerApiTestStream_createProduceStartStopStream" + i;
             kinesisVideoProducerStreams[i] = createTestStream(testStreamName,
                     StreamInfo.StreamingType.STREAMING_TYPE_REALTIME, TEST_LATENCY, TEST_BUFFER_DURATION);
@@ -85,7 +93,7 @@ public class ProducerApiTest extends ProducerTestBase{
                 }
 
                 try {
-                    Thread.sleep(frameDuration_ / 10000);
+                    Thread.sleep(frameDuration_ / 10000); // converting hundreds nanoseconds to milliseconds
                 } catch(InterruptedException e) {
                     e.printStackTrace();
                     fail();
@@ -99,11 +107,17 @@ public class ProducerApiTest extends ProducerTestBase{
                 fail();
             }
             assertTrue(stopCalled_);
+            // stopCalled_ is set to false initially. It is set to true by the streamClosed
+            // callback which is invoked only when a stream is closed successfully
             freeTestStream(kinesisVideoProducerStreams[i]);
             kinesisVideoProducerStreams[i] = null;
         }
     }
 
+    /**
+     * This test attempts to create multiple streams, sends frame across them and ultimately stop successfully while
+     * caching the stream-endpoint
+     */
     @Test
     public void createProduceStartStopStreamEndpointCached() {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
@@ -123,10 +137,14 @@ public class ProducerApiTest extends ProducerTestBase{
         frameDuration_ = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps_;
 
         for(int i = 0; i < 2; i++) {
+            stopCalled_ = false;
             testStreamName = "JavaProducerApiTestStream_createProduceStartStopStreamEndpointCached" + i;
             kinesisVideoProducerStreams[i] = createTestStream(testStreamName,
                     StreamInfo.StreamingType.STREAMING_TYPE_REALTIME, TEST_LATENCY, TEST_BUFFER_DURATION);
-            cacheStreamingEndpoint(false, testStreamName);
+            cacheStreamingInfo(false, testStreamName); // used to cache the stream-endpoint.
+            // first argument is set to false since we want to cache only the endpoint and not the stream-info
+            // and the credential-provider
+
             for (int index = 0; index < 100; index++) {
 
                 currentTimeMs = System.currentTimeMillis() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
@@ -142,7 +160,7 @@ public class ProducerApiTest extends ProducerTestBase{
                 }
 
                 try {
-                    Thread.sleep(frameDuration_ / 10000); //converting hundreds nanoseconds to milliseconds
+                    Thread.sleep(frameDuration_ / 10000); // converting hundreds nanoseconds to milliseconds
                 } catch(InterruptedException e) {
                     e.printStackTrace();
                     fail();
@@ -161,6 +179,10 @@ public class ProducerApiTest extends ProducerTestBase{
         }
     }
 
+    /**
+     * This test attempts to create multiple streams, sends frame across them and ultimately stop successfully while
+     * caching the stream-endpoint, credentials-provider and, stream-info
+     */
     @Test
     public void createProduceStartStopStreamAllCached() {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
@@ -180,10 +202,14 @@ public class ProducerApiTest extends ProducerTestBase{
         frameDuration_ = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps_;
 
         for(int i = 0; i < 2; i++) {
+            stopCalled_ = false;
             testStreamName = "JavaProducerApiTestStream_createProduceStartStopStreamAllCached" + i;
             kinesisVideoProducerStreams[i] = createTestStream(testStreamName,
                     StreamInfo.StreamingType.STREAMING_TYPE_REALTIME, TEST_LATENCY, TEST_BUFFER_DURATION);
-            cacheStreamingEndpoint(true, testStreamName);
+            cacheStreamingInfo(true, testStreamName);
+            // first argument is true since we want to cache
+            // all - the credential-provider, the stream-info and the stream-endpoint
+
             for (int index = 0; index < 100; index++) {
 
                 currentTimeMs = System.currentTimeMillis() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
@@ -199,7 +225,7 @@ public class ProducerApiTest extends ProducerTestBase{
                 }
 
                 try {
-                    Thread.sleep(frameDuration_ / 10000);
+                    Thread.sleep(frameDuration_ / 10000); // converting hundreds nanoseconds to milliseconds
                 } catch(InterruptedException e) {
                     e.printStackTrace();
                     fail();

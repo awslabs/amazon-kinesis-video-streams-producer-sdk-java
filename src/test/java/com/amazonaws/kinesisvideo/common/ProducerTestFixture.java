@@ -1,5 +1,7 @@
 package com.amazonaws.kinesisvideo.common;
 
+import javax.annotation.Nonnull;
+
 import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.common.logging.LogLevel;
 import com.amazonaws.kinesisvideo.producer.FragmentAckType;
@@ -8,14 +10,12 @@ import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.storage.DefaultStorageCallbacks;
 import com.amazonaws.kinesisvideo.streaming.DefaultStreamCallbacks;
 
-import javax.annotation.Nonnull;
-
 class TestStorageCallbacks extends DefaultStorageCallbacks {
 
     private final ProducerTestBase producerTestBase;
     private final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE, "TestStorageCallbacks");
 
-    TestStorageCallbacks(ProducerTestBase producerTestBase) {
+    protected TestStorageCallbacks(ProducerTestBase producerTestBase) {
         this.producerTestBase = producerTestBase;
     }
 
@@ -32,7 +32,7 @@ class TestStreamCallBacks extends DefaultStreamCallbacks {
     private final ProducerTestBase producerTestBase;
     private final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE, "TestStreamCallbacks");
 
-    TestStreamCallBacks(ProducerTestBase producerTestBase) {
+    protected TestStreamCallBacks(ProducerTestBase producerTestBase) {
         this.producerTestBase = producerTestBase;
     }
 
@@ -53,9 +53,9 @@ class TestStreamCallBacks extends DefaultStreamCallbacks {
 
         log.verbose("Reporting fragment ack");
         if(fragmentAck.getAckType() == bufferingAck) {
-            if(producerTestBase.previousBufferingAckTimestamp_.containsKey(uploadHandle)) {
-                if(fragmentAck.getTimestamp() != producerTestBase.previousBufferingAckTimestamp_.get(uploadHandle) &&
-                    fragmentAck.getTimestamp() - producerTestBase.previousBufferingAckTimestamp_.get(uploadHandle) > producerTestBase.getFragmentDurationMs()) {
+            if(producerTestBase.previousBufferingAckTimestamp_.containsKey(uploadHandle)) { //uploadHandle exists in the Map
+                if(fragmentAck.getTimestamp() != producerTestBase.previousBufferingAckTimestamp_.get(uploadHandle) && // can be the same in case of retransmits
+                    fragmentAck.getTimestamp() - producerTestBase.previousBufferingAckTimestamp_.get(uploadHandle) > producerTestBase.getFragmentDurationMs()) { //curr - prev > fragmentDuration
                     log.error("Buffering ack not in sequence. Previous ack ts: %d Current ack ts: %d", producerTestBase.previousBufferingAckTimestamp_.get(uploadHandle), fragmentAck.getTimestamp());
                     producerTestBase.bufferingAckInSequence_ = false;
                 }
