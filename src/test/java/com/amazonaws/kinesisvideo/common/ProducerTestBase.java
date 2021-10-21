@@ -16,52 +16,62 @@ import com.amazonaws.kinesisvideo.java.service.CachedInfoMultiAuthServiceCallbac
 import com.amazonaws.kinesisvideo.java.service.JavaKinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.producer.*;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
-import com.amazonaws.kinesisvideo.storage.DefaultStorageCallbacks;
-import com.amazonaws.kinesisvideo.streaming.DefaultStreamCallbacks;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
 import com.amazonaws.services.kinesisvideo.model.*;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-
 import static com.amazonaws.kinesisvideo.producer.StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.*;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RECALCULATE_METRICS;
+
+import java.util.HashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import static org.junit.Assert.fail;
 
 public class ProducerTestBase {
-    public static final long TEST_BUFFER_DURATION = 12000L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND; // 120 seconds
-    public static final long TEST_LATENCY = 6000L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND; // 60 seconds
-    public static final int FRAME_FLAG_KEY_FRAME = 1;
-    public static final int FRAME_FLAG_NONE = 0;
-    public static final int TEST_FRAME_SIZE_BYTES_1000 = 1000;
-    public static final int TEST_FPS = 20;
-    public static final int TEST_KEY_FRAME_INTERVAL = 20;
-    public static final int TEST_MEDIA_DURATION_SECONDS = 60;
-    public static final int TEST_TOTAL_FRAME_COUNT = TEST_FPS * TEST_MEDIA_DURATION_SECONDS;
-    public static final long TEST_FRAME_DURATION = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / TEST_FPS;
+    protected static final long TEST_BUFFER_DURATION = 12000L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND; // 120 seconds
+    protected static final long TEST_LATENCY = 6000L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND; // 60 seconds
+    protected static final int FRAME_FLAG_KEY_FRAME = 1;
+    protected static final int FRAME_FLAG_NONE = 0;
+    protected static final int TEST_FRAME_SIZE_BYTES = 1000;
+    protected static final int TEST_FPS = 20;
+    protected static final int TEST_KEY_FRAME_INTERVAL = 20;
+    protected static final int TEST_MEDIA_DURATION_SECONDS = 60;
+    protected static final int WAIT_5_SECONDS_FOR_ACKS = 5000;
+    protected static final int TEST_TOTAL_FRAME_COUNT = TEST_FPS * TEST_MEDIA_DURATION_SECONDS;
+    protected static final long TEST_FRAME_DURATION = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / TEST_FPS;
 
-    private static final int NUMBER_OF_THREADS_IN_POOL = 2;
-    private static final int NUMBER_OF_STREAMS = 10;
+    protected static final int DEVICE_VERSION = 0;
+    protected static final String DEVICE_NAME = "java-test-application";
 
-    private static final int DEVICE_VERSION = 0;
-    private static final String DEVICE_NAME = "java-test-application";
+    protected static final int STORAGE_SIZE_MEGS = 64 * 1024 * 1024;
+    protected static final int SPILL_RATIO_PERCENT = 90;
+    protected static final String STORAGE_PATH = "/tmp";
 
-    private static final int STORAGE_SIZE_MEGS = 64 * 1024 * 1024;
-    private static final int SPILL_RATIO_90_PERCENT = 90;
-    private static final String STORAGE_PATH = "/tmp";
+    protected static final int NUMBER_OF_THREADS_IN_POOL = 2;
+    protected static final int NUMBER_OF_STREAMS = 10;
 
-    private StorageInfo storageInfo = new StorageInfo(0,
+    protected int fps_ = TEST_FPS;
+    protected int keyFrameInterval_ = TEST_KEY_FRAME_INTERVAL;
+    protected long frameDuration_ = TEST_FRAME_DURATION;
+    protected StorageInfo storageInfo_ = new StorageInfo(0,
             StorageInfo.DeviceStorageType.DEVICE_STORAGE_TYPE_IN_MEM, STORAGE_SIZE_MEGS,
-            SPILL_RATIO_90_PERCENT, STORAGE_PATH);
+            SPILL_RATIO_PERCENT, STORAGE_PATH);
 
-    private DeviceInfo deviceInfo = new DeviceInfo(DEVICE_VERSION,
-            DEVICE_NAME, getStorageInfo(), NUMBER_OF_STREAMS, null);
+    protected DeviceInfo deviceInfo_ = new DeviceInfo(DEVICE_VERSION,
+            DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null);
+
+    protected boolean stopCalled_;
+    protected boolean frameDropped_;
+    protected boolean bufferDurationPressure_;
+    protected boolean storageOverflow_;
+    protected boolean bufferingAckInSequence_;
+    protected long errorStatus_;
+    protected int latencyPressureCount_;
+    protected HashMap<Long, Long> previousBufferingAckTimestamp_ = new HashMap<>();
 
     private StreamCallbacks streamCallbacks;
     private KinesisVideoClientConfiguration configuration;
@@ -74,34 +84,28 @@ public class ProducerTestBase {
     private StorageCallbacks storageCallbacks;
     private KinesisVideoProducer kinesisVideoProducer;
 
-    protected boolean stopCalled;
-    protected boolean frameDropped;
-    protected boolean bufferDurationPressure;
-    protected boolean storageOverflow;
-    protected boolean bufferingAckInSequence;
-    protected int errorStatus;
-    protected int latencyPressureCount;
+    private void reset() {
+        stopCalled_ = false;
+        frameDropped_ = false;
+        bufferDurationPressure_ = false;
+        storageOverflow_ = false;
+        bufferingAckInSequence_ = true;
+        errorStatus_ = 0x00000000;
+        latencyPressureCount_ = 0;
+        previousBufferingAckTimestamp_.clear();
 
-
-    public StorageInfo getStorageInfo() {
-        return storageInfo;
+        fps_ = 20;
+        keyFrameInterval_ = 20;
+        frameDuration_ = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps_;
     }
 
-    public DeviceInfo getDeviceInfo() {
-        return deviceInfo;
+    protected long getFragmentDurationMs() {
+        return keyFrameInterval_ * frameDuration_ / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
     }
 
-    public void setDeviceInfo(int version, @Nullable final String name, @Nonnull final StorageInfo storageInfo,
-                                      int streamCount, @Nullable final Tag[] tags) {
-        deviceInfo = new DeviceInfo(version, name, storageInfo, streamCount, tags);
-    }
+    protected void createProducer() {
 
-    public void setStorageInfo(int version, StorageInfo.DeviceStorageType deviceStorageType, long storageSize, int spillRatio,
-                                       @Nonnull String rootDirectory) {
-        storageInfo = new StorageInfo(version, deviceStorageType, storageSize, spillRatio, rootDirectory);
-    }
-
-    public void createProducer() {
+        reset();
 
         executor = Executors.newScheduledThreadPool(NUMBER_OF_THREADS_IN_POOL,
                 new ThreadFactoryBuilder().setNameFormat("KVS-JavaClientExecutor-%d").build());
@@ -111,7 +115,6 @@ public class ProducerTestBase {
                 .withRegion(Regions.US_WEST_2.getName())
                 .withCredentialsProvider(new JavaCredentialsProviderImpl(awsCredentialsProvider))
                 .withLogChannel(new SysOutLogChannel())
-                .withStorageCallbacks(new DefaultStorageCallbacks())
                 .build();
 
         log = new Log(configuration.getLogChannel(), LogLevel.VERBOSE, "KinesisVideoProducerApiTest");
@@ -120,25 +123,27 @@ public class ProducerTestBase {
         authCallbacks = new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
                 executor,
                 log);
-        storageCallbacks = configuration.getStorageCallbacks();
-        streamCallbacks = new DefaultStreamCallbacks();
+        storageCallbacks = new TestStorageCallbacks(this);
+        streamCallbacks = new TestStreamCallBacks(this);
 
-        DefaultServiceCallbacksImpl defaultServiceCallbacks = new DefaultServiceCallbacksImpl(log, executor, configuration, serviceClient);
+        DefaultServiceCallbacksImpl defaultServiceCallbacks = new DefaultServiceCallbacksImpl(log, executor,
+                configuration, serviceClient);
         kinesisVideoClient = new NativeKinesisVideoClient(log,
                     authCallbacks,
                     storageCallbacks,
-                defaultServiceCallbacks,
+                    defaultServiceCallbacks,
                     streamCallbacks);
 
         try {
-            kinesisVideoProducer = kinesisVideoClient.initializeNewKinesisVideoProducer(getDeviceInfo());
+            kinesisVideoProducer = kinesisVideoClient.initializeNewKinesisVideoProducer(deviceInfo_);
         } catch(Exception e) {
             e.printStackTrace();
             fail();
         }
     }
 
-    public KinesisVideoProducerStream createTestStream(String streamName, StreamInfo.StreamingType streamingType, long maxLatency, long bufferDuration) {
+    protected KinesisVideoProducerStream createTestStream(String streamName, StreamInfo.StreamingType streamingType,
+                                                       long maxLatency, long bufferDuration) {
         KinesisVideoProducerStream kinesisVideoProducerStream = null;
         final byte[] AVCC_EXTRA_DATA = {
                 (byte) 0x01, (byte) 0x42, (byte) 0x00, (byte) 0x1E, (byte) 0xFF, (byte) 0xE1, (byte) 0x00, (byte) 0x22,
@@ -149,7 +154,6 @@ public class ProducerTestBase {
                 (byte) 0x88, (byte) 0x46, (byte) 0xE0, (byte) 0x01, (byte) 0x00, (byte) 0x04, (byte) 0x28, (byte) 0xCE,
                 (byte) 0x1F, (byte) 0x20};
 
-        int fps = 25;
         StreamInfo streamInfo = new StreamInfo(VERSION_ZERO,
                 streamName,
                 streamingType,
@@ -167,7 +171,7 @@ public class ProducerTestBase {
                 "V_MPEG4/ISO/AVC",
                 "test-track",
                 DEFAULT_BITRATE,
-                fps,
+                fps_,
                 bufferDuration,
                 DEFAULT_REPLAY_DURATION,
                 DEFAULT_STALENESS_DURATION,
@@ -189,7 +193,7 @@ public class ProducerTestBase {
         return kinesisVideoProducerStream;
     }
 
-    public void freeTestStream(KinesisVideoProducerStream kinesisVideoProducerStream) {
+    protected void freeTestStream(KinesisVideoProducerStream kinesisVideoProducerStream) {
         try {
             kinesisVideoProducer.freeStream(kinesisVideoProducerStream);
         } catch(Exception e) {
@@ -198,7 +202,7 @@ public class ProducerTestBase {
         }
     }
 
-    public void freeStreams() {
+    protected void freeStreams() {
         try {
             kinesisVideoProducer.freeStreams();
         } catch(ProducerException e) {
@@ -207,9 +211,10 @@ public class ProducerTestBase {
         }
     }
 
-    public void cacheStreamingEndpoint(boolean all, String testStreamName) {
+    protected void cacheStreamingEndpoint(boolean all, String testStreamName) {
 
-        CachedInfoMultiAuthServiceCallbacksImpl cacheServiceCallbacks = new CachedInfoMultiAuthServiceCallbacksImpl(log, executor, configuration, serviceClient);
+        CachedInfoMultiAuthServiceCallbacksImpl cacheServiceCallbacks = new CachedInfoMultiAuthServiceCallbacksImpl(log,
+                executor, configuration, serviceClient);
         kinesisVideoClient = new NativeKinesisVideoClient(log,
                 authCallbacks,
                 storageCallbacks,
@@ -223,12 +228,14 @@ public class ProducerTestBase {
 
         if(all) {
             cacheServiceCallbacks.addCredentialsProviderToCache(testStreamName, awsCredentialsProvider);
-            DescribeStreamResult streamInfo = kvsClient.describeStream(new DescribeStreamRequest().withStreamName(testStreamName));
+            DescribeStreamResult streamInfo = kvsClient.describeStream(new DescribeStreamRequest()
+                    .withStreamName(testStreamName));
             cacheServiceCallbacks.addStreamInfoToCache(testStreamName, streamInfo);
         }
 
         GetDataEndpointResult dataEndpoint =
-                kvsClient.getDataEndpoint(new GetDataEndpointRequest().withAPIName(APIName.PUT_MEDIA).withStreamName(testStreamName));
+                kvsClient.getDataEndpoint(new GetDataEndpointRequest().withAPIName(APIName.PUT_MEDIA)
+                        .withStreamName(testStreamName));
         cacheServiceCallbacks.addStreamingEndpointToCache(testStreamName, dataEndpoint.getDataEndpoint());
     }
 
