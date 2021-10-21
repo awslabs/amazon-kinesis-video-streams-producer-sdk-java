@@ -1,19 +1,24 @@
 package com.amazonaws.kinesisvideo.common;
 
+import java.nio.ByteBuffer;
+
+import org.junit.Ignore;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
+
 import com.amazonaws.kinesisvideo.common.logging.Log;
 import com.amazonaws.kinesisvideo.common.logging.LogLevel;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.producer.*;
 
-import org.junit.Ignore;
-import org.junit.Test;
-
-import java.nio.ByteBuffer;
-
-import static org.junit.Assert.*;
-
 public class ProducerFunctionalityTest extends ProducerTestBase{
 
+    /**
+     * This test creates a stream, stops it and frees it
+     */
     @Test
     public void startStopSyncTerminate() {
         KinesisVideoProducerStream kinesisVideoProducerStream;
@@ -24,18 +29,23 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         deviceInfo_ = new DeviceInfo(DEVICE_VERSION,
                 DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null);
 
-        createProducer();
+        createProducer(); // resets all flags, creates callbacks and creates a KinesisVideoProducer
         kinesisVideoProducerStream = createTestStream("JavaFuncTest_startStopSyncTerminate",
                 StreamInfo.StreamingType.STREAMING_TYPE_REALTIME, TEST_LATENCY, TEST_BUFFER_DURATION);
+        // uses the KinesisVideoProducer to create a stream
         try {
             kinesisVideoProducerStream.stopStreamSync();
         } catch(ProducerException e) {
             e.printStackTrace();
             fail();
         }
-        freeStreams();
+        freeStreams(); // frees all the streams associated with the Producer
     }
 
+    /**
+     * This test sets the buffer-duration to 4 seconds and checks if there are any frames dropped, any errors received
+     * or any buffering acks that are not in sequence.
+     */
     @Test
     public void offlineUploadLimitedBufferDuration() {
         final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE,
@@ -59,7 +69,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         
         kinesisVideoProducerStream = createTestStream("JavaFuncTest_offlineUploadLimitedBufferDuration",
                 StreamInfo.StreamingType.STREAMING_TYPE_OFFLINE, TEST_LATENCY, 
-                400L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND); // buffer duration is 4 seconds
+                400L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND); // buffer-duration is 4 seconds
 
         for(int index = 0; index < TEST_TOTAL_FRAME_COUNT; index++) {
 
@@ -94,12 +104,21 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         log.debug("Status of stream error: %d", errorStatus_);
 
         assertFalse(frameDropped_);
+        // frameDropped_ is set to false initially. It can be set to true by droppedFrameReport callback in case there
+        // was a frame that was dropped during the test
         assertEquals(errorStatus_, 0x00000000);
+        //errorStatus_ is set to 0x00000000 which is STATUS_SUCCESS. It can be set to a different statusCode by
+        // streamErrorReport callback in case an error is encountered during the test
         assertTrue(bufferingAckInSequence_);
-
+        //bufferingAckInSequence_ is true initially. It can be set to false by fragmentAckReceived callback in case the
+        // (current timestamp - previous timestamp of the ack) > fragment duration
         freeStreams();
     }
 
+    /**
+     * This test sets the device storage size to 1 MB(which is less than what is needed by framesData). It is disabled
+     * because of timestamp decoding errors
+     */
     @Ignore
     @Test
     public void offlineUploadLimitedStorage() {
@@ -108,7 +127,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         int flags;
         long currentTimeMs = System.currentTimeMillis() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
         byte[][] framesData = new byte[][]{
-                new byte[TEST_FRAME_SIZE_BYTES]
+                new byte[TEST_FRAME_SIZE_BYTES * 12]
         };
 
         KinesisVideoProducerStream kinesisVideoProducerStream;
@@ -164,6 +183,9 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         freeStreams();
     }
 
+    /**
+     * This test pauses on the last frame of each clip for pauseSeconds which is less than the timeout
+     */
     @Test
     public void intermittentFileUpload() {
         final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE,
@@ -211,7 +233,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                 }
                 currentTimeMs += TEST_FRAME_DURATION;;
 
-                if(index > 0 && (index + 1) % framesPerClip == 0) {
+                if((index + 1) % framesPerClip == 0) { // pause on the last frame of each clip
                     try {
                         Thread.sleep(pauseSeconds * 1000);
                     } catch(InterruptedException e) {
@@ -247,6 +269,11 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         }
     }
 
+    /**
+     * This test sets keyFrameInterval_ to a small value which increases the frequency of key frames. Later, it checks
+     * if all the fragments are delivered
+     */
+    @Ignore
     @Test
     public void highFragmentRateFileUpload() {
         final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE,
@@ -267,7 +294,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                 DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null);
 
         createProducer();
-        keyFrameInterval_ = 4;
+        keyFrameInterval_ = 4; // high key frame interval
 
         kinesisVideoProducerStream = createTestStream("JavaFuncTest_highFragmentRateFileUpload",
                 StreamInfo.StreamingType.STREAMING_TYPE_OFFLINE, TEST_LATENCY,
@@ -307,11 +334,14 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
 
         assertFalse(frameDropped_);
         assertEquals(errorStatus_, 0x00000000);
-        assertTrue(bufferingAckInSequence_);
+        assertTrue(bufferingAckInSequence_); // all fragments should be sent
 
         freeStreams();
     }
 
+    /**
+     * This test is disabled as it is causing timestamp decoding errors
+     */
     @Ignore
     @Test
     public void offlineModeTokenRotationBlockOnSpace() {
@@ -375,6 +405,14 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         freeStreams();
     }
 
+    /**
+     * This test sets the latency in StreamInfo to 15 seconds. On the 5th keyframe, it sends an EoFR and pauses
+     * for 60 seconds which causes the connection to timeout. The EoFR is sent to ensure that we terminate the fragment
+     * on the backend which will issue a persistent ACK causing the state machine to not rollback on the next frame
+     * produced after the pause. The pause will cause the state machine to change state to a new session.
+     * The new session will not roll back as the previous one was closed with a persisted ACK received.
+     */
+    @Ignore
     @Test
     public void realtimeIntermittentNoLatencyPressureEofr() {
         final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE,
@@ -409,7 +447,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         for(int index = 0; index < testFrameTotalCount; index++) {
             flags = index % keyFrameInterval_ == 0 ? FRAME_FLAG_KEY_FRAME : FRAME_FLAG_NONE;
 
-            if(index == 5 * keyFrameInterval_) {
+            if(index == 5 * keyFrameInterval_) { // pause on the 5th key frame
                 try {
                     kinesisVideoProducerStream.putFrame(eofr);
                 } catch(ProducerException e) {
@@ -417,7 +455,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                     fail();
                 }
                 try {
-                    Thread.sleep(60000);
+                    Thread.sleep(60000); // make sure we hit the connection idle timeout of 60 seconds
                 } catch(InterruptedException e) {
                     e.printStackTrace();
                     fail();
@@ -467,6 +505,9 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         freeStreams();
     }
 
+    /**
+     * This test is disabled as Java SDK does not support Auto-intermittent Producer yet
+     */
     @Ignore
     @Test
     public void realtimeAutoIntermittentLatencyPressure() {
@@ -558,5 +599,4 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
 
         freeStreams();
     }
-
 }
