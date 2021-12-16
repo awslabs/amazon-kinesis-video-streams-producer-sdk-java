@@ -37,10 +37,10 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_BAD_REQUE
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_OK;
 
 public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallbacksImpl {
-    public CachedInfoMultiAuthServiceCallbacksImpl(@Nonnull Logger logger, @Nonnull ScheduledExecutorService executor,
+    public CachedInfoMultiAuthServiceCallbacksImpl(@Nonnull Logger log, @Nonnull ScheduledExecutorService executor,
                                                    @Nonnull KinesisVideoClientConfiguration configuration,
                                                    @Nonnull KinesisVideoServiceClient kinesisVideoServiceClient) {
-        super(logger, executor, configuration, kinesisVideoServiceClient);
+        super(log, executor, configuration, kinesisVideoServiceClient);
     }
 
     /**

@@ -152,7 +152,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
     private static AWSCredentialsProvider createAwsCredentialsProvider(
             @Nullable final KinesisVideoCredentialsProvider credentialsProvider,
-            @Nonnull final Logger logger)
+            @Nonnull final Logger log)
             throws KinesisVideoException {
 
         if (null == credentialsProvider) {
@@ -197,7 +197,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                         };
                     }
                 } catch (final KinesisVideoException e) {
-                    logger.error("Getting credentials threw an exception.", e);
+                    log.error("Getting credentials threw an exception.", e);
                     awsCredentials = null;
                 }
 
@@ -210,7 +210,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                     credentialsProvider.getUpdatedCredentials();
                 } catch (final KinesisVideoException e) {
                     // Do nothing
-                    logger.error("Refreshing credentials threw and exception.", e);
+                    log.error("Refreshing credentials threw and exception.", e);
                 }
             }
         };

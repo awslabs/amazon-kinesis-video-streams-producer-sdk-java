@@ -63,15 +63,15 @@ public final class DemoAppCachedInfo {
                     .withStorageCallbacks(new DefaultStorageCallbacks())
                     .build();
 
-            final Logger logger = LogManager.getLogger(DemoAppCachedInfo.class);
+            final Logger log = LogManager.getLogger(DemoAppCachedInfo.class);
 
             // Create CachedInfoServiceCallback
             final CachedInfoMultiAuthServiceCallbacksImpl serviceCallbacks =
-                    new CachedInfoMultiAuthServiceCallbacksImpl(logger, executor,
-                            configuration, new JavaKinesisVideoServiceClient(logger));
+                    new CachedInfoMultiAuthServiceCallbacksImpl(log, executor,
+                            configuration, new JavaKinesisVideoServiceClient(log));
             // create Kinesis Video high level client
             final KinesisVideoClient kinesisVideoClient = KinesisVideoJavaClientFactory
-                    .createKinesisVideoClient(logger, configuration, executor, null, serviceCallbacks);
+                    .createKinesisVideoClient(log, configuration, executor, null, serviceCallbacks);
 
 
             final String streamName1 = STREAM_NAME + "-account-1";

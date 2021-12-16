@@ -34,7 +34,7 @@ public class ClientInfo {
 
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
                       final long offlineBufferAvailabilityTimeout,
-                      final int loggerLogLevel, final boolean logMetric) {
+                      final int logLevel, final boolean logMetric) {
         mVersion = CLIENT_INFO_CURRENT_VERSION;
         mCreateClientTimeout = createClientTimeout;
         mCreateStreamTimeout = createStreamTimeout;
@@ -64,7 +64,7 @@ public class ClientInfo {
         return mOfflineBufferAvailabilityTimeout;
     }
 
-    public int getLogLevel() {
+    public int getLoggerLogLevel() {
         return mLogLevel;
     }
 

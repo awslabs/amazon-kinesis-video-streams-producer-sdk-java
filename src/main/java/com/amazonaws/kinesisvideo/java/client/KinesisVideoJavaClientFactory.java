@@ -99,11 +99,11 @@ public final class KinesisVideoJavaClientFactory {
         Preconditions.checkNotNull(deviceInfo);
         Preconditions.checkNotNull(executor);
 
-        final Logger logger = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
+        final Logger log = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
-        final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(logger);
+        final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(log);
 
-        final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(logger,
+        final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(log,
                 configuration,
                 serviceClient,
                 executor);
@@ -127,11 +127,11 @@ public final class KinesisVideoJavaClientFactory {
         Preconditions.checkNotNull(deviceInfo);
         Preconditions.checkNotNull(executor);
 
-        final Logger logger =  LogManager.getLogger(KinesisVideoJavaClientFactory.class);
+        final Logger log =  LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
-        final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(logger);
+        final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(log);
 
-        final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(logger,
+        final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(log,
                 configuration,
                 serviceClient,
                 executor,
@@ -144,7 +144,7 @@ public final class KinesisVideoJavaClientFactory {
 
     @Nonnull
     public static KinesisVideoClient createKinesisVideoClient(
-            @Nonnull final Logger logger,
+            @Nonnull final Logger log,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final ScheduledExecutorService executor,
             @Nullable final StreamCallbacks streamCallbacks,
@@ -153,10 +153,10 @@ public final class KinesisVideoJavaClientFactory {
         Preconditions.checkNotNull(configuration);
         Preconditions.checkNotNull(executor);
 
-        final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(logger,
+        final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(log,
                 configuration,
-                serviceCallbacks == null ? new DefaultServiceCallbacksImpl(logger, executor, configuration,
-                        new JavaKinesisVideoServiceClient(logger)) : serviceCallbacks,
+                serviceCallbacks == null ? new DefaultServiceCallbacksImpl(log, executor, configuration,
+                        new JavaKinesisVideoServiceClient(log)) : serviceCallbacks,
                 executor,
                 streamCallbacks == null ? new DefaultStreamCallbacks() : streamCallbacks);
 

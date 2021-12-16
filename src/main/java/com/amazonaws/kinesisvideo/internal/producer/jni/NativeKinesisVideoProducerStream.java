@@ -197,7 +197,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     public NativeKinesisVideoProducerStream(final @Nonnull NativeKinesisVideoProducerJni kinesisVideoProducerJni,
                                             final @Nonnull StreamInfo streamInfo,
                                             final long streamHandle,
-                                            final @Nonnull Logger logger,
+                                            final @Nonnull Logger log,
                                             final @Nullable StreamCallbacks streamCallbacks, 
                                             final @Nullable DeviceInfo deviceInfo) {
         mKinesisVideoProducerJni = Preconditions.checkNotNull(kinesisVideoProducerJni);
@@ -207,7 +207,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         mStreamCallbacks = streamCallbacks;
         mReadyLatch = new CountDownLatch(1);
         mStoppedLatch = new CountDownLatch(1);
-        mLog = Preconditions.checkNotNull(logger);
+        mLog = Preconditions.checkNotNull(log);
         mStreamMetrics = new KinesisVideoStreamMetrics();
         mInputStreamMap = new HashMap<Long, NativeDataInputStream>();
         mDeviceInfo = deviceInfo;

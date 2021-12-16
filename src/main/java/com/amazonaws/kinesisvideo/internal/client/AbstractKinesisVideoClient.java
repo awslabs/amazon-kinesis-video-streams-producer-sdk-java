@@ -37,8 +37,8 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
      */
     protected final Logger mLog;
 
-    public AbstractKinesisVideoClient(@Nonnull final Logger logger) {
-        mLog = Preconditions.checkNotNull(logger);
+    public AbstractKinesisVideoClient(@Nonnull final Logger log) {
+        mLog = Preconditions.checkNotNull(log);
     }
 
     /**

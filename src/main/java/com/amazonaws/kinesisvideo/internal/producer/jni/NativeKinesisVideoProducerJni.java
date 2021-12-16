@@ -151,17 +151,17 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param authCallbacks Authentication callbacks
      * @param storageCallbacks Storage callbacks
      * @param serviceCallbacks Service call callbacks
-     * @param logger logger object to use for logging
+     * @param log logger object to use for logging
      * @throws ProducerException
      */
     public NativeKinesisVideoProducerJni(final @Nonnull AuthCallbacks authCallbacks,
                                          final @Nonnull StorageCallbacks storageCallbacks,
                                          final @Nonnull ServiceCallbacks serviceCallbacks,
-                                         final @Nonnull Logger logger) throws ProducerException {
+                                         final @Nonnull Logger log) throws ProducerException {
         this(authCallbacks,
                 storageCallbacks,
                 serviceCallbacks,
-                logger,
+                log,
                 new CountDownLatch(1));
     }
 
@@ -170,16 +170,16 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param authCallbacks Authentication callbacks
      * @param storageCallbacks Storage callbacks
      * @param serviceCallbacks Service call callbacks
-     * @param logger logger objet to use for logging
+     * @param log log object to use for logging
      * @param readyLatch Ready latch for synch creation
      * @throws ProducerException
      */
     public NativeKinesisVideoProducerJni(final @Nonnull AuthCallbacks authCallbacks,
                                          final @Nonnull StorageCallbacks storageCallbacks,
                                          final @Nonnull ServiceCallbacks serviceCallbacks,
-                                         final @Nonnull Logger logger,
+                                         final @Nonnull Logger log,
                                          final @Nonnull CountDownLatch readyLatch) throws ProducerException {
-        mLog = Preconditions.checkNotNull(logger);
+        mLog = Preconditions.checkNotNull(log);
         mAuthCallbacks = Preconditions.checkNotNull(authCallbacks);
         mStorageCallbacks = Preconditions.checkNotNull(storageCallbacks);
         mServiceCallbacks = Preconditions.checkNotNull(serviceCallbacks);

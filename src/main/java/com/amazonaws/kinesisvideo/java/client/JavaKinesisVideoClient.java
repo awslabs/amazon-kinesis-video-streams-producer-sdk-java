@@ -28,39 +28,39 @@ import java.util.concurrent.ScheduledExecutorService;
 public final class JavaKinesisVideoClient extends NativeKinesisVideoClient {
 
     public JavaKinesisVideoClient(
-            @Nonnull final Logger logger,
+            @Nonnull final Logger log,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor) {
-        super(logger,
+        super(log,
                 configuration,
                 serviceClient,
                 executor);
     }
 
     public JavaKinesisVideoClient(
-            @Nonnull final Logger logger,
+            @Nonnull final Logger log,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor,
             @Nonnull final StreamCallbacks streamCallbacks) {
-        this(logger,
+        this(log,
                 configuration,
-                new DefaultServiceCallbacksImpl(logger, executor, configuration, serviceClient),
+                new DefaultServiceCallbacksImpl(log, executor, configuration, serviceClient),
                 executor,
                 streamCallbacks);
     }
 
     public JavaKinesisVideoClient(
-            @Nonnull final Logger logger,
+            @Nonnull final Logger log,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final ServiceCallbacks serviceCallbacks,
             @Nonnull final ScheduledExecutorService executor,
             @Nonnull final StreamCallbacks streamCallbacks) {
-        super(logger,
+        super(log,
                 new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
                         executor,
-                        logger),
+                        log),
                 configuration.getStorageCallbacks(),
                 serviceCallbacks,
                 streamCallbacks);

@@ -14,8 +14,8 @@ public class NativeLibraryLoader {
 
     private final Logger mLog;
 
-    public NativeLibraryLoader(final @Nonnull Logger logger) {
-        mLog = Preconditions.checkNotNull(logger);
+    public NativeLibraryLoader(final @Nonnull Logger log) {
+        mLog = Preconditions.checkNotNull(log);
     }
 
     /**

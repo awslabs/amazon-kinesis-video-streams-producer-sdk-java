@@ -81,27 +81,27 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
     }
 
     public NativeKinesisVideoClient(
-            @Nonnull final Logger logger,
+            @Nonnull final Logger log,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor) {
-        this(logger,
+        this(log,
                 new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
                         executor,
-                        logger),
+                        log),
                 configuration.getStorageCallbacks(),
-                new DefaultServiceCallbacksImpl(logger, executor, configuration, serviceClient),
+                new DefaultServiceCallbacksImpl(log, executor, configuration, serviceClient),
                 new DefaultStreamCallbacks());
     }
 
     public NativeKinesisVideoClient(
-            @Nonnull final Logger logger,
+            @Nonnull final Logger log,
             @Nonnull final AuthCallbacks authCallbacks,
             @Nonnull final StorageCallbacks storageCallbacks,
             @Nonnull final ServiceCallbacks serviceCallbacks,
             @Nonnull final StreamCallbacks streamCallbacks) {
 
-        super(logger);
+        super(log);
 
         mAuthCallbacks = checkNotNull(authCallbacks);
         mStorageCallbacks = checkNotNull(storageCallbacks);

@@ -624,9 +624,9 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
     @Nullable
     protected static KinesisVideoCredentialsProvider getCredentialsProvider(@Nullable final byte[] authData,
-                                                                    @Nonnull final Logger logger) {
+                                                                    @Nonnull final Logger log) {
         if (null == authData) {
-            logger.warn("NULL credentials have been returned by the credentials provider.");
+            log.warn("NULL credentials have been returned by the credentials provider.");
             return null;
         }
 
@@ -638,16 +638,16 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
             credentials = (KinesisVideoCredentials) objectInput.readObject();
             objectInput.close();
         } catch (final IOException e) {
-            logger.error(e);
+            log.error(e);
             return null;
         } catch (final ClassNotFoundException e) {
-            logger.error(e);
+            log.error(e);
             return null;
         } finally {
             try {
                 byteArrayInputStream.close();
             } catch (final IOException e) {
-                logger.error(e);
+                log.error(e);
             }
         }
 
