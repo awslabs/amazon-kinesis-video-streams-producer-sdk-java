@@ -12,10 +12,10 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class NativeLibraryLoader {
 
-    private final Logger mLogger;
+    private final Logger mLog;
 
     public NativeLibraryLoader(final @Nonnull Logger logger) {
-        mLogger = Preconditions.checkNotNull(logger);
+        mLog = Preconditions.checkNotNull(logger);
     }
 
     /**
@@ -53,12 +53,12 @@ public class NativeLibraryLoader {
         if (libraryFullPath != null && !libraryFullPath.isEmpty()) {
             try {
                 System.load(libraryFullPath);
-                mLogger.trace("Success! Directly loaded native library {}.", libraryFullPath);
+                mLog.trace("Success! Directly loaded native library {}.", libraryFullPath);
                 return true;
             } catch (final UnsatisfiedLinkError e) {
-                mLogger.debug("Unsatisfied link error. Directly loading native library {}.", libraryFullPath);
+                mLog.debug("Unsatisfied link error. Directly loading native library {}.", libraryFullPath);
             } catch (final SecurityException e) {
-                mLogger.debug("Security exception. Directly loading native library {}.", libraryFullPath);
+                mLog.debug("Security exception. Directly loading native library {}.", libraryFullPath);
             }
         }
 
@@ -74,12 +74,12 @@ public class NativeLibraryLoader {
     private boolean loadNativeLibraryIndirect(final @Nonnull String libraryName) {
         try {
             System.loadLibrary(libraryName);
-            mLogger.trace("Success! Indirectly loaded native library {}.", libraryName);
+            mLog.trace("Success! Indirectly loaded native library {}.", libraryName);
             return true;
         } catch (final UnsatisfiedLinkError e) {
-            mLogger.error("Unsatisfied link error.", e);
+            mLog.error("Unsatisfied link error.", e);
         } catch (final SecurityException e) {
-            mLogger.error("Security exception.", e);
+            mLog.error("Security exception.", e);
         }
 
         // This is the error return case.

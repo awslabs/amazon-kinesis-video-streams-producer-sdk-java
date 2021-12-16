@@ -2,7 +2,6 @@ package com.amazonaws.kinesisvideo.internal.service;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.encoding.ChunkDecoder;
 import com.amazonaws.kinesisvideo.model.ResponseStatus;
@@ -28,14 +27,14 @@ class BlockingAckConsumer implements Consumer<InputStream> {
     private final Consumer<InputStream> inputStreamConsumer;
     private final CountDownLatch responseLatch;
     private Exception storedException;
-    private Logger logger;
+    private Logger log;
     private KinesisVideoProducerStream kinesisVideoProducerStream;
 
-    public BlockingAckConsumer(@Nonnull final Consumer<InputStream> inputStreamConsumer, Logger logger,
+    public BlockingAckConsumer(@Nonnull final Consumer<InputStream> inputStreamConsumer, Logger log,
                                @Nonnull final KinesisVideoProducerStream kinesisVideoProducerStream) {
         this.inputStreamConsumer = checkNotNull(inputStreamConsumer);
         this.responseLatch = new CountDownLatch(1);
-        this.logger = logger;
+        this.log = log;
         this.kinesisVideoProducerStream = kinesisVideoProducerStream;
     }
 
@@ -49,7 +48,7 @@ class BlockingAckConsumer implements Consumer<InputStream> {
             final int responseCode = responseStatus.getStatusCode();
             switch (responseCode) {
                 case HTTP_OK:
-                    logger.info("PutMedia call for stream {} return OK with request id {}",
+                    log.info("PutMedia call for stream {} return OK with request id {}",
                             kinesisVideoProducerStream.getStreamName(), ChunkDecoder.decodeHeaders(inputStream));
                     break;
                 case HTTP_BAD_REQUEST:

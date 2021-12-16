@@ -190,8 +190,8 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
                 try {
                     producerStream.stopStreamSync();
                 } catch (final KinesisVideoException e) {
-                    mLogger.error("Failed to stop media source {} due to Exception.", mediaSource);
-                    mLogger.error(e);
+                    mLog.error("Failed to stop media source {} due to Exception.", mediaSource);
+                    mLog.error(e);
                 }
             }
         } finally {
@@ -235,7 +235,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
                 mAuthCallbacks,
                 mStorageCallbacks,
                 mServiceCallbacks,
-                mLogger);
+                mLog);
         kinesisVideoProducer.createSync(deviceInfo);
         return kinesisVideoProducer;
     }

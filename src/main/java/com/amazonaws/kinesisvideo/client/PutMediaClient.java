@@ -43,12 +43,12 @@ public final class PutMediaClient {
     private static final double MILLI_TO_SEC = 1000;
     private static final int LOGGING_INTERVAL = 250; // Rougly every 10 seconds in 25 fps
     private final Builder mBuilder;
-    private final Logger logger;
+    private final Logger log;
     private ParallelSimpleHttpClient httpClient;
 
     private PutMediaClient(final Builder builder) {
         mBuilder = builder;
-        logger = LogManager.getLogger(PutMediaClient.class);
+        log = LogManager.getLogger(PutMediaClient.class);
     }
 
     public static Builder builder() {
@@ -116,10 +116,10 @@ public final class PutMediaClient {
                         mkvBytesRead = mBuilder.mMkvStream.read(buffer);
                         counter++;
                         if (counter % LOGGING_INTERVAL == 0) {
-                            logger.debug("Sending data, counter: {}", counter);
+                            log.debug("Sending data, counter: {}", counter);
                         }
                         if (mkvBytesRead == -1) {
-                            logger.info("End-of-stream is reported. Terminating...");
+                            log.info("End-of-stream is reported. Terminating...");
                             continueLoop = false;
                         } else {
                             throttledOutputStream.write(ChunkEncoder.encode(buffer, mkvBytesRead));
@@ -131,9 +131,9 @@ public final class PutMediaClient {
                     }
                     throttledOutputStream.write(ChunkEncoder.encode(buffer, 0));
                     rawOutputStream.flush();
-                    logger.debug("Data sent. counter: {}", counter);
+                    log.debug("Data sent. counter: {}", counter);
                 } catch (final Exception e) {
-                    logger.debug("Exception while sending data.", e);
+                    log.debug("Exception while sending data.", e);
                     throw new RuntimeException("Exception while sending encoded chunk in MKV stream ! ", e);
                 } finally {
                     tryCloseOutputFileStream(outputFileStream);
@@ -197,7 +197,7 @@ public final class PutMediaClient {
         try {
             outputFileStream.close();
         } catch (final IOException e) {
-            logger.error(e.getMessage());
+            log.error(e.getMessage());
         }
     }
 

@@ -35,7 +35,7 @@ public class HostnameVerifyingX509ExtendedTrustManager extends X509ExtendedTrust
 
     private static final DefaultHostnameVerifier DEFAULT_HOSTNAME_VERIFIER = new DefaultHostnameVerifier(
             PublicSuffixMatcherLoader.getDefault());
-    private Logger logger = LogManager.getLogger(HostnameVerifyingX509ExtendedTrustManager.class);
+    private Logger log = LogManager.getLogger(HostnameVerifyingX509ExtendedTrustManager.class);
     private final boolean clientSideHostnameVerificationEnabled;
 
     private final X509ExtendedTrustManager x509ExtendedTrustManager;
@@ -161,14 +161,14 @@ public class HostnameVerifyingX509ExtendedTrustManager extends X509ExtendedTrust
             DEFAULT_HOSTNAME_VERIFIER.verify(hostAddress, certificate);
         } catch (SSLException addressVerificationException) {
             try {
-                logger.debug(
+                log.debug(
                         "Failed to verify host address: {} attempting to verify host name with reverse dns lookup {}",
                         hostAddress,
                         addressVerificationException);
                 DEFAULT_HOSTNAME_VERIFIER.verify(hostName, certificate);
             } catch (SSLException hostnameVerificationException) {
-                logger.error("Failed to verify host address: {}", hostAddress, addressVerificationException);
-                logger.error("Failed to verify hostname: {}", hostName, hostnameVerificationException);
+                log.error("Failed to verify host address: {}", hostAddress, addressVerificationException);
+                log.error("Failed to verify hostname: {}", hostName, hostnameVerificationException);
                 throw new CertificateException("Failed to verify both host address and host name",
                         hostnameVerificationException);
             }

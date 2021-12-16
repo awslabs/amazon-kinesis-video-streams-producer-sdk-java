@@ -12,14 +12,14 @@ public class ClientInfo {
      * Current version for the structure as defined in the native code
      */
     public static final int CLIENT_INFO_CURRENT_VERSION = 0;
-    public static final int DEFAULT_LOGGER_LOG_LEVEL = 4;
+    public static final int DEFAULT_LOG_LEVEL = 4;
 
     private final int mVersion;
     private final long mCreateClientTimeout;
     private final long mCreateStreamTimeout;
     private final long mStopStreamTimeout;
     private final long mOfflineBufferAvailabilityTimeout;
-    private final int mLoggerLogLevel;
+    private final int mLogLevel;
     private final boolean mLogMetric;
 
     public ClientInfo() {
@@ -28,7 +28,7 @@ public class ClientInfo {
         mCreateStreamTimeout = 0L;
         mStopStreamTimeout = 0L;
         mOfflineBufferAvailabilityTimeout = 0L;
-        mLoggerLogLevel = DEFAULT_LOGGER_LOG_LEVEL;
+        mLogLevel = DEFAULT_LOG_LEVEL;
         mLogMetric = true;
     }
 
@@ -40,7 +40,7 @@ public class ClientInfo {
         mCreateStreamTimeout = createStreamTimeout;
         mStopStreamTimeout = stopStreamTimeout;
         mOfflineBufferAvailabilityTimeout = offlineBufferAvailabilityTimeout;
-        mLoggerLogLevel = DEFAULT_LOGGER_LOG_LEVEL;
+        mLogLevel = DEFAULT_LOG_LEVEL;
         mLogMetric = logMetric;
     }
 
@@ -64,8 +64,8 @@ public class ClientInfo {
         return mOfflineBufferAvailabilityTimeout;
     }
 
-    public int getLoggerLogLevel() {
-        return mLoggerLogLevel;
+    public int getLogLevel() {
+        return mLogLevel;
     }
 
     public boolean getLogMetric() {

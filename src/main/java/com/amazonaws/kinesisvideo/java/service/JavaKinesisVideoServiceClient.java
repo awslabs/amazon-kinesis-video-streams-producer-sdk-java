@@ -51,7 +51,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
     private static final String ABSOLUTE_TIMECODE = "ABSOLUTE";
     private static final String RELATIVE_TIMECODE = "RELATIVE";
 
-    private final Logger logger;
+    private final Logger log;
     private KinesisVideoClientConfiguration configuration;
 
     private static AmazonKinesisVideo createAmazonKinesisVideoClient(
@@ -225,8 +225,8 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withUserAgentPrefix(VersionUtil.getUserAgent());
     }
 
-    public JavaKinesisVideoServiceClient(@Nonnull final Logger logger) {
-        this.logger = Preconditions.checkNotNull(logger);
+    public JavaKinesisVideoServiceClient(@Nonnull final Logger log) {
+        this.log = Preconditions.checkNotNull(log);
     }
 
     @Nonnull
@@ -270,18 +270,18 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withDataRetentionInHours((int) retentionPeriodInHours)
                 .withTags(null);
 
-        logger.debug("calling create stream: {}", createStreamRequest.toString());
+        log.debug("calling create stream: {}", createStreamRequest.toString());
 
         final CreateStreamResult createStreamResult;
         try {
             createStreamResult = serviceClient.createStream(createStreamRequest);
         } catch (final AmazonClientException e) {
             // Wrap into an KinesisVideoException object
-            logger.error("Service call failed.", e);
+            log.error("Service call failed.", e);
             throw new KinesisVideoException(e);
         }
 
-        logger.debug("create stream result: {}", createStreamResult.toString());
+        log.debug("create stream result: {}", createStreamResult.toString());
 
         return createStreamResult.getStreamARN();
     }
@@ -299,22 +299,22 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
         final DescribeStreamRequest describeStreamRequest = new DescribeStreamRequest()
                 .withStreamName(streamName);
 
-        logger.debug("calling describe stream: {}", describeStreamRequest.toString());
+        log.debug("calling describe stream: {}", describeStreamRequest.toString());
 
         final DescribeStreamResult describeStreamResult;
         try {
             describeStreamResult = serviceClient.describeStream(describeStreamRequest);
         } catch (final AmazonClientException e) {
-            logger.error("Service call failed.", e);
+            log.error("Service call failed.", e);
             throw new KinesisVideoException(e);
         }
 
         if (null == describeStreamResult) {
-            logger.debug("describe stream returned null");
+            log.debug("describe stream returned null");
             return null;
         }
 
-        logger.debug("describe stream result: {}", describeStreamResult.toString());
+        log.debug("describe stream result: {}", describeStreamResult.toString());
         return toStreamDescription(describeStreamResult);
     }
 
@@ -335,17 +335,17 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withStreamARN(streamDescription.getStreamArn())
                 .withCurrentVersion(streamDescription.getUpdateVersion());
 
-        logger.debug("calling delete stream: {}", deleteStreamRequest.toString());
+        log.debug("calling delete stream: {}", deleteStreamRequest.toString());
 
         final DeleteStreamResult deleteStreamResult;
         try {
             deleteStreamResult = serviceClient.deleteStream(deleteStreamRequest);
         } catch (final AmazonClientException e) {
-            logger.error("Service call failed.", e);
+            log.error("Service call failed.", e);
             throw new KinesisVideoException(e);
         }
 
-        logger.debug("delete stream result: {}", deleteStreamResult.toString());
+        log.debug("delete stream result: {}", deleteStreamResult.toString());
     }
 
     @Override
@@ -363,17 +363,17 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withStreamARN(streamArn)
                 .withTags(tags);
 
-        logger.debug("calling tag resource: {}", tagStreamRequest.toString());
+        log.debug("calling tag resource: {}", tagStreamRequest.toString());
 
         final TagStreamResult tagStreamResult;
         try {
             tagStreamResult = serviceClient.tagStream(tagStreamRequest);
         } catch (final AmazonClientException e) {
-            logger.error("Service call failed.", e);
+            log.error("Service call failed.", e);
             throw new KinesisVideoException(e);
         }
 
-        logger.debug("tag resource result: {}", tagStreamResult.toString());
+        log.debug("tag resource result: {}", tagStreamResult.toString());
     }
 
     @Override
@@ -391,18 +391,18 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withStreamName(streamName)
                 .withAPIName(apiName);
 
-        logger.debug("calling get data endpoint: {}", getDataEndpointRequest.toString());
+        log.debug("calling get data endpoint: {}", getDataEndpointRequest.toString());
 
         final GetDataEndpointResult getDataEndpointResult;
 
         try {
             getDataEndpointResult = serviceClient.getDataEndpoint(getDataEndpointRequest);
         } catch (final AmazonClientException e) {
-            logger.error("Service call failed.", e);
+            log.error("Service call failed.", e);
             throw new KinesisVideoException(e);
         }
 
-        logger.debug("get data endpoint result: {}", getDataEndpointResult.toString());
+        log.debug("get data endpoint result: {}", getDataEndpointResult.toString());
 
         return getDataEndpointResult.getDataEndpoint();
     }
@@ -421,7 +421,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
             @Nonnull final Consumer<InputStream> acksConsumer,
             @Nullable final Consumer<Exception> completionCallback)
             throws KinesisVideoException {
-        final AWSCredentialsProvider awsCredentialsProvider = createAwsCredentialsProvider(credentialsProvider, logger);
+        final AWSCredentialsProvider awsCredentialsProvider = createAwsCredentialsProvider(credentialsProvider, log);
         final com.amazonaws.kinesisvideo.config.ClientConfiguration clientConfiguration =
                 com.amazonaws.kinesisvideo.config.ClientConfiguration
                 .builder()

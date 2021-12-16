@@ -173,9 +173,9 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
             serializedCredentials = byteArrayOutputStream.toByteArray();
             outputStream.close();
         } catch (final IOException e) {
-            logger.error(e);
+            log.error(e);
         } catch (final KinesisVideoException e) {
-            logger.error(e);
+            log.error(e);
         } finally {
             try {
                 byteArrayOutputStream.close();
@@ -231,7 +231,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
         final Runnable task = new Runnable() {
             @Override
             public void run() {
-                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, logger);
+                final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, log);
                 final long timeoutInMillis = timeout / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
                 int statusCode = HTTP_OK;
 
@@ -250,7 +250,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
                             timeoutInMillis,
                             credentialsProvider);
                 } catch (final KinesisVideoException e) {
-                    logger.error("Kinesis Video service client returned an error. Reporting to Kinesis Video PIC.", e);
+                    log.error("Kinesis Video service client returned an error. Reporting to Kinesis Video PIC.", e);
                     statusCode = getStatusCodeFromException(e);
                 }
 

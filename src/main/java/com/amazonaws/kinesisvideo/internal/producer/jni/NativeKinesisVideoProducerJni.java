@@ -1,6 +1,5 @@
 package com.amazonaws.kinesisvideo.internal.producer.jni;
 
-import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
@@ -108,7 +107,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Logger interface
      */
-    private final Logger mLogger;
+    private final Logger mLog;
 
     /**
      * Helper class for loading the native libraries
@@ -180,12 +179,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
                                          final @Nonnull ServiceCallbacks serviceCallbacks,
                                          final @Nonnull Logger logger,
                                          final @Nonnull CountDownLatch readyLatch) throws ProducerException {
-        mLogger = Preconditions.checkNotNull(logger);
+        mLog = Preconditions.checkNotNull(logger);
         mAuthCallbacks = Preconditions.checkNotNull(authCallbacks);
         mStorageCallbacks = Preconditions.checkNotNull(storageCallbacks);
         mServiceCallbacks = Preconditions.checkNotNull(serviceCallbacks);
         mReadyLatch = Preconditions.checkNotNull(readyLatch);
-        mLibraryLoader = new NativeLibraryLoader(mLogger);
+        mLibraryLoader = new NativeLibraryLoader(mLog);
         mServiceCallbacks.initialize(this);
         mKinesisVideoMetrics = new KinesisVideoMetrics();
     }
@@ -326,7 +325,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             final KinesisVideoProducerStream kinesisVideoProducerStream = new NativeKinesisVideoProducerStream(this,
                     streamInfo,
                     streamHandle,
-                    mLogger,
+                    mLog,
                     streamCallbacks, 
                     mDeviceInfo);
 
@@ -755,7 +754,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         synchronized (mCallbackSyncObject) {
             synchronized (mSyncObject) {
                 if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                    mLogger.info("Stream Ready for non-existing stream handle {}", streamHandle);
+                    mLog.info("Stream Ready for non-existing stream handle {}", streamHandle);
                     return;
                 }
 
@@ -1183,7 +1182,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         // Get the compile time for reporting purposes
         final String compileTime = getNativeCodeCompileTime();
 
-        mLogger.trace("{} library: version {}, compile time {}", PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion, compileTime);
+        mLog.trace("{} library: version {}, compile time {}", PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion, compileTime);
 
         Preconditions.checkState(libraryVersion.equals(EXPECTED_LIBRARY_VERSION),
                     String.format("FATAL DEPLOYMENT ERROR: This app is built "
@@ -1197,25 +1196,25 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param level - log level from PIC
      * @param tag - tag from PIC
      * @param picFmt - fmt from PIC
-     * @param print - the string to be logged
+     * @param message - the string to be logged
      */
-    public void logPrint(final @Nonnull int level, final @Nonnull String tag, final @Nonnull String picFmt, final @Nonnull String print) {
-        String toPrint = "[PIC] " + tag + " - " + print;
+    public void logPrint(final @Nonnull int level, final @Nonnull String tag, final @Nonnull String picFmt, final @Nonnull String message) {
+        String toPrint = "[PIC] " + tag + " - " + message;
         switch (level) {
             case 1:
-                mLogger.trace(toPrint);
+                mLog.trace(toPrint);
                 break;
             case 2:
-                mLogger.debug(toPrint);
+                mLog.debug(toPrint);
                 break;
             case 3:
-                mLogger.info(toPrint);
+                mLog.info(toPrint);
                 break;
             case 4:
-                mLogger.warn(toPrint);
+                mLog.warn(toPrint);
                 break;
             default:
-                mLogger.error(toPrint);
+                mLog.error(toPrint);
                 break;
         }
     }

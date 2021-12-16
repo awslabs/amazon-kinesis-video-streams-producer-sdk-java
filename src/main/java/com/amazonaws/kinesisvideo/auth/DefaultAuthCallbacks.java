@@ -41,7 +41,7 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
     /**
      * Used for logging
      */
-    private final Logger logger;
+    private final Logger log;
 
     /**
      * Stores the serialized credentials
@@ -55,10 +55,10 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
 
     public DefaultAuthCallbacks(@Nonnull KinesisVideoCredentialsProvider credentialsProvider,
                                 @Nonnull final ScheduledExecutorService executor,
-                                @Nonnull Logger logger) {
+                                @Nonnull Logger log) {
         this.credentialsProvider = Preconditions.checkNotNull(credentialsProvider);
         this.executor = Preconditions.checkNotNull(executor);
-        this.logger = Preconditions.checkNotNull(logger);
+        this.log = Preconditions.checkNotNull(log);
     }
 
     @Nullable
@@ -89,19 +89,19 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
                     // return null
                     serializedCredentials = null;
                     expiration = 0;
-                    logger.error("Exception was thrown trying to get updated credentials", e);
+                    log.error("Exception was thrown trying to get updated credentials", e);
                 } catch (final KinesisVideoException e) {
                     // return null
                     serializedCredentials = null;
                     expiration = 0;
-                    logger.error("Exception was thrown trying to get updated credentials", e);
+                    log.error("Exception was thrown trying to get updated credentials", e);
                 } finally {
                     try {
                         byteArrayOutputStream.close();
                     }
                     catch(final IOException e) {
                         // Do nothing
-                        logger.error("Closing the byte array stream threw an exception", e);
+                        log.error("Closing the byte array stream threw an exception", e);
                     }
                 }
             }
@@ -113,11 +113,11 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
         try {
             future.get(CREDENTIALS_UPDATE_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
         } catch (final InterruptedException e) {
-            logger.error("Awaiting for the credentials update threw an exception", e);
+            log.error("Awaiting for the credentials update threw an exception", e);
         } catch (final ExecutionException e) {
-            logger.error("Awaiting for the credentials update threw an exception", e);
+            log.error("Awaiting for the credentials update threw an exception", e);
         } catch (final TimeoutException e) {
-            logger.error("Awaiting for the credentials update threw an exception", e);
+            log.error("Awaiting for the credentials update threw an exception", e);
         }
 
         return new AuthInfo(

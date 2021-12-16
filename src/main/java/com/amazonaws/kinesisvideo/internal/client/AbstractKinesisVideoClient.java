@@ -35,10 +35,10 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
     /**
      * Logging through this object
      */
-    protected final Logger mLogger;
+    protected final Logger mLog;
 
     public AbstractKinesisVideoClient(@Nonnull final Logger logger) {
-        mLogger = Preconditions.checkNotNull(logger);
+        mLog = Preconditions.checkNotNull(logger);
     }
 
     /**
@@ -55,7 +55,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
     @Override
     public void initialize(@Nonnull final DeviceInfo deviceInfo) throws KinesisVideoException
     {
-        mLogger.info("Initializing Kinesis Video client");
+        mLog.info("Initializing Kinesis Video client");
 
         // Make sure we are not yet initialized
         checkState(!mIsInitialized, "Already initialized");
@@ -69,7 +69,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
      */
     @Override
     public void startAllMediaSources() throws KinesisVideoException {
-        mLogger.trace("Resuming Kinesis Video client");
+        mLog.trace("Resuming Kinesis Video client");
 
         checkState(isInitialized(), "Must initialize first.");
         for (final MediaSource mediaSource : mMediaSources) {
@@ -94,7 +94,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
      */
     @Override
     public void stopAllMediaSources() throws KinesisVideoException {
-        mLogger.trace("Pausing Kinesis Video client");
+        mLog.trace("Pausing Kinesis Video client");
 
         if (!isInitialized()) {
             // Idempotent call
@@ -111,7 +111,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
      */
     @Override
     public void free() throws KinesisVideoException {
-        mLogger.trace("Releasing Kinesis Video client");
+        mLog.trace("Releasing Kinesis Video client");
 
         if (!isInitialized()) {
             // Idempotent call

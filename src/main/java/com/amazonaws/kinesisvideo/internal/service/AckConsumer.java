@@ -22,16 +22,16 @@ class AckConsumer implements Consumer<InputStream> {
     private final KinesisVideoProducerStream stream;
     private InputStream ackStream = null;
     private final CountDownLatch stoppedLatch;
-    private final Logger logger;
+    private final Logger log;
     private final long uploadHandle;
     private volatile boolean closed = false;
 
     public AckConsumer(final long uploadHandle,
                        @Nonnull final KinesisVideoProducerStream stream,
-                       @Nonnull final Logger logger) {
+                       @Nonnull final Logger log) {
         this.stream = Preconditions.checkNotNull(stream);
         this.uploadHandle = uploadHandle;
-        this.logger = Preconditions.checkNotNull(logger);
+        this.log = Preconditions.checkNotNull(log);
         this.stoppedLatch = new CountDownLatch(1);
     }
 
@@ -53,7 +53,7 @@ class AckConsumer implements Consumer<InputStream> {
 
         final byte[] buffer = new byte[FOUR_KB];
         int bytesRead;
-        logger.info("Starting ACK processing");
+        log.info("Starting ACK processing");
         try {
             while (!closed) {
                 // This is a blocking operation
@@ -68,23 +68,23 @@ class AckConsumer implements Consumer<InputStream> {
                 if (stream.getStreamHandle() == NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE
                         || bytesRead <= 0 || END_OF_STREAM_MSG.equals(bytesString)) {
                     // End-of-stream
-                    logger.debug("Received end-of-stream for ACKs.");
+                    log.debug("Received end-of-stream for ACKs.");
                     closed = true;
                 } else if (bytesRead != 0) {
-                    logger.debug("Received ACK bits: {}", bytesString);
+                    log.debug("Received ACK bits: {}", bytesString);
                     try {
                         stream.parseFragmentAck(uploadHandle, bytesString);
                     } catch (final ProducerException e) {
                         // Log the exception
-                        logger.error("Processing ACK threw an exception. Logging and continuing.", e);
+                        log.error("Processing ACK threw an exception. Logging and continuing.", e);
                     }
                 }
             }
 
-            logger.debug("Finished reading ACKs stream");
+            log.debug("Finished reading ACKs stream");
         } catch (final IOException e) {
             // Log and exit
-            logger.error(e);
+            log.error(e);
         } finally {
             stoppedLatch.countDown();
         }

@@ -38,7 +38,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
             // No op;
         }
     };
-    private final Logger logger;
+    private final Logger log;
     private final Builder mBuilder;
     private Socket mSocket;
     private InputStream mInputStream;
@@ -48,7 +48,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
     private ParallelSimpleHttpClient(final Builder builder) {
         mBuilder = builder;
-        logger = LogManager.getLogger(ParallelSimpleHttpClient.class);
+        log = LogManager.getLogger(ParallelSimpleHttpClient.class);
     }
 
     public static Builder builder() {
@@ -93,7 +93,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private void sendInitRequest() throws Exception {
         final Writer outputWriter = new BufferedWriter(new OutputStreamWriter(mOutputStream, Charset.defaultCharset()));
         final String initRequest = new StringBuilder().append(getHttpRequestString()).append(getHeadersString()).append(CLRF).toString();
-        logger.debug("Request: {}", initRequest);
+        log.debug("Request: {}", initRequest);
         outputWriter.write(initRequest);
         outputWriter.flush();
     }
@@ -143,11 +143,11 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                     Exception storedException = null;
                     try {
                         // This is needed to get the thread Id.
-                        logger.debug("Start sending data.");
+                        log.debug("Start sending data.");
                         mBuilder.mSender.accept(mOutputStream);
-                        logger.debug("End sending data. Sent all data, close.");
+                        log.debug("End sending data. Sent all data, close.");
                     } catch (final Exception e) {
-                        logger.error("Exception thrown on sending thread", e);
+                        log.error("Exception thrown on sending thread", e);
                         storedException = e;
                     } finally {
                         //Only call completion if there is an exception, otherwise sender will call completion
@@ -169,11 +169,11 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                 public void run() {
                     Exception storedException = null;
                     try {
-                        logger.debug("Starting receiving data");
+                        log.debug("Starting receiving data");
                         mBuilder.mReceiver.accept(mInputStream);
-                        logger.debug("Received all data, close");
+                        log.debug("Received all data, close");
                     } catch (final Exception e) {
-                        logger.error("Exception thrown on receiving thread", e);
+                        log.error("Exception thrown on receiving thread", e);
                         storedException = e;
                     } finally {
                         mBuilder.mCompletion.accept(storedException);
