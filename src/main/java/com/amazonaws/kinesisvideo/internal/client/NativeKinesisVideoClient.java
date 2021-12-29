@@ -16,8 +16,8 @@ import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.common.logging.Log;
-import com.amazonaws.kinesisvideo.common.logging.LogLevel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.mediasource.ProducerStreamSink;
 import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
@@ -74,14 +74,14 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor) {
-        this(new Log(configuration.getLogChannel(), LogLevel.VERBOSE, TAG),
+        this(LogManager.getLogger(NativeKinesisVideoClient.class),
                 configuration,
                 serviceClient,
                 executor);
     }
 
     public NativeKinesisVideoClient(
-            @Nonnull final Log log,
+            @Nonnull final Logger log,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor) {
@@ -95,7 +95,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
     }
 
     public NativeKinesisVideoClient(
-            @Nonnull final Log log,
+            @Nonnull final Logger log,
             @Nonnull final AuthCallbacks authCallbacks,
             @Nonnull final StorageCallbacks storageCallbacks,
             @Nonnull final ServiceCallbacks serviceCallbacks,
@@ -190,7 +190,8 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
                 try {
                     producerStream.stopStreamSync();
                 } catch (final KinesisVideoException e) {
-                    mLog.exception(e, "Failed to stop media source %s due to Exception ", mediaSource);
+                    mLog.error("Failed to stop media source {} due to Exception.", mediaSource);
+                    mLog.error(e);
                 }
             }
         } finally {

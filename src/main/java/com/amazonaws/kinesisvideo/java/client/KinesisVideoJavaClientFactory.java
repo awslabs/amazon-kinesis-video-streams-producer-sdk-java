@@ -5,13 +5,12 @@ import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.common.logging.Log;
-import com.amazonaws.kinesisvideo.common.logging.LogLevel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks;
 import com.amazonaws.kinesisvideo.internal.service.DefaultServiceCallbacksImpl;
 import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsProviderImpl;
-import com.amazonaws.kinesisvideo.java.logging.SysOutLogChannel;
 import com.amazonaws.kinesisvideo.java.service.JavaKinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.producer.DeviceInfo;
 import com.amazonaws.kinesisvideo.producer.StorageInfo;
@@ -76,7 +75,6 @@ public final class KinesisVideoJavaClientFactory {
         final KinesisVideoClientConfiguration configuration = KinesisVideoClientConfiguration.builder()
                 .withRegion(regions.getName())
                 .withCredentialsProvider(kinesisVideoCredentialsProvider)
-                .withLogChannel(new SysOutLogChannel())
                 .withStorageCallbacks(new DefaultStorageCallbacks())
                 .build();
 
@@ -101,7 +99,7 @@ public final class KinesisVideoJavaClientFactory {
         Preconditions.checkNotNull(deviceInfo);
         Preconditions.checkNotNull(executor);
 
-        final Log log = new Log(configuration.getLogChannel(), LogLevel.DEBUG, "KinesisVideo");
+        final Logger log = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
         final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(log);
 
@@ -129,7 +127,7 @@ public final class KinesisVideoJavaClientFactory {
         Preconditions.checkNotNull(deviceInfo);
         Preconditions.checkNotNull(executor);
 
-        final Log log = new Log(configuration.getLogChannel(), LogLevel.DEBUG, "KinesisVideo");
+        final Logger log =  LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
         final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(log);
 
@@ -146,7 +144,7 @@ public final class KinesisVideoJavaClientFactory {
 
     @Nonnull
     public static KinesisVideoClient createKinesisVideoClient(
-            @Nonnull final Log log,
+            @Nonnull final Logger log,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final ScheduledExecutorService executor,
             @Nullable final StreamCallbacks streamCallbacks,

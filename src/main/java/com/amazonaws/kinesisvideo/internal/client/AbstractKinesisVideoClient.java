@@ -3,7 +3,7 @@ package com.amazonaws.kinesisvideo.internal.client;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.DeviceInfo;
 
@@ -35,9 +35,9 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
     /**
      * Logging through this object
      */
-    protected final Log mLog;
+    protected final Logger mLog;
 
-    public AbstractKinesisVideoClient(@Nonnull final Log log) {
+    public AbstractKinesisVideoClient(@Nonnull final Logger log) {
         mLog = Preconditions.checkNotNull(log);
     }
 
@@ -69,7 +69,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
      */
     @Override
     public void startAllMediaSources() throws KinesisVideoException {
-        mLog.verbose("Resuming Kinesis Video client");
+        mLog.trace("Resuming Kinesis Video client");
 
         checkState(isInitialized(), "Must initialize first.");
         for (final MediaSource mediaSource : mMediaSources) {
@@ -94,7 +94,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
      */
     @Override
     public void stopAllMediaSources() throws KinesisVideoException {
-        mLog.verbose("Pausing Kinesis Video client");
+        mLog.trace("Pausing Kinesis Video client");
 
         if (!isInitialized()) {
             // Idempotent call
@@ -111,7 +111,7 @@ public abstract class AbstractKinesisVideoClient implements KinesisVideoClient {
      */
     @Override
     public void free() throws KinesisVideoException {
-        mLog.verbose("Releasing Kinesis Video client");
+        mLog.trace("Releasing Kinesis Video client");
 
         if (!isInitialized()) {
             // Idempotent call

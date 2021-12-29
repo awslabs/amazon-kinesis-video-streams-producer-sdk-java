@@ -3,14 +3,13 @@ package com.amazonaws.kinesisvideo.demoapp;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
-import com.amazonaws.kinesisvideo.common.logging.Log;
-import com.amazonaws.kinesisvideo.common.logging.LogLevel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
 import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsProviderImpl;
 import com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory;
-import com.amazonaws.kinesisvideo.java.logging.SysOutLogChannel;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSource;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.java.service.CachedInfoMultiAuthServiceCallbacksImpl;
@@ -61,10 +60,10 @@ public final class DemoAppCachedInfo {
             final KinesisVideoClientConfiguration configuration = KinesisVideoClientConfiguration.builder()
                     .withRegion(Regions.US_WEST_2.getName())
                     .withCredentialsProvider(new JavaCredentialsProviderImpl(awsCredentialsProvider))
-                    .withLogChannel(new SysOutLogChannel())
                     .withStorageCallbacks(new DefaultStorageCallbacks())
                     .build();
-            final Log log = new Log(configuration.getLogChannel(), LogLevel.DEBUG, "KinesisVideo");
+
+            final Logger log = LogManager.getLogger(DemoAppCachedInfo.class);
 
             // Create CachedInfoServiceCallback
             final CachedInfoMultiAuthServiceCallbacksImpl serviceCallbacks =

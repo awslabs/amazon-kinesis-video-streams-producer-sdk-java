@@ -1,6 +1,6 @@
 package com.amazonaws.kinesisvideo.internal.producer.jni;
 
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 
 import javax.annotation.Nonnull;
@@ -12,9 +12,9 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class NativeLibraryLoader {
 
-    private final Log mLog;
+    private final Logger mLog;
 
-    public NativeLibraryLoader(final @Nonnull Log log) {
+    public NativeLibraryLoader(final @Nonnull Logger log) {
         mLog = Preconditions.checkNotNull(log);
     }
 
@@ -53,12 +53,12 @@ public class NativeLibraryLoader {
         if (libraryFullPath != null && !libraryFullPath.isEmpty()) {
             try {
                 System.load(libraryFullPath);
-                mLog.verbose("Success! Directly loaded native library %s.", libraryFullPath);
+                mLog.trace("Success! Directly loaded native library {}.", libraryFullPath);
                 return true;
             } catch (final UnsatisfiedLinkError e) {
-                mLog.debug("Unsatisfied link error. Directly loading native library %s.", libraryFullPath);
+                mLog.debug("Unsatisfied link error. Directly loading native library {}.", libraryFullPath);
             } catch (final SecurityException e) {
-                mLog.debug("Security exception. Directly loading native library %s.", libraryFullPath);
+                mLog.debug("Security exception. Directly loading native library {}.", libraryFullPath);
             }
         }
 
@@ -74,12 +74,12 @@ public class NativeLibraryLoader {
     private boolean loadNativeLibraryIndirect(final @Nonnull String libraryName) {
         try {
             System.loadLibrary(libraryName);
-            mLog.verbose("Success! Indirectly loaded native library %s.", libraryName);
+            mLog.trace("Success! Indirectly loaded native library {}.", libraryName);
             return true;
         } catch (final UnsatisfiedLinkError e) {
-            mLog.exception(e, "Unsatisfied link error. Loading native library %s failed with %s", libraryName, e.toString());
+            mLog.error("Unsatisfied link error.", e);
         } catch (final SecurityException e) {
-            mLog.exception(e, "Security exception. Loading native library %s failed with %s", libraryName, e.toString());
+            mLog.error("Security exception.", e);
         }
 
         // This is the error return case.

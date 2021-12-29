@@ -1,7 +1,7 @@
 package com.amazonaws.kinesisvideo.internal.service;
 
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
@@ -22,13 +22,13 @@ class AckConsumer implements Consumer<InputStream> {
     private final KinesisVideoProducerStream stream;
     private InputStream ackStream = null;
     private final CountDownLatch stoppedLatch;
-    private final Log log;
+    private final Logger log;
     private final long uploadHandle;
     private volatile boolean closed = false;
 
     public AckConsumer(final long uploadHandle,
                        @Nonnull final KinesisVideoProducerStream stream,
-                       @Nonnull final Log log) {
+                       @Nonnull final Logger log) {
         this.stream = Preconditions.checkNotNull(stream);
         this.uploadHandle = uploadHandle;
         this.log = Preconditions.checkNotNull(log);
@@ -71,12 +71,12 @@ class AckConsumer implements Consumer<InputStream> {
                     log.debug("Received end-of-stream for ACKs.");
                     closed = true;
                 } else if (bytesRead != 0) {
-                    log.debug("Received ACK bits: " + bytesString);
+                    log.debug("Received ACK bits: {}", bytesString);
                     try {
                         stream.parseFragmentAck(uploadHandle, bytesString);
                     } catch (final ProducerException e) {
                         // Log the exception
-                        log.exception(e, "Processing ACK threw an exception. Logging and continuing. ");
+                        log.error("Processing ACK threw an exception. Logging and continuing.", e);
                     }
                 }
             }
@@ -84,7 +84,7 @@ class AckConsumer implements Consumer<InputStream> {
             log.debug("Finished reading ACKs stream");
         } catch (final IOException e) {
             // Log and exit
-            log.exception(e);
+            log.error(e);
         } finally {
             stoppedLatch.countDown();
         }

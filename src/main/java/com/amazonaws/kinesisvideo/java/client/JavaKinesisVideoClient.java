@@ -3,7 +3,7 @@ package com.amazonaws.kinesisvideo.java.client;
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.internal.client.NativeKinesisVideoClient;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
@@ -28,7 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 public final class JavaKinesisVideoClient extends NativeKinesisVideoClient {
 
     public JavaKinesisVideoClient(
-            @Nonnull final Log log,
+            @Nonnull final Logger log,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor) {
@@ -39,7 +39,7 @@ public final class JavaKinesisVideoClient extends NativeKinesisVideoClient {
     }
 
     public JavaKinesisVideoClient(
-            @Nonnull final Log log,
+            @Nonnull final Logger log,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient serviceClient,
             @Nonnull final ScheduledExecutorService executor,
@@ -52,7 +52,7 @@ public final class JavaKinesisVideoClient extends NativeKinesisVideoClient {
     }
 
     public JavaKinesisVideoClient(
-            @Nonnull final Log log,
+            @Nonnull final Logger log,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final ServiceCallbacks serviceCallbacks,
             @Nonnull final ScheduledExecutorService executor,

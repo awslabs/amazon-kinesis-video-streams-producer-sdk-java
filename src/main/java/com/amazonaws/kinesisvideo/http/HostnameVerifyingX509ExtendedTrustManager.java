@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.http;
 
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 import org.apache.http.conn.util.PublicSuffixMatcherLoader;
 
@@ -34,7 +35,7 @@ public class HostnameVerifyingX509ExtendedTrustManager extends X509ExtendedTrust
 
     private static final DefaultHostnameVerifier DEFAULT_HOSTNAME_VERIFIER = new DefaultHostnameVerifier(
             PublicSuffixMatcherLoader.getDefault());
-    private Log log = new Log(Log.SYSTEM_OUT);
+    private Logger log = LogManager.getLogger(HostnameVerifyingX509ExtendedTrustManager.class);
     private final boolean clientSideHostnameVerificationEnabled;
 
     private final X509ExtendedTrustManager x509ExtendedTrustManager;
@@ -161,7 +162,7 @@ public class HostnameVerifyingX509ExtendedTrustManager extends X509ExtendedTrust
         } catch (SSLException addressVerificationException) {
             try {
                 log.debug(
-                        "Failed to verify host address: {} attempting to verify host name with reverse dns lookup",
+                        "Failed to verify host address: {} attempting to verify host name with reverse dns lookup {}",
                         hostAddress,
                         addressVerificationException);
                 DEFAULT_HOSTNAME_VERIFIER.verify(hostName, certificate);

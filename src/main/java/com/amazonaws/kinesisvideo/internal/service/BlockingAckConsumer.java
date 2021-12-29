@@ -2,7 +2,7 @@ package com.amazonaws.kinesisvideo.internal.service;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.encoding.ChunkDecoder;
 import com.amazonaws.kinesisvideo.model.ResponseStatus;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
@@ -27,10 +27,10 @@ class BlockingAckConsumer implements Consumer<InputStream> {
     private final Consumer<InputStream> inputStreamConsumer;
     private final CountDownLatch responseLatch;
     private Exception storedException;
-    private Log log;
+    private Logger log;
     private KinesisVideoProducerStream kinesisVideoProducerStream;
 
-    public BlockingAckConsumer(@Nonnull final Consumer<InputStream> inputStreamConsumer, Log log,
+    public BlockingAckConsumer(@Nonnull final Consumer<InputStream> inputStreamConsumer, Logger log,
                                @Nonnull final KinesisVideoProducerStream kinesisVideoProducerStream) {
         this.inputStreamConsumer = checkNotNull(inputStreamConsumer);
         this.responseLatch = new CountDownLatch(1);
@@ -48,8 +48,8 @@ class BlockingAckConsumer implements Consumer<InputStream> {
             final int responseCode = responseStatus.getStatusCode();
             switch (responseCode) {
                 case HTTP_OK:
-                    log.info(String.format("PutMedia call for stream %s return OK with request id %s",
-                            kinesisVideoProducerStream.getStreamName(), ChunkDecoder.decodeHeaders(inputStream)));
+                    log.info("PutMedia call for stream {} return OK with request id {}",
+                            kinesisVideoProducerStream.getStreamName(), ChunkDecoder.decodeHeaders(inputStream));
                     break;
                 case HTTP_BAD_REQUEST:
                     throw new AmazonServiceException("PutMedia call returned bad request: "
