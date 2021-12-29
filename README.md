@@ -69,6 +69,10 @@ Start the demo app
 $ java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.11.0-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Dkvs-stream=<KINESIS_VIDEO_STREAM_NAME> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml com.amazonaws.kinesisvideo.demoapp.DemoAppMain
 
 ```
+##### Run API and functionality tests
+```
+$ mvn clean test -DargLine="-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml"
+```
 
 ##### Run the demo application from Docker
 

@@ -8,15 +8,14 @@ import static org.junit.Assert.fail;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
-import com.amazonaws.kinesisvideo.common.logging.Log;
-import com.amazonaws.kinesisvideo.common.logging.LogLevel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
 import com.amazonaws.kinesisvideo.internal.client.NativeKinesisVideoClient;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.internal.service.DefaultServiceCallbacksImpl;
 import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsProviderImpl;
-import com.amazonaws.kinesisvideo.java.logging.SysOutLogChannel;
 import com.amazonaws.kinesisvideo.java.service.CachedInfoMultiAuthServiceCallbacksImpl;
 import com.amazonaws.kinesisvideo.java.service.JavaKinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.producer.*;
@@ -63,6 +62,7 @@ public class ProducerTestBase {
 
     protected DeviceInfo deviceInfo_ = new DeviceInfo(DEVICE_VERSION,
             DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null);
+    private final Logger log = LogManager.getLogger(ProducerTestBase.class);
 
     // flags that are updated in case of various events like overflow, error, pressure, etc.
     protected boolean stopCalled_;
@@ -80,7 +80,6 @@ public class ProducerTestBase {
     private AWSCredentialsProvider awsCredentialsProvider;
     private JavaKinesisVideoServiceClient serviceClient;
     private ScheduledExecutorService executor;
-    private Log log;
     private NativeKinesisVideoClient kinesisVideoClient;
     private AuthCallbacks authCallbacks;
     private StorageCallbacks storageCallbacks;
@@ -119,10 +118,7 @@ public class ProducerTestBase {
         configuration = KinesisVideoClientConfiguration.builder()
                 .withRegion(Regions.US_WEST_2.getName())
                 .withCredentialsProvider(new JavaCredentialsProviderImpl(awsCredentialsProvider))
-                .withLogChannel(new SysOutLogChannel())
                 .build();
-
-        log = new Log(configuration.getLogChannel(), LogLevel.VERBOSE, "KinesisVideoProducerApiTest");
 
         serviceClient = new JavaKinesisVideoServiceClient(log);
         authCallbacks = new DefaultAuthCallbacks(configuration.getCredentialsProvider(),

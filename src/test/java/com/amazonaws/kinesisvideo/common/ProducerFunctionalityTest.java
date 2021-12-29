@@ -9,13 +9,14 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
-import com.amazonaws.kinesisvideo.common.logging.Log;
-import com.amazonaws.kinesisvideo.common.logging.LogLevel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.producer.*;
 
 public class ProducerFunctionalityTest extends ProducerTestBase{
 
+    final Logger log = LogManager.getLogger(ProducerFunctionalityTest.class);
     /**
      * This test creates a stream, stops it and frees it
      */
@@ -48,8 +49,6 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      */
     @Test
     public void offlineUploadLimitedBufferDuration() {
-        final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE,
-                "ProducerFunctionalityTest/offlineUploadLimitedBufferDuration");
         int flags;
         long currentTimeMs = 0;
         byte[][] framesData = new byte[][]{
@@ -91,7 +90,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             fail();
         }
 
-        log.debug("Stopping the stream: %s", kinesisVideoProducerStream.getStreamName());
+        log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
         } catch(ProducerException e) {
@@ -100,8 +99,8 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
 
         }
 
-        log.debug("Status of frame drop: %b", frameDropped_);
-        log.debug("Status of stream error: %d", errorStatus_);
+        log.debug("Status of frame drop: {}", frameDropped_);
+        log.debug("Status of stream error: {}", errorStatus_);
 
         assertFalse(frameDropped_);
         // frameDropped_ is set to false initially. It can be set to true by droppedFrameReport callback in case there
@@ -122,8 +121,6 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
     @Ignore
     @Test
     public void offlineUploadLimitedStorage() {
-        final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE,
-                "ProducerFunctionalityTest/offlineUploadLimitedStorage");
         int flags;
         long currentTimeMs = System.currentTimeMillis() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
         byte[][] framesData = new byte[][]{
@@ -165,7 +162,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             fail();
         }
 
-        log.debug("Stopping the stream: %s", kinesisVideoProducerStream.getStreamName());
+        log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
         } catch(ProducerException e) {
@@ -173,8 +170,8 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             fail();
         }
 
-        log.debug("Status of frame drop: %b", frameDropped_);
-        log.debug("Status of stream error: %d", errorStatus_);
+        log.debug("Status of frame drop: {}", frameDropped_);
+        log.debug("Status of stream error: {}", errorStatus_);
 
         assertFalse(frameDropped_);
         assertEquals(errorStatus_, 0x00000000);
@@ -188,8 +185,6 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      */
     @Test
     public void intermittentFileUpload() {
-        final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE,
-                "ProducerFunctionalityTest/intermittentFileUpload");
         int flags;
         long currentTimeMs = 0;
         byte[][] framesData = new byte[][]{
@@ -250,7 +245,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                 fail();
             }
 
-            log.debug("Stopping the stream: %s", kinesisVideoProducerStream.getStreamName());
+            log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
             try {
                 kinesisVideoProducerStream.stopStreamSync();
             } catch(ProducerException e) {
@@ -258,8 +253,8 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                 fail();
             }
 
-            log.debug("Status of frame drop: %b", frameDropped_);
-            log.debug("Status of stream error: %d", errorStatus_);
+            log.debug("Status of frame drop: {}", frameDropped_);
+            log.debug("Status of stream error: {}", errorStatus_);
 
             assertFalse(frameDropped_);
             assertEquals(errorStatus_, 0x00000000);
@@ -276,8 +271,6 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
     @Ignore
     @Test
     public void highFragmentRateFileUpload() {
-        final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE,
-                "ProducerFunctionalityTest/highFragmentRateFileUpload");
         int flags;
         long currentTimeMs = 0;
         byte[][] framesData = new byte[][]{
@@ -321,7 +314,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             fail();
         }
 
-        log.debug("Stopping the stream: %s", kinesisVideoProducerStream.getStreamName());
+        log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
         } catch(ProducerException e) {
@@ -329,8 +322,8 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             fail();
         }
 
-        log.debug("Status of frame drop: %b", frameDropped_);
-        log.debug("Status of stream error: %d", errorStatus_);
+        log.debug("Status of frame drop: {}", frameDropped_);
+        log.debug("Status of stream error: {}", errorStatus_);
 
         assertFalse(frameDropped_);
         assertEquals(errorStatus_, 0x00000000);
@@ -345,8 +338,6 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
     @Ignore
     @Test
     public void offlineModeTokenRotationBlockOnSpace() {
-        final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE,
-                "ProducerFunctionalityTest/offlineModeTokenRotationBlockOnSpace");
         KinesisVideoProducerStream kinesisVideoProducerStream;
         KinesisVideoFrame frame;
 
@@ -387,7 +378,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             fail();
         }
 
-        log.debug("Stopping the stream: %s", kinesisVideoProducerStream.getStreamName());
+        log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
         } catch(ProducerException e) {
@@ -395,8 +386,8 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             fail();
         }
 
-        log.debug("Status of frame drop: %b", frameDropped_);
-        log.debug("Status of stream error: %d", errorStatus_);
+        log.debug("Status of frame drop: {}", frameDropped_);
+        log.debug("Status of stream error: {}", errorStatus_);
 
         assertFalse(frameDropped_);
         assertEquals(errorStatus_, 0x00000000);
@@ -415,8 +406,6 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
     @Ignore
     @Test
     public void realtimeIntermittentNoLatencyPressureEofr() {
-        final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE,
-                "ProducerFunctionalityTest/realtimeIntermittentNoLatencyPressureEofr");
         KinesisVideoProducerStream kinesisVideoProducerStream;
         KinesisVideoFrame frame;
 
@@ -487,7 +476,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             fail();
         }
 
-        log.debug("Stopping the stream: %s", kinesisVideoProducerStream.getStreamName());
+        log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
         } catch(ProducerException e) {
@@ -495,8 +484,8 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             fail();
         }
 
-        log.debug("Status of frame drop: %b", frameDropped_);
-        log.debug("Status of stream error: %d", errorStatus_);
+        log.debug("Status of frame drop: {}", frameDropped_);
+        log.debug("Status of stream error: {}", errorStatus_);
 
         assertFalse(frameDropped_);
         assertEquals(errorStatus_, 0x00000000);
@@ -511,8 +500,6 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
     @Ignore
     @Test
     public void realtimeAutoIntermittentLatencyPressure() {
-        final Log log = new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE,
-                "ProducerFunctionalityTest/realtimeAutoIntermittentLatencyPressure");
         KinesisVideoProducerStream kinesisVideoProducerStream;
 
         int totalFrameCount;
@@ -582,7 +569,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             fail();
         }
 
-        log.debug("Stopping the stream: %s", kinesisVideoProducerStream.getStreamName());
+        log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
         } catch(ProducerException e) {
@@ -590,8 +577,8 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             fail();
         }
 
-        log.debug("Status of frame drop: %b", frameDropped_);
-        log.debug("Status of stream error: %d", errorStatus_);
+        log.debug("Status of frame drop: {}", frameDropped_);
+        log.debug("Status of stream error: {}", errorStatus_);
 
         assertFalse(frameDropped_);
         assertEquals(errorStatus_, 0x00000000);
