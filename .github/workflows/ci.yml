@@ -16,7 +16,7 @@ jobs:
         os: [ macos-latest, windows-latest, ubuntu-latest ]
         java: [ 8, 11, 16 ]
     steps:
-     - name: Configure AWS Credentials
+      - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-region: us-west-2
