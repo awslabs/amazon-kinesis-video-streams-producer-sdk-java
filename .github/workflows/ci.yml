@@ -23,7 +23,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::502759840390:role/GitHubActionsRole
           role-session-name: SampleRoleSession
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: us-west-2
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
