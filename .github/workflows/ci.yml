@@ -17,11 +17,11 @@ jobs:
         java: [ 8, 11, 16 ]
     steps:
       - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-region: us-west-2
-        role-to-assume: arn:aws:iam::502759840390:role/GitHubActionsRole
-        role-session-name: NewSession
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: us-west-2
+          role-to-assume: arn:aws:iam::502759840390:role/GitHubActionsRole
+          role-session-name: NewSession
       - name: Checkout the repository
         uses: actions/checkout@v2
       - name: Set up JDK
