@@ -38,13 +38,11 @@ jobs:
       - name: Run tests
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            unset AWS_SESSION_TOKEN
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Djava.library.path=src/main/resources/lib/ubuntu/ -Dlog4j.configurationFile=log4j2.xml"
+            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/ubuntu/ -Dlog4j.configurationFile=log4j2.xml"
           elif [ "$RUNNER_OS" == "Windows" ]; then
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Djava.library.path=src/main/resources/lib/windows/ -Dlog4j.configurationFile=log4j2.xml"
+            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/windows/ -Dlog4j.configurationFile=log4j2.xml"
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            unset AWS_SESSION_TOKEN
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Djava.library.path=src/main/resources/lib/mac/ -Dlog4j.configurationFile=log4j2.xml"
+            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/mac/ -Dlog4j.configurationFile=log4j2.xml"
           else
             echo "$RUNNER_OS not supported"
             exit 1
