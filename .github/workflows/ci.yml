@@ -16,7 +16,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        os: [ macos-latest, windows-latest, ubuntu-latest ]
+        os: [ macos-latest, windows-2019, ubuntu-latest ]
         java: [ 8, 11, 16 ]
     steps:
       - name: Checkout the repository
