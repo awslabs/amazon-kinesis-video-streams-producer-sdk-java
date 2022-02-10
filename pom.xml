@@ -157,9 +157,15 @@
     </dependencies>
     <build>
         <plugins>
+            <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-compiler-plugin -->
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.9.0</version>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.3.0</version>
                 <executions>
                     <execution>
                         <phase>generate-sources</phase>
@@ -178,6 +184,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.2</version>
                 <configuration>
                     <!-- DO NOT include log4j.properties file in your Jar -->
                     <excludes>
