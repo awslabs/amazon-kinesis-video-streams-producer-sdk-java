@@ -134,6 +134,20 @@ The repository is using `develop` branch as the aggregation and all of the featu
 
 ## Release Notes
 
+### Release 1.12.0 (February 2022)
+* Update guice from 4.2.3 to 5.1.0
+* Update junit from 4.13.1 to 4.13.2
+* Update mockito-core from 2.18.3 to 4.3.1
+* Update annotations from 2.0.3 to 3.0.1
+* Update commons-lang3 from 3.4 to 3.12.0
+* Update gson from 2.8.2 to 2.9.0
+* Update jsr-275 from 1.0.0 to 0.9.1 (artifact moved)
+* Update commons-io from 2.7 to 2.11.0
+* Update httpasyncclient from 4.1.4 to 4.1.5
+* Replace custom logger with log4j2
+* Obtain PIC logs in Java with JNI
+* Add ProducerFunctionalityTests and ProducerApiTests
+
 ### Release 1.11.0 (11 September 2020)
 * Improve TLS validation by implementing hostname verification
 
