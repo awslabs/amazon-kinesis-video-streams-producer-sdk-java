@@ -15,7 +15,7 @@
     <groupId>com.amazonaws</groupId>
     <artifactId>amazon-kinesis-video-streams-producer-sdk-java</artifactId>
     <name>Amazon Kinesis Video Streams Producer SDK Java</name>
-    <version>1.11.0</version>
+    <version>1.12.0</version>
     <description>The Amazon Kinesis Video Streams Producer SDK for Java enables Java developers to ingest data into
         Amazon Kinesis Video.
     </description>
@@ -71,7 +71,7 @@
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
-            <version>4.2.3</version>
+            <version>5.1.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.hamcrest/hamcrest-all -->
         <dependency>
@@ -84,13 +84,13 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.13.1</version>
+            <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>2.18.3</version>
+            <version>4.3.1</version>
             <scope>test</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.google.code.findbugs/jsr305 -->
@@ -103,25 +103,25 @@
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>annotations</artifactId>
-            <version>2.0.3</version>
+            <version>3.0.1</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.4</version>
+            <version>3.12.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>2.8.2</version>
+            <version>2.9.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/javax.measure/jsr-275 -->
         <dependency>
             <groupId>javax.measure</groupId>
             <artifactId>jsr-275</artifactId>
-            <version>1.0.0</version>
+            <version>0.9.1</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.google.inject.extensions/guice-multibindings -->
         <dependency>
@@ -133,13 +133,13 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.7</version>
+            <version>2.11.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpasyncclient -->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpasyncclient</artifactId>
-            <version>4.1.4</version>
+            <version>4.1.5</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
         <dependency>
