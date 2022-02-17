@@ -403,6 +403,10 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      * produced after the pause. The pause will cause the state machine to change state to a new session.
      * The new session will not roll back as the previous one was closed with a persisted ACK received.
      */
+<<<<<<< HEAD
+=======
+    @Ignore
+>>>>>>> 74da9fc (Merge develop into master for release 1.12.0 (#155))
     @Test
     public void realtimeIntermittentNoLatencyPressureEofr() {
         KinesisVideoProducerStream kinesisVideoProducerStream;
@@ -494,8 +498,14 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
     }
 
     /**
+<<<<<<< HEAD
      * This test is tests Intermittent Producer under latency pressure
      */
+=======
+     * This test is disabled as Java SDK does not support Auto-intermittent Producer yet
+     */
+    @Ignore
+>>>>>>> 74da9fc (Merge develop into master for release 1.12.0 (#155))
     @Test
     public void realtimeAutoIntermittentLatencyPressure() {
         KinesisVideoProducerStream kinesisVideoProducerStream;
@@ -516,6 +526,10 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         deviceInfo_ = new DeviceInfo(DEVICE_VERSION,
                 DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null);
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 74da9fc (Merge develop into master for release 1.12.0 (#155))
         createProducer();
 
         keyFrameInterval_ = 60;

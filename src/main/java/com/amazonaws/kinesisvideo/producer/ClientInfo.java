@@ -11,6 +11,7 @@ public class ClientInfo {
     /**
      * Current version for the structure as defined in the native code
      */
+<<<<<<< HEAD
     public static final int CLIENT_INFO_CURRENT_VERSION = 2;
     public static final int DEFAULT_LOG_LEVEL = 4;
 
@@ -27,6 +28,10 @@ public class ClientInfo {
         }
 
     }
+=======
+    public static final int CLIENT_INFO_CURRENT_VERSION = 0;
+    public static final int DEFAULT_LOG_LEVEL = 4;
+>>>>>>> 74da9fc (Merge develop into master for release 1.12.0 (#155))
 
     private final int mVersion;
     private final long mCreateClientTimeout;
@@ -49,6 +54,7 @@ public class ClientInfo {
     }
 
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
+<<<<<<< HEAD
                       final long offlineBufferAvailabilityTimeout, final int logLevel,
                       final boolean logMetric) {
         this(createClientTimeout, createStreamTimeout, stopStreamTimeout, offlineBufferAvailabilityTimeout,
@@ -58,12 +64,20 @@ public class ClientInfo {
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
                       final long offlineBufferAvailabilityTimeout, final int logLevel,
                       final boolean logMetric, final AutomaticStreamingFlags flag) {
+=======
+                      final long offlineBufferAvailabilityTimeout,
+                      final int logLevel, final boolean logMetric) {
+>>>>>>> 74da9fc (Merge develop into master for release 1.12.0 (#155))
         mVersion = CLIENT_INFO_CURRENT_VERSION;
         mCreateClientTimeout = createClientTimeout;
         mCreateStreamTimeout = createStreamTimeout;
         mStopStreamTimeout = stopStreamTimeout;
         mOfflineBufferAvailabilityTimeout = offlineBufferAvailabilityTimeout;
+<<<<<<< HEAD
         mLogLevel = logLevel;
+=======
+        mLogLevel = DEFAULT_LOG_LEVEL;
+>>>>>>> 74da9fc (Merge develop into master for release 1.12.0 (#155))
         mLogMetric = logMetric;
         mAutomaticStreamingFlags = flag;
     }

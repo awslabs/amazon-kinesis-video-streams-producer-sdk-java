@@ -8,7 +8,10 @@ import static org.junit.Assert.fail;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
+<<<<<<< HEAD
 import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
+=======
+>>>>>>> 74da9fc (Merge develop into master for release 1.12.0 (#155))
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
@@ -60,7 +63,13 @@ public class ProducerTestBase {
     protected StorageInfo storageInfo_ = new StorageInfo(0,
             StorageInfo.DeviceStorageType.DEVICE_STORAGE_TYPE_IN_MEM, STORAGE_SIZE_MEGS,
             SPILL_RATIO_PERCENT, STORAGE_PATH);
+<<<<<<< HEAD
     protected DeviceInfo deviceInfo_;
+=======
+
+    protected DeviceInfo deviceInfo_ = new DeviceInfo(DEVICE_VERSION,
+            DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null);
+>>>>>>> 74da9fc (Merge develop into master for release 1.12.0 (#155))
     private final Logger log = LogManager.getLogger(ProducerTestBase.class);
 
     // flags that are updated in case of various events like overflow, error, pressure, etc.
@@ -107,6 +116,7 @@ public class ProducerTestBase {
      * This method is used to create a KinesisVideoProducer which is used by the later methods
      */
     protected void createProducer() {
+<<<<<<< HEAD
         deviceInfo_ = new DeviceInfo(DEVICE_VERSION,
                 DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null,
                 "JNI " + NativeKinesisVideoProducerJni.EXPECTED_LIBRARY_VERSION,
@@ -118,6 +128,8 @@ public class ProducerTestBase {
      * This method is used to create a KinesisVideoProducer which is used by the later methods
      */
     protected void createProducer(DeviceInfo deviceInfo) {
+=======
+>>>>>>> 74da9fc (Merge develop into master for release 1.12.0 (#155))
 
         reset(); // reset all flags to initial values so that they can be modified by the stream and storage callbacks
 
@@ -147,8 +159,14 @@ public class ProducerTestBase {
                     storageCallbacks,
                     defaultServiceCallbacks,
                     streamCallbacks);
+<<<<<<< HEAD
         try {
             kinesisVideoProducer = kinesisVideoClient.initializeNewKinesisVideoProducer(deviceInfo);
+=======
+
+        try {
+            kinesisVideoProducer = kinesisVideoClient.initializeNewKinesisVideoProducer(deviceInfo_);
+>>>>>>> 74da9fc (Merge develop into master for release 1.12.0 (#155))
         } catch(Exception e) {
             e.printStackTrace();
             fail();
@@ -176,7 +194,11 @@ public class ProducerTestBase {
                 (byte) 0x88, (byte) 0x46, (byte) 0xE0, (byte) 0x01, (byte) 0x00, (byte) 0x04, (byte) 0x28, (byte) 0xCE,
                 (byte) 0x1F, (byte) 0x20};
 
+<<<<<<< HEAD
         StreamInfo streamInfo = new StreamInfo(VERSION_TWO,
+=======
+        StreamInfo streamInfo = new StreamInfo(VERSION_ZERO,
+>>>>>>> 74da9fc (Merge develop into master for release 1.12.0 (#155))
                 streamName,
                 streamingType,
                 "video/h264",
