@@ -31,12 +31,12 @@ Import the Maven project to your IDE, it will find dependency packages from Mave
 
 Run `DemoAppMain.java` in `./src/main/demo` with JVM arguments set to
 ```
--Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Dkvs-stream=<YourKinesisVideoStreamName> -Djava.library.path=<NativeLibraryPath>
+-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Dkvs-stream=<YourKinesisVideoStreamName> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml
 ```
 for **non-temporary** AWS credential.
 
 ```
--Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Dkvs-stream=<YourKinesisVideoStreamName> -Djava.library.path=<NativeLibraryPath>
+-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Dkvs-stream=<YourKinesisVideoStreamName> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml
 ```
 for *temporary* AWS credential.
 
@@ -66,8 +66,12 @@ $ mvn clean compile assembly:single
 
 Start the demo app
 ```
-$ java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.11.0-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Dkvs-stream=<KINESIS_VIDEO_STREAM_NAME> -Djava.library.path=<NativeLibraryPath> com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+$ java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.12.0-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Dkvs-stream=<KINESIS_VIDEO_STREAM_NAME> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml com.amazonaws.kinesisvideo.demoapp.DemoAppMain
 
+```
+##### Run API and functionality tests
+```
+$ mvn clean test -DargLine="-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml"
 ```
 
 ##### Run the demo application from Docker
@@ -124,7 +128,25 @@ Then, provide the path to the libKinesisVideoProducerJNI.dylib library.
 
 This should resolve native library loading issues.
 
+## Development
+
+The repository is using `develop` branch as the aggregation and all of the feature development is done in appropriate feature branches. The PRs (Pull Requests) are cut on a feature branch and once approved with all the checks passed they can be merged by a click of a button on the PR tool. The master branch should always be build-able and all the tests should be passing. We are welcoming any contribution to the code base. The master branch contains our most recent release cycle from `develop`.
+
 ## Release Notes
+
+### Release 1.12.0 (February 2022)
+* Update guice from 4.2.3 to 5.1.0
+* Update junit from 4.13.1 to 4.13.2
+* Update mockito-core from 2.18.3 to 4.3.1
+* Update annotations from 2.0.3 to 3.0.1
+* Update commons-lang3 from 3.4 to 3.12.0
+* Update gson from 2.8.2 to 2.9.0
+* Update jsr-275 from 1.0.0 to 0.9.1 (artifact moved)
+* Update commons-io from 2.7 to 2.11.0
+* Update httpasyncclient from 4.1.4 to 4.1.5
+* Replace custom logger with log4j2
+* Obtain PIC logs in Java with JNI
+* Add ProducerFunctionalityTests and ProducerApiTests
 
 ### Release 1.11.0 (11 September 2020)
 * Improve TLS validation by implementing hostname verification

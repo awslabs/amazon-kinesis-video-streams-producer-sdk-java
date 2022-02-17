@@ -1,8 +1,7 @@
 package com.amazonaws.kinesisvideo.internal.producer.jni;
 
-import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
-import com.amazonaws.kinesisvideo.common.logging.Log;
-import com.amazonaws.kinesisvideo.common.logging.LogLevel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.*;
 import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
@@ -108,7 +107,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Logger interface
      */
-    private final Log mLog;
+    private final Logger mLog;
 
     /**
      * Helper class for loading the native libraries
@@ -144,7 +143,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         this(authCallbacks,
                 storageCallbacks,
                 serviceCallbacks,
-                new Log(Log.SYSTEM_OUT, LogLevel.VERBOSE, "Producer JNI"));
+                LogManager.getLogger(NativeKinesisVideoProducerJni.class));
     }
 
     /**
@@ -152,13 +151,13 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param authCallbacks Authentication callbacks
      * @param storageCallbacks Storage callbacks
      * @param serviceCallbacks Service call callbacks
-     * @param log Log object to use for logging
+     * @param log logger object to use for logging
      * @throws ProducerException
      */
     public NativeKinesisVideoProducerJni(final @Nonnull AuthCallbacks authCallbacks,
                                          final @Nonnull StorageCallbacks storageCallbacks,
                                          final @Nonnull ServiceCallbacks serviceCallbacks,
-                                         final @Nonnull Log log) throws ProducerException {
+                                         final @Nonnull Logger log) throws ProducerException {
         this(authCallbacks,
                 storageCallbacks,
                 serviceCallbacks,
@@ -171,14 +170,14 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param authCallbacks Authentication callbacks
      * @param storageCallbacks Storage callbacks
      * @param serviceCallbacks Service call callbacks
-     * @param log Log objet to use for logging
+     * @param log log object to use for logging
      * @param readyLatch Ready latch for synch creation
      * @throws ProducerException
      */
     public NativeKinesisVideoProducerJni(final @Nonnull AuthCallbacks authCallbacks,
                                          final @Nonnull StorageCallbacks storageCallbacks,
                                          final @Nonnull ServiceCallbacks serviceCallbacks,
-                                         final @Nonnull Log log,
+                                         final @Nonnull Logger log,
                                          final @Nonnull CountDownLatch readyLatch) throws ProducerException {
         mLog = Preconditions.checkNotNull(log);
         mAuthCallbacks = Preconditions.checkNotNull(authCallbacks);
@@ -755,7 +754,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         synchronized (mCallbackSyncObject) {
             synchronized (mSyncObject) {
                 if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                    mLog.info("Stream Ready for non-existing stream handle " + streamHandle);
+                    mLog.info("Stream Ready for non-existing stream handle {}", streamHandle);
                     return;
                 }
 
@@ -1183,12 +1182,41 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         // Get the compile time for reporting purposes
         final String compileTime = getNativeCodeCompileTime();
 
-        mLog.verbose("%s library: version %s, compile time %s", PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion, compileTime);
+        mLog.trace("{} library: version {}, compile time {}", PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion, compileTime);
 
         Preconditions.checkState(libraryVersion.equals(EXPECTED_LIBRARY_VERSION),
                     String.format("FATAL DEPLOYMENT ERROR: This app is built "
                             + "to run with version %s of the lib%s.so library, but version %s was found on this device",
                     EXPECTED_LIBRARY_VERSION, PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion));
+    }
+
+    /**
+     * Logs PIC logs
+     *
+     * @param level - log level from PIC
+     * @param tag - tag from PIC
+     * @param picFmt - fmt from PIC
+     * @param message - the string to be logged
+     */
+    public void logPrint(final @Nonnull int level, final @Nonnull String tag, final @Nonnull String picFmt, final @Nonnull String message) {
+        String toPrint = "[PIC] " + tag + " - " + message;
+        switch (level) {
+            case 1:
+                mLog.trace(toPrint);
+                break;
+            case 2:
+                mLog.debug(toPrint);
+                break;
+            case 3:
+                mLog.info(toPrint);
+                break;
+            case 4:
+                mLog.warn(toPrint);
+                break;
+            default:
+                mLog.error(toPrint);
+                break;
+        }
     }
 
     /**

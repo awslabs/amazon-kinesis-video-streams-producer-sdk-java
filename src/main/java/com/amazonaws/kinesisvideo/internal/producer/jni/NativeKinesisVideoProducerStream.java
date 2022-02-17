@@ -1,6 +1,6 @@
 package com.amazonaws.kinesisvideo.internal.producer.jni;
 
-import com.amazonaws.kinesisvideo.common.logging.Log;
+import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.FrameFlags;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFragmentAck;
@@ -62,7 +62,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                         final int len)
                 throws IOException {
             if (mStreamClosed) {
-                mLog.warn("Stream %s with uploadHandle %d has been closed", mStreamInfo.getName(), mUploadHandle);
+                mLog.warn("Stream {} with uploadHandle {} has been closed", mStreamInfo.getName(), mUploadHandle);
             }
 
             // Read from the KinesisVideo Producer
@@ -74,12 +74,12 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                 synchronized (mMonitor) {
                     while (!mDataAvailable && !mStreamClosed) {
                         try {
-                            mLog.debug("no data for stream %s with uploadHandle %d, waiting", mStreamInfo.getName(),
+                            mLog.debug("no data for stream {} with uploadHandle {}, waiting", mStreamInfo.getName(),
                                     mUploadHandle);
                             mMonitor.wait(TIMEOUT_IN_MS);
                         } catch (final InterruptedException e) {
-                            mLog.exception(e, "Waiting for the data availability with uploadHandle %d"
-                                    + "threw an interrupted exception. Continuing...", mUploadHandle);
+                            mLog.error("Waiting for the data availability with uploadHandle {}", mUploadHandle);
+                            mLog.error(e);
                         }
                     }
 
@@ -88,7 +88,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                     if (mStreamClosed) {
                         // Indicate the EOS
                         bytesRead = -1;
-                        mLog.debug("Being notified to close stream %s with uploadHandle %d",
+                        mLog.debug("Being notified to close stream {} with uploadHandle {}",
                                 mStreamInfo.getName(), mUploadHandle);
                         return bytesRead;
                     }
@@ -97,12 +97,12 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                 try {
                     mKinesisVideoProducerJni.getStreamData(mStreamHandle, mUploadHandle, b, off, len, mReadResult);
                     bytesRead = mReadResult.getReadBytes();
-                    mLog.debug("getStreamData fill %d bytes for stream %s with uploadHandle %d", bytesRead,
+                    mLog.trace("getStreamData fill {} bytes for stream {} with uploadHandle {}", bytesRead,
                             mStreamInfo.getName(), mUploadHandle);
 
                     if (mReadResult.isEndOfStream()) {
                         // EOS for current session
-                        mLog.info("Received end-of-stream indicator for %s, uploadHandle %d",
+                        mLog.info("Received end-of-stream indicator for {}, uploadHandle {}",
                                 mStreamInfo.getName(), mUploadHandle);
 
                         // Set the flag so the stream is not valid any longer
@@ -126,16 +126,16 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                         }
                     }
                 } catch (final ProducerException e) {
-                    mLog.exception(e, "Reader threw an exception");
+                    mLog.error("Reader threw an exception", e);
                     throw new IOException(e);
                 }
             }
 
-            mLog.debug("Streamed %d bytes for stream %s with uploadHandle %d", bytesRead, mStreamInfo.getName(),
+            mLog.debug("Streamed {} bytes for stream {} with uploadHandle {}", bytesRead, mStreamInfo.getName(),
                     mUploadHandle);
 
             if (-1 == bytesRead) {
-                mLog.debug("Closing stream %s with uploadHandle %d", mStreamInfo.getName(), mUploadHandle);
+                mLog.debug("Closing stream {} with uploadHandle {}", mStreamInfo.getName(), mUploadHandle);
             }
 
             return bytesRead;
@@ -163,7 +163,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
             // Unblock the awaiting reading code block
             synchronized (mMonitor) {
                 mAvailableDataSize = availableSize;
-                mLog.debug("Data availability notification. Upload handle: %d, Size: %d, Duration %d ",
+                mLog.debug("Data availability notification. Upload handle: {}, Size: {}, Duration {} ",
                         mUploadHandle, availableSize, duration);
 
                 mDataAvailable = true;
@@ -190,14 +190,14 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     private final StreamCallbacks mStreamCallbacks;
     private final CountDownLatch mReadyLatch;
     private final CountDownLatch mStoppedLatch;
-    private final Log mLog;
+    private final Logger mLog;
     private final KinesisVideoStreamMetrics mStreamMetrics;
     private final Map<Long, NativeDataInputStream> mInputStreamMap;
 
     public NativeKinesisVideoProducerStream(final @Nonnull NativeKinesisVideoProducerJni kinesisVideoProducerJni,
                                             final @Nonnull StreamInfo streamInfo,
                                             final long streamHandle,
-                                            final @Nonnull Log log,
+                                            final @Nonnull Logger log,
                                             final @Nullable StreamCallbacks streamCallbacks, 
                                             final @Nullable DeviceInfo deviceInfo) {
         mKinesisVideoProducerJni = Preconditions.checkNotNull(kinesisVideoProducerJni);
@@ -235,7 +235,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         Preconditions.checkNotNull(kinesisVideoFrame);
         Preconditions.checkState(mStreamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE);
 
-        mLog.debug("PutFrame index: %s, pts: %s, dts: %s, duration: %s, keyFrame: %s, track: %s",
+        mLog.debug("PutFrame index: {}, pts: {}, dts: {}, duration: {}, keyFrame: {}, track: {}",
                 kinesisVideoFrame.getIndex(),
                 kinesisVideoFrame.getPresentationTs(),
                 kinesisVideoFrame.getDecodingTs(),
@@ -248,18 +248,18 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
             final KinesisVideoMetrics kinesisVideoMetrics = mKinesisVideoProducerJni.getMetrics();
             final KinesisVideoStreamMetrics streamMetrics = getMetrics();
             mLog.debug("Kinesis Video client and stream metrics"
-                            + "\n\t>> Overall storage size: %s"
-                            + "\n\t>> Available storage size: %s"
-                            + "\n\t>> Allocated storage size: %s"
-                            + "\n\t>> Total view allocation size: %s"
-                            + "\n\t>> Total streams frame rate: %s"
-                            + "\n\t>> Total streams transfer rate: %s"
-                            + "\n\t>> Current view duration: %s"
-                            + "\n\t>> Overall view duration: %s"
-                            + "\n\t>> Current view size: %s"
-                            + "\n\t>> Overall view size: %s"
-                            + "\n\t>> Current frame rate: %s"
-                            + "\n\t>> Current transfer rate: %s",
+                            + "\n\t>> Overall storage size: {}"
+                            + "\n\t>> Available storage size: {}"
+                            + "\n\t>> Allocated storage size: {}"
+                            + "\n\t>> Total view allocation size: {}"
+                            + "\n\t>> Total streams frame rate: {}"
+                            + "\n\t>> Total streams transfer rate: {}"
+                            + "\n\t>> Current view duration: {}"
+                            + "\n\t>> Overall view duration: {}"
+                            + "\n\t>> Current view size: {}"
+                            + "\n\t>> Overall view size: {}"
+                            + "\n\t>> Current frame rate: {}"
+                            + "\n\t>> Current transfer rate: {}",
                     kinesisVideoMetrics.getContentStoreSize(),
                     kinesisVideoMetrics.getContentStoreAvailableSize(),
                     kinesisVideoMetrics.getContentStoreAllocatedSize(),
@@ -341,7 +341,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                     storedException = e1;
                 }
             }
-            mLog.exception(e, "Stopping stream threw an exception. Force stopping the input stream.");
+            mLog.error("Stopping stream threw an exception. Force stopping the input stream.", e);
             if (storedException != null) {
                 throw new ProducerException(storedException);
             }
@@ -350,7 +350,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                 try {
                     stream.close();
                 } catch (final IOException e) {
-                    mLog.exception(e);
+                    mLog.error(e);
                 }
             }
         }
@@ -445,7 +445,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         if (inputStreamToNotify != null) {
             inputStreamToNotify.notifyReaderThread(duration, availableSize);
         } else {
-            mLog.warn("Data available notification for non-existing uploadHandle %d", uploadHandle);
+            mLog.warn("Data available notification for non-existing uploadHandle {}", uploadHandle);
         }
 
         if (mStreamCallbacks != null) {
@@ -456,7 +456,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     @Override
     public void streamReady() throws ProducerException
     {
-        mLog.debug("Stream %s is ready", mStreamInfo.getName());
+        mLog.debug("Stream {} is ready", mStreamInfo.getName());
         // Release the ready latch
         mReadyLatch.countDown();
 
@@ -468,7 +468,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     @Override
     public void streamClosed(final long uploadHandle) throws ProducerException
     {
-        mLog.debug("Stream %s is closed", mStreamInfo.getName());
+        mLog.debug("Stream {} is closed", mStreamInfo.getName());
 
         if (uploadHandle == ReadResult.INVALID_UPLOAD_HANDLE_VALUE) {
             for (final Map.Entry<Long, NativeDataInputStream> stream : mInputStreamMap.entrySet()) {
@@ -513,7 +513,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
      */
     @Override
     public void resetConnection() throws ProducerException {
-        mLog.debug("Current connection of stream %s is being reset", mStreamInfo.getName());
+        mLog.debug("Current connection of stream {} is being reset", mStreamInfo.getName());
 
         streamTerminated(ReadResult.INVALID_UPLOAD_HANDLE_VALUE, SERVICE_CALL_RESULT_OK);
     }
