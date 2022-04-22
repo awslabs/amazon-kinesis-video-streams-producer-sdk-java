@@ -108,6 +108,13 @@ public class ProducerTestBase {
      * This method is used to create a KinesisVideoProducer which is used by the later methods
      */
     protected void createProducer() {
+        createProducer(ClientInfo.AUTOMATIC_STREAMING_FLAGS.AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER);
+    }
+
+    /**
+     * This method is used to create a KinesisVideoProducer which is used by the later methods
+     */
+    protected void createProducer(ClientInfo.AUTOMATIC_STREAMING_FLAGS flag) {
 
         reset(); // reset all flags to initial values so that they can be modified by the stream and storage callbacks
 
@@ -137,7 +144,7 @@ public class ProducerTestBase {
                     storageCallbacks,
                     defaultServiceCallbacks,
                     streamCallbacks);
-
+        deviceInfo_.getClientInfo().setAutomaticStreamingFlags(flag);
         try {
             kinesisVideoProducer = kinesisVideoClient.initializeNewKinesisVideoProducer(deviceInfo_);
         } catch(Exception e) {
