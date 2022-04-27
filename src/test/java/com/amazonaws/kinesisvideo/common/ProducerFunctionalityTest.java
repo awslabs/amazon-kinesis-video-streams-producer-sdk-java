@@ -516,7 +516,6 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         deviceInfo_ = new DeviceInfo(DEVICE_VERSION,
                 DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null);
 
-
         createProducer();
 
         keyFrameInterval_ = 60;

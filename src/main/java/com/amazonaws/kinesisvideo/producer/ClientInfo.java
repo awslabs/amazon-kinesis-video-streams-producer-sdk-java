@@ -17,11 +17,6 @@ public class ClientInfo {
     public static final int AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER = 0;
     public static final int AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS = 256;
 
-    public static enum AUTOMATIC_STREAMING_FLAGS {
-        AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER,
-        AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS
-    }
-
     private final int mVersion;
     private final long mCreateClientTimeout;
     private final long mCreateStreamTimeout;
@@ -29,7 +24,7 @@ public class ClientInfo {
     private final long mOfflineBufferAvailabilityTimeout;
     private final int mLogLevel;
     private final boolean mLogMetric;
-    private int mAutomaticStreamingFlags;
+    private final int mAutomaticStreamingFlags;
 
     public ClientInfo() {
         mVersion = CLIENT_INFO_CURRENT_VERSION;
@@ -42,6 +37,10 @@ public class ClientInfo {
         mAutomaticStreamingFlags = AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
     }
 
+    public ClientInfo(final int flag) {
+        this(0L, 0L, 0L, 0L, DEFAULT_LOG_LEVEL, true, flag);
+    }
+
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
                       final long offlineBufferAvailabilityTimeout, final int logLevel,
                       final boolean logMetric, final int automaticStreamingFlags) {
@@ -52,7 +51,11 @@ public class ClientInfo {
         mOfflineBufferAvailabilityTimeout = offlineBufferAvailabilityTimeout;
         mLogLevel = logLevel;
         mLogMetric = logMetric;
-        mAutomaticStreamingFlags = automaticStreamingFlags;
+        if (automaticStreamingFlags == AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS) {
+            mAutomaticStreamingFlags = AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS;
+        } else {
+            mAutomaticStreamingFlags = AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
+        }
     }
 
     public int getVersion() {
@@ -85,13 +88,5 @@ public class ClientInfo {
 
     public int getAutomaticStreamingFlags() {
         return mAutomaticStreamingFlags;
-    }
-
-    public void setAutomaticStreamingFlags(AUTOMATIC_STREAMING_FLAGS flag) {
-        if (flag == AUTOMATIC_STREAMING_FLAGS.AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS) {
-            mAutomaticStreamingFlags = AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS;
-        } else {
-            mAutomaticStreamingFlags = AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
-        }
     }
 }
