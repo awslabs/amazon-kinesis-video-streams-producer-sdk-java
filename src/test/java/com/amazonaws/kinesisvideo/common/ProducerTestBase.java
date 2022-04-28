@@ -110,7 +110,7 @@ public class ProducerTestBase {
         deviceInfo_ = new DeviceInfo(DEVICE_VERSION,
                 DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null,
                 "JNI " + NativeKinesisVideoProducerJni.EXPECTED_LIBRARY_VERSION,
-                new ClientInfo(ClientInfo.AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER));
+                new ClientInfo());
         createProducer(deviceInfo_);
     }
 

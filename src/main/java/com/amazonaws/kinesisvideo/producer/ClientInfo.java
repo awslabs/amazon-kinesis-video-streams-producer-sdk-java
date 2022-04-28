@@ -14,8 +14,19 @@ public class ClientInfo {
     public static final int CLIENT_INFO_CURRENT_VERSION = 2;
     public static final int DEFAULT_LOG_LEVEL = 4;
 
-    public static final int AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER = 0;
-    public static final int AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS = 256;
+    public static enum automaticStreamingFlags {
+        AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER(0), AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS(256);
+        private final int value;
+
+        private automaticStreamingFlags(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+
+    }
 
     private final int mVersion;
     private final long mCreateClientTimeout;
@@ -24,7 +35,7 @@ public class ClientInfo {
     private final long mOfflineBufferAvailabilityTimeout;
     private final int mLogLevel;
     private final boolean mLogMetric;
-    private final int mAutomaticStreamingFlags;
+    private final automaticStreamingFlags mAutomaticStreamingFlags;
 
     public ClientInfo() {
         mVersion = CLIENT_INFO_CURRENT_VERSION;
@@ -34,16 +45,12 @@ public class ClientInfo {
         mOfflineBufferAvailabilityTimeout = 0L;
         mLogLevel = DEFAULT_LOG_LEVEL;
         mLogMetric = true;
-        mAutomaticStreamingFlags = AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
-    }
-
-    public ClientInfo(final int flag) {
-        this(0L, 0L, 0L, 0L, DEFAULT_LOG_LEVEL, true, flag);
+        mAutomaticStreamingFlags = automaticStreamingFlags.AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
     }
 
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
                       final long offlineBufferAvailabilityTimeout, final int logLevel,
-                      final boolean logMetric, final int automaticStreamingFlags) {
+                      final boolean logMetric, final automaticStreamingFlags flag) {
         mVersion = CLIENT_INFO_CURRENT_VERSION;
         mCreateClientTimeout = createClientTimeout;
         mCreateStreamTimeout = createStreamTimeout;
@@ -51,11 +58,7 @@ public class ClientInfo {
         mOfflineBufferAvailabilityTimeout = offlineBufferAvailabilityTimeout;
         mLogLevel = logLevel;
         mLogMetric = logMetric;
-        if (automaticStreamingFlags == AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS) {
-            mAutomaticStreamingFlags = AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS;
-        } else {
-            mAutomaticStreamingFlags = AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
-        }
+        mAutomaticStreamingFlags = flag;
     }
 
     public int getVersion() {
@@ -87,6 +90,6 @@ public class ClientInfo {
     }
 
     public int getAutomaticStreamingFlags() {
-        return mAutomaticStreamingFlags;
+        return mAutomaticStreamingFlags.getValue();
     }
 }
