@@ -16,14 +16,14 @@ public class ClientInfo {
 
     public static enum automaticStreamingFlags {
         AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER(0), AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS(256);
-        private final int value;
+        private final int streamingFlagValue;
 
-        private automaticStreamingFlags(int value) {
-            this.value = value;
+        private automaticStreamingFlags(int streamingFlagValue) {
+            this.streamingFlagValue = streamingFlagValue;
         }
 
-        public int getValue() {
-            return value;
+        public int getStreamingFlagValue() {
+            return streamingFlagValue;
         }
 
     }
@@ -45,6 +45,19 @@ public class ClientInfo {
         mOfflineBufferAvailabilityTimeout = 0L;
         mLogLevel = DEFAULT_LOG_LEVEL;
         mLogMetric = true;
+        mAutomaticStreamingFlags = automaticStreamingFlags.AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
+    }
+
+    public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
+                      final long offlineBufferAvailabilityTimeout, final int logLevel,
+                      final boolean logMetric) {
+        mVersion = CLIENT_INFO_CURRENT_VERSION;
+        mCreateClientTimeout = createClientTimeout;
+        mCreateStreamTimeout = createStreamTimeout;
+        mStopStreamTimeout = stopStreamTimeout;
+        mOfflineBufferAvailabilityTimeout = offlineBufferAvailabilityTimeout;
+        mLogLevel = logLevel;
+        mLogMetric = logMetric;
         mAutomaticStreamingFlags = automaticStreamingFlags.AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
     }
 
@@ -90,6 +103,6 @@ public class ClientInfo {
     }
 
     public int getAutomaticStreamingFlags() {
-        return mAutomaticStreamingFlags.getValue();
+        return mAutomaticStreamingFlags.getStreamingFlagValue();
     }
 }
