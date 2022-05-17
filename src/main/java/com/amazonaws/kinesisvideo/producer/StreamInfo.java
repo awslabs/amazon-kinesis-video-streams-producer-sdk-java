@@ -29,7 +29,7 @@ public class StreamInfo {
      * StreamInfo structure current version.
      * IMPORTANT: Must be kept in sync with the native counterpart.
      */
-    public static final int STREAM_INFO_CURRENT_VERSION = 1;
+    public static final int STREAM_INFO_CURRENT_VERSION = 2;
 
     /**
      * Streaming types that must correspond to the native counterparts
@@ -113,6 +113,34 @@ public class StreamInfo {
         }
     }
 
+    /**
+     * Storage pressure policy that must correspond to the native counterparts
+     */
+    public static enum StorePressurePolicy {
+        /**
+         * Return an error STATUS_STORE_OUT_OF_MEMORY when we have no available storage when putting frame.
+         * The value of 0 is the default.
+         */
+        CONTENT_STORE_PRESSURE_POLICY_OOM(0),
+
+        /**
+         * Evict the earliest frames to make space for the new frame being put.
+         * Might result in dropped frame callbacks fired.
+         */
+        CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM(1);
+
+        private int value;
+
+        private StorePressurePolicy(final int i) {
+            value = i;
+        }
+
+        public int getIntValue() {
+            return value;
+        }
+    }
+
+
     private final int mVersion;
     private final String mName;
     private final StreamingType mStreamingType;
@@ -139,6 +167,7 @@ public class StreamInfo {
     private final TrackInfo[] mTrackInfoList;
     private final UUID mSegmentUuid;
     private final FrameOrderMode mFrameOrderMode;
+    private final StorePressurePolicy mStorePressurePolicy;
 
     /**
      * Generates a track name from a content type
@@ -230,7 +259,7 @@ public class StreamInfo {
                       @Nullable final UUID segmentUuid,
                       @Nonnull final TrackInfo[] trackInfoList) {
         this(version, name, streamingType, contentType, kmsKeyId, retentionPeriod, adaptive, maxLatency,
-                fragmentDuration, keyFrameFragmentation, frameTimecodes, absoluteFragmentTimes, fragmentAcks,
+                fragmentDuration, fragmentAcks, keyFrameFragmentation, frameTimecodes, absoluteFragmentTimes,
                 recoverOnError, avgBandwidthBps, frameRate, bufferDuration, replayDuration,
                 connectionStalenessDuration, timecodeScale, recalculateMetrics, tags,
                 nalAdaptationFlags,
@@ -267,7 +296,7 @@ public class StreamInfo {
         mStreamingType = streamingType;
         mContentType = contentType;
         mKmsKeyId = kmsKeyId;
-        mRetentionPeriod = retentionPeriod;
+        mRetentionPeriod = 0;
         mAdaptive = adaptive;
         mMaxLatency = maxLatency;
         mFragmentDuration = fragmentDuration;
@@ -288,6 +317,48 @@ public class StreamInfo {
         mSegmentUuid = segmentUuid;
         mTrackInfoList = trackInfoList;
         mFrameOrderMode = frameOrderMode;
+        mStorePressurePolicy = StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM;
+    }
+
+    public StreamInfo(final int version, @Nullable final String name, @Nonnull final StreamingType streamingType,
+                      @Nonnull final String contentType, @Nullable final String kmsKeyId, final long retentionPeriod,
+                      final boolean adaptive, final long maxLatency, final long fragmentDuration,
+                      final boolean keyFrameFragmentation, final boolean frameTimecodes,
+                      final boolean absoluteFragmentTimes, final boolean fragmentAcks, final boolean recoverOnError,
+                      final int avgBandwidthBps, final int frameRate, final long bufferDuration,
+                      final long replayDuration, final long connectionStalenessDuration, final long timecodeScale,
+                      final boolean recalculateMetrics, @Nullable final Tag[] tags,
+                      @Nonnull final NalAdaptationFlags nalAdaptationFlags,
+                      @Nullable final UUID segmentUuid,
+                      @Nonnull final TrackInfo[] trackInfoList,
+                      FrameOrderMode frameOrderMode, StorePressurePolicy storePressurePolicy) {
+        mVersion = version;
+        mName = name;
+        mStreamingType = streamingType;
+        mContentType = contentType;
+        mKmsKeyId = kmsKeyId;
+        mRetentionPeriod = 0;
+        mAdaptive = adaptive;
+        mMaxLatency = maxLatency;
+        mFragmentDuration = fragmentDuration;
+        mKeyFrameFragmentation = keyFrameFragmentation;
+        mFrameTimecodes = frameTimecodes;
+        mAbsoluteFragmentTimes = absoluteFragmentTimes;
+        mFragmentAcks = fragmentAcks;
+        mRecoverOnError = recoverOnError;
+        mAvgBandwidthBps = avgBandwidthBps;
+        mFrameRate = frameRate;
+        mBufferDuration = bufferDuration;
+        mReplayDuration = replayDuration;
+        mConnectionStalenessDuration = connectionStalenessDuration;
+        mTimecodeScale = timecodeScale;
+        mRecalculateMetrics = recalculateMetrics;
+        mTags = tags;
+        mNalAdaptationFlags = nalAdaptationFlags;
+        mSegmentUuid = segmentUuid;
+        mTrackInfoList = trackInfoList;
+        mFrameOrderMode = frameOrderMode;
+        mStorePressurePolicy = storePressurePolicy;
     }
 
     public int getVersion() {
@@ -465,5 +536,9 @@ public class StreamInfo {
 
     public int getFrameOrderMode() {
         return mFrameOrderMode.intValue();
+    }
+
+    public int getStorePressurePolicy() {
+        return mStorePressurePolicy.getIntValue();
     }
 }

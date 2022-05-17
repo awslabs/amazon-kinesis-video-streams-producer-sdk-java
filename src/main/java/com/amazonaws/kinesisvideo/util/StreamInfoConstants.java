@@ -22,6 +22,8 @@ public final class StreamInfoConstants {
     public static final boolean RELATIVE_FRAGMENT_TIMECODES = false;
     public static final String NO_KMS_KEY_ID = null;
     public static final int VERSION_ZERO = 0;
+    public static final int VERSION_ONE = 1;
+    public static final int VERSION_TWO = 2;
     public static final long MAX_LATENCY_ZERO = 0L; // latency set to 0 will never trigger latency pressure callback
     public static final long MAX_LATENCY = 120L * HUNDREDS_OF_NANOS_IN_A_SECOND;
     public static final long NO_RETENTION = 0L;

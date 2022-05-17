@@ -176,7 +176,7 @@ public class ProducerTestBase {
                 (byte) 0x88, (byte) 0x46, (byte) 0xE0, (byte) 0x01, (byte) 0x00, (byte) 0x04, (byte) 0x28, (byte) 0xCE,
                 (byte) 0x1F, (byte) 0x20};
 
-        StreamInfo streamInfo = new StreamInfo(VERSION_ZERO,
+        StreamInfo streamInfo = new StreamInfo(VERSION_TWO,
                 streamName,
                 streamingType,
                 "video/h264",
