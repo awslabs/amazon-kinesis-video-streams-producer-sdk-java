@@ -51,14 +51,8 @@ public class ClientInfo {
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
                       final long offlineBufferAvailabilityTimeout, final int logLevel,
                       final boolean logMetric) {
-        mVersion = CLIENT_INFO_CURRENT_VERSION;
-        mCreateClientTimeout = createClientTimeout;
-        mCreateStreamTimeout = createStreamTimeout;
-        mStopStreamTimeout = stopStreamTimeout;
-        mOfflineBufferAvailabilityTimeout = offlineBufferAvailabilityTimeout;
-        mLogLevel = logLevel;
-        mLogMetric = logMetric;
-        mAutomaticStreamingFlags = AutomaticStreamingFlags.AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
+        this(createClientTimeout, createStreamTimeout, stopStreamTimeout, offlineBufferAvailabilityTimeout,
+                logLevel, logMetric, AutomaticStreamingFlags.AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER);
     }
 
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
