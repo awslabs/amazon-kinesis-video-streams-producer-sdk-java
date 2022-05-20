@@ -66,7 +66,7 @@ $ mvn clean compile assembly:single
 
 Start the demo app
 ```
-$ java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.12.0-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Dkvs-stream=<KINESIS_VIDEO_STREAM_NAME> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+$ java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.12.1-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Dkvs-stream=<KINESIS_VIDEO_STREAM_NAME> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml com.amazonaws.kinesisvideo.demoapp.DemoAppMain
 
 ```
 ##### Run API and functionality tests
@@ -133,6 +133,10 @@ This should resolve native library loading issues.
 The repository is using `develop` branch as the aggregation and all of the feature development is done in appropriate feature branches. The PRs (Pull Requests) are cut on a feature branch and once approved with all the checks passed they can be merged by a click of a button on the PR tool. The master branch should always be build-able and all the tests should be passing. We are welcoming any contribution to the code base. The master branch contains our most recent release cycle from `develop`.
 
 ## Release Notes
+
+### Release 1.12.1 (May 2022)
+* Allow updating automaticStreamingFlags (default: AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER) in ClientInfo
+* Allow updating storePressurePolicy (default: CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM) in StreamInfo
 
 ### Release 1.12.0 (February 2022)
 * Update guice from 4.2.3 to 5.1.0
