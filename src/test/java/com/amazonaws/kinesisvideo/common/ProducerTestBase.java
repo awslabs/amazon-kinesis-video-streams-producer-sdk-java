@@ -8,6 +8,7 @@ import static org.junit.Assert.fail;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
+import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
@@ -59,9 +60,7 @@ public class ProducerTestBase {
     protected StorageInfo storageInfo_ = new StorageInfo(0,
             StorageInfo.DeviceStorageType.DEVICE_STORAGE_TYPE_IN_MEM, STORAGE_SIZE_MEGS,
             SPILL_RATIO_PERCENT, STORAGE_PATH);
-
-    protected DeviceInfo deviceInfo_ = new DeviceInfo(DEVICE_VERSION,
-            DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null);
+    protected DeviceInfo deviceInfo_;
     private final Logger log = LogManager.getLogger(ProducerTestBase.class);
 
     // flags that are updated in case of various events like overflow, error, pressure, etc.
@@ -108,6 +107,17 @@ public class ProducerTestBase {
      * This method is used to create a KinesisVideoProducer which is used by the later methods
      */
     protected void createProducer() {
+        deviceInfo_ = new DeviceInfo(DEVICE_VERSION,
+                DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null,
+                "JNI " + NativeKinesisVideoProducerJni.EXPECTED_LIBRARY_VERSION,
+                new ClientInfo());
+        createProducer(deviceInfo_);
+    }
+
+    /**
+     * This method is used to create a KinesisVideoProducer which is used by the later methods
+     */
+    protected void createProducer(DeviceInfo deviceInfo) {
 
         reset(); // reset all flags to initial values so that they can be modified by the stream and storage callbacks
 
@@ -137,9 +147,8 @@ public class ProducerTestBase {
                     storageCallbacks,
                     defaultServiceCallbacks,
                     streamCallbacks);
-
         try {
-            kinesisVideoProducer = kinesisVideoClient.initializeNewKinesisVideoProducer(deviceInfo_);
+            kinesisVideoProducer = kinesisVideoClient.initializeNewKinesisVideoProducer(deviceInfo);
         } catch(Exception e) {
             e.printStackTrace();
             fail();
@@ -167,7 +176,7 @@ public class ProducerTestBase {
                 (byte) 0x88, (byte) 0x46, (byte) 0xE0, (byte) 0x01, (byte) 0x00, (byte) 0x04, (byte) 0x28, (byte) 0xCE,
                 (byte) 0x1F, (byte) 0x20};
 
-        StreamInfo streamInfo = new StreamInfo(VERSION_ZERO,
+        StreamInfo streamInfo = new StreamInfo(VERSION_TWO,
                 streamName,
                 streamingType,
                 "video/h264",

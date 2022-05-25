@@ -18,7 +18,7 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RELATIVE_TIMEC
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.REQUEST_FRAGMENT_ACKS;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RETENTION_ONE_HOUR;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.USE_FRAME_TIMECODES;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VERSION_ZERO;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VERSION_TWO;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -83,7 +83,7 @@ public class ImageFileMediaSource implements MediaSource {
 
     @Override
     public StreamInfo getStreamInfo() throws KinesisVideoException {
-        return new StreamInfo(VERSION_ZERO,
+        return new StreamInfo(VERSION_TWO,
                 streamName,
                 StreamInfo.StreamingType.STREAMING_TYPE_REALTIME,
                 imageFileMediaSourceConfiguration.getContentType(),
