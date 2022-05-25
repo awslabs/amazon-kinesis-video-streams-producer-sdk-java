@@ -138,7 +138,7 @@ The repository is using `develop` branch as the aggregation and all of the featu
 * Allow updating automaticStreamingFlags (default: AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER) in ClientInfo
 * Allow updating storePressurePolicy (default: CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM) in StreamInfo
 
-### Release 1.12.1 (May 2022)
+### Release 1.12.1 (May 2022) (pre-release)
 * Allow updating automaticStreamingFlags (default: AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER) in ClientInfo
 * Allow updating storePressurePolicy (default: CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM) in StreamInfo
 
