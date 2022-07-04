@@ -521,6 +521,7 @@ public class StreamInfo {
         if (mRetentionPeriod > 0) {
             return mStorePressurePolicy.getIntValue();
         }
+        mStorePressurePolicy = StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM;
         return StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM.getIntValue();
     }
 }
