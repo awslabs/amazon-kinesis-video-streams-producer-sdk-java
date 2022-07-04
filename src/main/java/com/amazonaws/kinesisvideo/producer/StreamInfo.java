@@ -167,7 +167,7 @@ public class StreamInfo {
     private final TrackInfo[] mTrackInfoList;
     private final UUID mSegmentUuid;
     private final FrameOrderMode mFrameOrderMode;
-    private StorePressurePolicy mStorePressurePolicy;
+    private final StorePressurePolicy mStorePressurePolicy;
 
     /**
      * Generates a track name from a content type
