@@ -342,7 +342,6 @@ public class StreamInfo {
         } else {
             mStorePressurePolicy = StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM;
         }
-        mStorePressurePolicy = storePressurePolicy;
     }
 
     public int getVersion() {
