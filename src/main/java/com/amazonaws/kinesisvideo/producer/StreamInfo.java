@@ -167,7 +167,7 @@ public class StreamInfo {
     private final TrackInfo[] mTrackInfoList;
     private final UUID mSegmentUuid;
     private final FrameOrderMode mFrameOrderMode;
-    private final StorePressurePolicy mStorePressurePolicy;
+    private StorePressurePolicy mStorePressurePolicy;
 
     /**
      * Generates a track name from a content type
@@ -337,6 +337,11 @@ public class StreamInfo {
         mSegmentUuid = segmentUuid;
         mTrackInfoList = trackInfoList;
         mFrameOrderMode = frameOrderMode;
+        if (mRetentionPeriod > 0) {
+            mStorePressurePolicy = storePressurePolicy;
+        } else {
+            mStorePressurePolicy = StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM;
+        }
         mStorePressurePolicy = storePressurePolicy;
     }
 
@@ -518,10 +523,6 @@ public class StreamInfo {
     }
 
     public int getStorePressurePolicy() {
-        if (mRetentionPeriod > 0) {
-            return mStorePressurePolicy.getIntValue();
-        }
-        mStorePressurePolicy = StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM;
-        return StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM.getIntValue();
+        return mStorePressurePolicy.getIntValue();
     }
 }
