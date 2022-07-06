@@ -337,7 +337,11 @@ public class StreamInfo {
         mSegmentUuid = segmentUuid;
         mTrackInfoList = trackInfoList;
         mFrameOrderMode = frameOrderMode;
-        mStorePressurePolicy = storePressurePolicy;
+        if (mRetentionPeriod > 0) {
+            mStorePressurePolicy = storePressurePolicy;
+        } else {
+            mStorePressurePolicy = StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM;
+        }
     }
 
     public int getVersion() {
