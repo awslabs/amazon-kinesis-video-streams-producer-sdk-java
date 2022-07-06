@@ -29,7 +29,6 @@ public class StreamInfo {
      * StreamInfo structure current version.
      * IMPORTANT: Must be kept in sync with the native counterpart.
      */
-    //TODO:  Update version along with native library builds
     public static final int STREAM_INFO_CURRENT_VERSION = 2;
 
     /**
@@ -339,7 +338,11 @@ public class StreamInfo {
         mSegmentUuid = segmentUuid;
         mTrackInfoList = trackInfoList;
         mFrameOrderMode = frameOrderMode;
-        mStorePressurePolicy = storePressurePolicy;
+        if (mRetentionPeriod > 0) {
+            mStorePressurePolicy = storePressurePolicy;
+        } else {
+            mStorePressurePolicy = StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM;
+        }
         mAllowStreamCreation = allowStreamCreation;
     }
 
