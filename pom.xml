@@ -154,6 +154,14 @@
             <version>2.17.1</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-cloudwatch -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-cloudwatch</artifactId>
+            <version>1.12.282</version>
+        </dependency>
+
+
     </dependencies>
     <build>
         <plugins>
@@ -193,7 +201,7 @@
                     <archive>
                         <manifest>
                             <!-- Jar file entry point -->
-                            <mainClass>com.amazonaws.kinesisvideo.demoapp.DemoAppMain</mainClass>
+                            <mainClass>com.amazonaws.kinesisvideo.demoapp.CanaryAppMain</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -203,7 +211,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.amazonaws.kinesisvideo.demoapp.DemoAppMain</mainClass>
+                            <mainClass>com.amazonaws.kinesisvideo.demoapp.CanaryAppMain</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
