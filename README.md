@@ -45,7 +45,7 @@ for *temporary* AWS credential.
 * `libKinesisVideoProducerJNI.dylib` for Mac OS
 * `KinesisVideoProducerJNI.dll` for Windows
 
-If you are using pre-built libraries, please specify the path of library. Take pre-build library for Mac as example, you can specify `src/resources/lib/mac` as <NativeLibraryPath>.
+If you are using pre-built libraries, please specify the path of library. Take pre-build library for Mac as example, you can specify `src/main/resources/lib/mac` as \<NativeLibraryPath\>.
 
 Demo app will start running and putting sample video frames in a loop into Kinesis Video Streams. You can change your stream settings in `DemoAppMain.java` before you run the app.
 
