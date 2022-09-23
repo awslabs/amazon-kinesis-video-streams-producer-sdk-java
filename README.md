@@ -84,6 +84,9 @@ This script will create a stream with the given name if the stream doesn't exist
 Demo app will start running and putting sample video frames in a loop into Kinesis Video Streams.
 You can change your stream settings in [`DemoAppMain.java`](./src/main/demo/com/amazonaws/kinesisvideo/demoapp/DemoAppMain.java) before you run the app.
 
+> [!NOTE]
+> Make sure the stream name that you specify exists in the region the app runs in. This demo app is set to run in us-west-2 by default.
+
 To run [`DemoAppMain.java`](./src/main/demo/com/amazonaws/kinesisvideo/demoapp/DemoAppMain.java) in `./src/main/demo` with JVM arguments:
 
 1. Credentials: `aws.accessKeyId`, `aws.secretKey`, `aws.sessionToken` (optional)
