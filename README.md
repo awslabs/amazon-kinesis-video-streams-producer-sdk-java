@@ -47,6 +47,8 @@ for *temporary* AWS credential.
 
 If you are using pre-built libraries, please specify the path of library. Take pre-build library for Mac as example, you can specify `src/resources/lib/mac` as <NativeLibraryPath>.
 
+**Note**: Make sure the stream name that you specify exists in the region the app runs in. This demo app is set to run in us-west-2 by default.
+
 Demo app will start running and putting sample video frames in a loop into Kinesis Video Streams. You can change your stream settings in `DemoAppMain.java` before you run the app.
 
 ##### Run the demo application from command line
