@@ -111,7 +111,7 @@ java -classpath target/*jar-with-dependencies.jar \
 > * `KinesisVideoProducerJNI.dll` for Windows
 
 > [!TIP]
-> Pre-built JNI libraries for some systems can be found in `src/resources/lib`.
+> Pre-built JNI libraries for some systems can be found in `src/main/resources/lib`.
 
 > [!NOTE]
 > If your system isn't part of the pre-built JNI libraries, you will need to build the JNI yourself. You can find instructions [here](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/wiki/Building-and-Using-JNI).
