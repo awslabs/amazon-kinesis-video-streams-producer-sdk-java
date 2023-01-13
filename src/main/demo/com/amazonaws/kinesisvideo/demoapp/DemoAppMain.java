@@ -19,11 +19,11 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.ABSOLUTE_TIMEC
  */
 public final class DemoAppMain {
     // Use a different stream name when testing audio/video sample
-    private static final String STREAM_NAME = System.getProperty("kvs-stream");
+    private static final String STREAM_NAME = "amazon-connect-fake-stream-e2e";
     private static final int FPS_25 = 25;
-    private static final int RETENTION_ONE_HOUR = 1;
+    private static final int RETENTION_HOURS = 8760;
     private static final String IMAGE_DIR = "src/main/resources/data/h264/";
-    private static final String FRAME_DIR = "src/main/resources/data/audio-video-frames";
+    private static final String FRAME_DIR = "src/main/resources/data/audio-frames";
     // CHECKSTYLE:SUPPRESS:LineLength
     // Need to get key frame configured properly so the output can be decoded. h264 files can be decoded using gstreamer plugin
     // gst-launch-1.0 rtspsrc location="YourRtspUri" short-header=TRUE protocols=tcp ! rtph264depay ! decodebin ! videorate ! videoscale ! vtenc_h264_hw allow-frame-reordering=FALSE max-keyframe-interval=25 bitrate=1024 realtime=TRUE ! video/x-h264,stream-format=avc,alignment=au,profile=baseline,width=640,height=480,framerate=1/25 ! multifilesink location=./frame-%03d.h264 index=1
@@ -45,10 +45,10 @@ public final class DemoAppMain {
 
             // create a media source. this class produces the data and pushes it into
             // Kinesis Video Producer lower level components
-            final MediaSource mediaSource = createImageFileMediaSource();
+            // final MediaSource mediaSource = createImageFileMediaSource();
 
             // Audio/Video sample is available for playback on HLS (Http Live Streaming)
-            //final MediaSource mediaSource = createFileMediaSource();
+            final MediaSource mediaSource = createFileMediaSource();
 
             // register media source with Kinesis Video Client
             kinesisVideoClient.registerMediaSource(mediaSource);
@@ -90,7 +90,7 @@ public final class DemoAppMain {
         final AudioVideoFileMediaSourceConfiguration configuration =
                 new AudioVideoFileMediaSourceConfiguration.AudioVideoBuilder()
                         .withDir(FRAME_DIR)
-                        .withRetentionPeriodInHours(RETENTION_ONE_HOUR)
+                        .withRetentionPeriodInHours(RETENTION_HOURS)
                         .withAbsoluteTimecode(ABSOLUTE_TIMECODES)
                         .withTrackInfoList(DemoTrackInfos.createTrackInfoList())
                         .build();

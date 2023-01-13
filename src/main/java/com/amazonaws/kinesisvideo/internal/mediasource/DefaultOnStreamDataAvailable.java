@@ -17,7 +17,6 @@ public class DefaultOnStreamDataAvailable implements OnStreamDataAvailable {
         if (frame.getSize() == 0) {
             throw new KinesisVideoException("Empty frame is provided in frame data available.");
         }
-
         mediaSourceSink.onFrame(frame);
     }
 

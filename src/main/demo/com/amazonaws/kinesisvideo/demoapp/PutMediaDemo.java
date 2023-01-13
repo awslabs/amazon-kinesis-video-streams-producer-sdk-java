@@ -10,6 +10,7 @@ import com.amazonaws.services.kinesisvideo.model.AckEvent;
 import com.amazonaws.services.kinesisvideo.model.FragmentTimecodeType;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.PutMediaRequest;
+import com.amazonaws.services.kinesisvideo.model.APIName;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -45,10 +46,10 @@ public final class PutMediaDemo {
     private static final String PUT_MEDIA_API = "/putMedia";
 
     /* the name of the stream */
-    private static final String STREAM_NAME = "my-stream";
+    private static final String STREAM_NAME = "amazon-connect-fake-stream-walter-dev-e2e";
 
     /* sample MKV file */
-    private static final String MKV_FILE_PATH = "src/main/resources/data/mkv/clusters.mkv";
+    private static final String MKV_FILE_PATH = "src/main/resources/data/mkv/sample-stereo.mkv";
 
     /* max upload bandwidth */
     private static final long MAX_BANDWIDTH_KBPS = 15 * 1024L;
@@ -70,10 +71,9 @@ public final class PutMediaDemo {
         final String dataEndpoint = frontendClient.getDataEndpoint(
                 new GetDataEndpointRequest()
                         .withStreamName(STREAM_NAME)
-                        .withAPIName("PUT_MEDIA")).getDataEndpoint();
+                        .withAPIName(APIName.PUT_MEDIA)).getDataEndpoint();
 
         /* send the same MKV file over and over */
-        while (true) {
             /* actually URI to send PutMedia request */
             final URI uri = URI.create(dataEndpoint + PUT_MEDIA_API);
 
@@ -124,6 +124,5 @@ public final class PutMediaDemo {
 
             /* close the client */
             dataClient.close();
-        }
     }
 }

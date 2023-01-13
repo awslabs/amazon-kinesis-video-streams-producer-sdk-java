@@ -5,9 +5,9 @@ import com.amazonaws.kinesisvideo.producer.TrackInfo;
 import static com.amazonaws.kinesisvideo.producer.MkvTrackInfoType.AUDIO;
 import static com.amazonaws.kinesisvideo.producer.MkvTrackInfoType.VIDEO;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.AUDIO_CODEC_ID;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.AUDIO_TRACK_ID;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.AGENT_TRACK_ID;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_CODEC_ID;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_TRACK_ID;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VISITOR_TRACK_ID;
 
 public final class DemoTrackInfos {
     private DemoTrackInfos() {
@@ -24,10 +24,11 @@ public final class DemoTrackInfos {
             (byte) 0x68, (byte) 0xca, (byte) 0x8c, (byte) 0xb2};
     private static final byte[] AAC_EXTRA_DATA = {(byte) 0x11, (byte) 0x90};
 
+    // This is to mock the amazon connect generated media.
     public static TrackInfo[] createTrackInfoList() {
         return new TrackInfo[] {
-                new TrackInfo(VIDEO_TRACK_ID, VIDEO_CODEC_ID, "VideoTrack", AVCC_EXTRA_DATA, VIDEO),
-                new TrackInfo(AUDIO_TRACK_ID, AUDIO_CODEC_ID, "AudioTrack", AAC_EXTRA_DATA, AUDIO)
+                new TrackInfo(AGENT_TRACK_ID, AUDIO_CODEC_ID, "AUDIO_TO_CUSTOMER", AAC_EXTRA_DATA, AUDIO),
+                new TrackInfo(VISITOR_TRACK_ID, AUDIO_CODEC_ID, "AUDIO_FROM_CUSTOMER", AAC_EXTRA_DATA, AUDIO)
         };
     }
 }

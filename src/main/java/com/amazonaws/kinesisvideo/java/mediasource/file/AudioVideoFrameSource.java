@@ -25,9 +25,9 @@ import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_KEY_FRAM
 import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_NONE;
 import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
 import static com.amazonaws.kinesisvideo.producer.Time.NANOS_IN_A_TIME_UNIT;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.AUDIO_TRACK_ID;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.AGENT_TRACK_ID;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.FRAME_DURATION_0_MS;
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_TRACK_ID;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VISITOR_TRACK_ID;;
 
 /**
  * Frame source backed by local image files.
@@ -36,7 +36,7 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_TRACK_ID
 public class AudioVideoFrameSource {
     private static final String DELIMITER = "-";
     private static final int INFO_LENGTH = 4;
-    private static final String VIDEO_TYPE = "video";
+    private static final String AGENT_TYPE = "agent";
     private final ExecutorService executor = Executors.newFixedThreadPool(1);
     private final int fps;
     private final AudioVideoFileMediaSourceConfiguration configuration;
@@ -129,13 +129,14 @@ public class AudioVideoFrameSource {
                 + Long.parseLong(infos[0]) / NANOS_IN_A_TIME_UNIT
                 - frameStartMillis * HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
 
-        final long trackId = VIDEO_TYPE.equals(infos[1]) ? VIDEO_TRACK_ID : AUDIO_TRACK_ID;
-        final int isKeyFrame = VIDEO_TYPE.equals(infos[1]) && Boolean.parseBoolean(infos[2])
+        final long trackId = AGENT_TYPE.equals(infos[1]) ? AGENT_TRACK_ID : VISITOR_TRACK_ID;
+        final int isKeyFrame = AGENT_TYPE.equals(infos[1]) && Boolean.parseBoolean(infos[2])
                 ? FRAME_FLAG_KEY_FRAME
                 : FRAME_FLAG_NONE;
         final Path path = Paths.get(configuration.getDir() + "/" + fileName);
         try {
             final byte[] bytes = Files.readAllBytes(path);
+            System.out.println("read " + bytes.length + "bytes from file: " + fileName);
             return new KinesisVideoFrame(frameIndex,
                     isKeyFrame,
                     timestamp,
