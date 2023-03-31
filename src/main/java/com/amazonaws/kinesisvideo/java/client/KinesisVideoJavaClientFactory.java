@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 public final class KinesisVideoJavaClientFactory {
-    private static final int DEVICE_VERSION = 0;
+    private static final int DEVICE_VERSION = 1;
     private static final int TEN_STREAMS = 10;
     private static final int SPILL_RATIO_90_PERCENT = 90;
     private static final int STORAGE_SIZE_MEGS = 256 * 1000 * 1000;
