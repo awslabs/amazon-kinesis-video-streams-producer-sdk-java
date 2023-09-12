@@ -1,5 +1,7 @@
 ## Amazon Kinesis Video Streams Producer SDK Java
-
+<p align="center">
+  <a href="https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/actions/workflows/ci.yml"> <img src="https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/actions/workflows/ci.yml/badge.svg"> </a>
+</p>
 ## License
 
 This library is licensed under the Apache License, 2.0. 
