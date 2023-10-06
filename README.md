@@ -58,22 +58,22 @@ If you want to run the `DemoAppMain`, follow the [steps](https://github.com/awsl
 Change the current working directory to
 
 ```
-$ cd /<YOUR_FOLDER_PATH_WHERE_SDK_IS_DOWNLOADED>/amazon-kinesis-video-streams-producer-sdk-java/
+cd /<YOUR_FOLDER_PATH_WHERE_SDK_IS_DOWNLOADED>/amazon-kinesis-video-streams-producer-sdk-java/
 ```
 
 Compile and assemble Java SDK, Java Demoapp and the Maven dependencies
 ```
-$ mvn clean compile assembly:single
+mvn clean compile assembly:single
 ```
 
 Start the demo app
 ```
-$ java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.12.1-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Dkvs-stream=<KINESIS_VIDEO_STREAM_NAME> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.12.1-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Dkvs-stream=<KINESIS_VIDEO_STREAM_NAME> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml com.amazonaws.kinesisvideo.demoapp.DemoAppMain
 
 ```
 ##### Run API and functionality tests
 ```
-$ mvn clean test -DargLine="-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml"
+mvn clean test -DargLine="-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml"
 ```
 
 ##### Run the demo application from Docker
@@ -111,11 +111,11 @@ For additional examples on using Kinesis Video Streams Java SDK and  Kinesis Vid
 If you notice error in loading the native library (JNI), then check the output of `ldd` or `otool`
 
 ```
-$ ldd libKinesisVideoProducerJNI.so
+ldd libKinesisVideoProducerJNI.so
 ```
 or in MacOS
 ```
-$ otool -L libKinesisVideoProducerJNI.dylib
+otool -L libKinesisVideoProducerJNI.dylib
 ```
 
 This will provide details on missing libraries during linking; If the output shows missing shared libraries, then run the following commands to link:
