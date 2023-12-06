@@ -50,7 +50,9 @@ jobs:
             exit 1
           fi
         shell: bash
-      - name: Codecov
+      - name: Install Codecov
         uses: codecov/codecov-action@v3
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload coverage to Codecov
+        run: bash <(curl -s https://codecov.io/bash)
