@@ -11,7 +11,7 @@ public class ClientInfo {
     /**
      * Current version for the structure as defined in the native code
      */
-    public static final int CLIENT_INFO_CURRENT_VERSION = 2;
+    public static final int CLIENT_INFO_CURRENT_VERSION = 3;
     public static final int DEFAULT_LOG_LEVEL = 4;
 
     public static enum AutomaticStreamingFlags {
@@ -33,9 +33,15 @@ public class ClientInfo {
     private final long mCreateStreamTimeout;
     private final long mStopStreamTimeout;
     private final long mOfflineBufferAvailabilityTimeout;
+
     private final int mLogLevel;
     private final boolean mLogMetric;
     private final AutomaticStreamingFlags mAutomaticStreamingFlags;
+
+    private final long mServiceCompletionTimeout;
+
+    private final long mServiceConnectionTimeout;
+
 
     public ClientInfo() {
         mVersion = CLIENT_INFO_CURRENT_VERSION;
@@ -46,6 +52,8 @@ public class ClientInfo {
         mLogLevel = DEFAULT_LOG_LEVEL;
         mLogMetric = true;
         mAutomaticStreamingFlags = AutomaticStreamingFlags.AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
+        mServiceConnectionTimeout = 0L;
+        mServiceCompletionTimeout = 0L;
     }
 
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
@@ -66,6 +74,24 @@ public class ClientInfo {
         mLogLevel = logLevel;
         mLogMetric = logMetric;
         mAutomaticStreamingFlags = flag;
+        mServiceConnectionTimeout = 0L;
+        mServiceCompletionTimeout = 0L;
+    }
+
+    public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
+                      final long offlineBufferAvailabilityTimeout, final long serviceConnectionTimeout,
+                      final long serviceCompletionTimeout, final int logLevel,
+                      final boolean logMetric, final AutomaticStreamingFlags flag) {
+        mVersion = CLIENT_INFO_CURRENT_VERSION;
+        mCreateClientTimeout = createClientTimeout;
+        mCreateStreamTimeout = createStreamTimeout;
+        mStopStreamTimeout = stopStreamTimeout;
+        mOfflineBufferAvailabilityTimeout = offlineBufferAvailabilityTimeout;
+        mLogLevel = logLevel;
+        mLogMetric = logMetric;
+        mAutomaticStreamingFlags = flag;
+        mServiceConnectionTimeout = serviceConnectionTimeout;
+        mServiceCompletionTimeout = serviceCompletionTimeout;
     }
 
     public int getVersion() {
@@ -87,6 +113,10 @@ public class ClientInfo {
     public long getOfflineBufferAvailabilityTimeout() {
         return mOfflineBufferAvailabilityTimeout;
     }
+
+    public long getServiceConnectionTimeout() { return mServiceConnectionTimeout; }
+
+    public long getServiceCompletionTimeout() { return mServiceCompletionTimeout; }
 
     public int getLoggerLogLevel() {
         return mLogLevel;
