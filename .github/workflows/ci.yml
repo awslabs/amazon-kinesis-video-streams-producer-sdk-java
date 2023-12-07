@@ -83,7 +83,7 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          directory: target/surefire-reports/
-          # files: target/site/jacoco/jacoco.xml
+          # directory: target/surefire-reports/
+          files: /home/runner/work/amazon-kinesis-video-streams-producer-sdk-java/amazon-kinesis-video-streams-producer-sdk-java/target/site/jacoco/jacoco.xml
           fail_ci_if_error: true
 
