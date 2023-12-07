@@ -73,7 +73,7 @@ jobs:
         run: mvn clean compile assembly:single
       - name: Run tests
         run: |
-          mvn clean verify -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/ubuntu/ -Dlog4j.configurationFile=log4j2.xml"
+          mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/ubuntu/ -Dlog4j.configurationFile=log4j2.xml"
         shell: bash
       - name: Check contents
         run: |
