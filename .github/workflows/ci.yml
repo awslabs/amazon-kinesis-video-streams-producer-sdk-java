@@ -22,7 +22,7 @@ jobs:
         java: [ 8, 11, 16 ]
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -30,7 +30,7 @@ jobs:
           role-session-name: ${{ secrets.AWS_ROLE_SESSION_NAME }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
           distribution: 'adopt'
@@ -59,7 +59,7 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
       - name: Set up JDK 18
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 18
           distribution: 'adopt'
@@ -78,5 +78,8 @@ jobs:
         shell: bash
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: target/surefire-reports/
+          files: target/site/jacoco/jacoco.xml
+
