@@ -156,7 +156,7 @@
         <dependency>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.8.5</version>
+            <version>0.8.11</version>
         </dependency>
     </dependencies>
     <build>
@@ -218,7 +218,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.7</version>
+                <version>0.8.11</version>
                 <configuration>
                     <destFile>${project.build.directory}/site/jacoco/jacoco.xml</destFile>
                 </configuration>
