@@ -11,42 +11,79 @@ on:
       - master
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  # build:
+  #   runs-on: ${{ matrix.os }}
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   strategy:
+  #     matrix:
+  #       os: [ macos-latest, ubuntu-latest, windows-2019]
+  #       java: [ 8, 11, 16 ]
+  #   steps:
+      # - name: Checkout the repository
+      #   uses: actions/checkout@v4
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+      #     role-session-name: ${{ secrets.AWS_ROLE_SESSION_NAME }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
+      # - name: Set up JDK
+      #   uses: actions/setup-java@v4
+      #   with:
+      #     java-version: ${{ matrix.java }}
+      #     distribution: 'adopt'
+      #     cache: maven
+      # - name: Build with Maven
+      #   run: mvn clean compile assembly:single
+      # - name: Run tests
+      #   run: |
+      #     if [ "$RUNNER_OS" == "Linux" ]; then
+      #       mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/ubuntu/ -Dlog4j.configurationFile=log4j2.xml"
+      #     elif [ "$RUNNER_OS" == "Windows" ]; then
+      #       mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/windows/ -Dlog4j.configurationFile=log4j2.xml"
+      #     elif [ "$RUNNER_OS" == "macOS" ]; then
+      #       mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/mac/ -Dlog4j.configurationFile=log4j2.xml"
+      #     else
+      #       echo "$RUNNER_OS not supported"
+      #       exit 1
+      #     fi
+      #   shell: bash
+  codecov-build:
+    runs-on: macos-latest
     permissions:
       id-token: write
       contents: read
-    strategy:
-      matrix:
-        os: [ macos-10.15, ubuntu-18.04, windows-2019]
-        java: [ 8, 11, 16 ]
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: 11
+          distribution: 'adopt'
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: ${{ secrets.AWS_ROLE_SESSION_NAME }}
           aws-region: ${{ secrets.AWS_REGION }}
-      - name: Set up JDK
-        uses: actions/setup-java@v2
-        with:
-          java-version: ${{ matrix.java }}
-          distribution: 'adopt'
-          cache: maven
       - name: Build with Maven
         run: mvn clean compile assembly:single
       - name: Run tests
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/ubuntu/ -Dlog4j.configurationFile=log4j2.xml"
-          elif [ "$RUNNER_OS" == "Windows" ]; then
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/windows/ -Dlog4j.configurationFile=log4j2.xml"
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/mac/ -Dlog4j.configurationFile=log4j2.xml"
-          else
-            echo "$RUNNER_OS not supported"
-            exit 1
-          fi
+          mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/ubuntu/ -Dlog4j.configurationFile=log4j2.xml"
         shell: bash
+      - name: Check contents
+        run: |
+          sudo apt-get install tree
+          tree 
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          # directory: target/surefire-reports/
+          files: /home/runner/work/amazon-kinesis-video-streams-producer-sdk-java/amazon-kinesis-video-streams-producer-sdk-java/target/site/jacoco/jacoco.xml
+          fail_ci_if_error: true
+
