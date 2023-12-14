@@ -9,3 +9,5 @@
 cm-file
 .DS_Store
 target
+logs/*
+src/main/resources/data/*
