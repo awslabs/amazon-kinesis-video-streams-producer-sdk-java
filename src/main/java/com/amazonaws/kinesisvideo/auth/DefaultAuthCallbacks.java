@@ -78,6 +78,9 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
                 final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                 try {
                     final KinesisVideoCredentials credentials = credentialsProvider.getUpdatedCredentials();
+                    if (credentials == null) {
+                        throw new IllegalArgumentException("Credentials must not be null");
+                    }
                     expiration = credentials.getExpiration().getTime() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
 
                     final ObjectOutput outputStream = new ObjectOutputStream(byteArrayOutputStream);
@@ -85,12 +88,7 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
                     outputStream.flush();
                     serializedCredentials = byteArrayOutputStream.toByteArray();
                     outputStream.close();
-                } catch (final IOException e) {
-                    // return null
-                    serializedCredentials = null;
-                    expiration = 0;
-                    log.error("Exception was thrown trying to get updated credentials", e);
-                } catch (final KinesisVideoException e) {
+                } catch (final IOException | KinesisVideoException | IllegalArgumentException e) {
                     // return null
                     serializedCredentials = null;
                     expiration = 0;
@@ -112,11 +110,7 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
         // Await for the future to complete
         try {
             future.get(CREDENTIALS_UPDATE_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
-        } catch (final InterruptedException e) {
-            log.error("Awaiting for the credentials update threw an exception", e);
-        } catch (final ExecutionException e) {
-            log.error("Awaiting for the credentials update threw an exception", e);
-        } catch (final TimeoutException e) {
+        } catch (final InterruptedException | TimeoutException | ExecutionException e) {
             log.error("Awaiting for the credentials update threw an exception", e);
         }
 

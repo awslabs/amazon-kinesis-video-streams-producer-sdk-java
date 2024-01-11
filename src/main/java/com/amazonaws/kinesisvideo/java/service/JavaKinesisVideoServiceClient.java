@@ -114,6 +114,10 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
         final KinesisVideoCredentials kinesisVideoCredentials = credentialsProvider.getCredentials();
 
+        if (kinesisVideoCredentials == null) {
+            return null;
+        }
+
         AWSCredentials credentials = null;
 
         if (kinesisVideoCredentials.getSessionToken() == null) {
@@ -166,6 +170,10 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 try {
                     final KinesisVideoCredentials kinesisVideoCredentials = credentialsProvider.getCredentials();
 
+                    if (kinesisVideoCredentials == null) {
+                        throw new IllegalArgumentException("Credentials must not be null");
+                    }
+
                     if (kinesisVideoCredentials.getSessionToken() == null) {
                         awsCredentials = new AWSCredentials() {
                             @Override
@@ -196,7 +204,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                             }
                         };
                     }
-                } catch (final KinesisVideoException e) {
+                } catch (final KinesisVideoException | IllegalArgumentException e) {
                     log.error("Getting credentials threw an exception.", e);
                     awsCredentials = null;
                 }
@@ -331,21 +339,26 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
         final StreamDescription streamDescription = describeStream(streamName, timeoutInMillis, credentialsProvider);
 
-        final DeleteStreamRequest deleteStreamRequest = new DeleteStreamRequest()
-                .withStreamARN(streamDescription.getStreamArn())
-                .withCurrentVersion(streamDescription.getUpdateVersion());
-
-        log.debug("calling delete stream: {}", deleteStreamRequest.toString());
-
         final DeleteStreamResult deleteStreamResult;
+
         try {
+            if (streamDescription == null) {
+                throw new IllegalArgumentException("Stream description must not be null");
+            }
+
+            final DeleteStreamRequest deleteStreamRequest = new DeleteStreamRequest()
+                    .withStreamARN(streamDescription.getStreamArn())
+                    .withCurrentVersion(streamDescription.getUpdateVersion());
+
+            log.debug("calling delete stream: {}", deleteStreamRequest.toString());
             deleteStreamResult = serviceClient.deleteStream(deleteStreamRequest);
+            log.debug("delete stream result: {}", deleteStreamResult.toString());
         } catch (final AmazonClientException e) {
             log.error("Service call failed.", e);
             throw new KinesisVideoException(e);
+        } catch (final IllegalArgumentException e) {
+            log.error("Stream description null.", e);
         }
-
-        log.debug("delete stream result: {}", deleteStreamResult.toString());
     }
 
     @Override

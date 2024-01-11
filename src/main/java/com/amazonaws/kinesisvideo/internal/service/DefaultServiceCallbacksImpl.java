@@ -339,6 +339,9 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                 try {
                     final KinesisVideoCredentials credentials = credentialsProvider.getUpdatedCredentials();
+                    if (credentials == null) {
+                        throw new IllegalArgumentException("Credentials must not be null");
+                    }
 
                     // Serialize the credentials
                     expiration = credentials.getExpiration().getTime() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
@@ -349,9 +352,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     outputStream.flush();
                     serializedCredentials = byteArrayOutputStream.toByteArray();
                     outputStream.close();
-                } catch (final IOException e) {
-                    log.error(e);
-                } catch (final KinesisVideoException e) {
+                } catch (final IOException | KinesisVideoException | IllegalArgumentException e) {
                     log.error(e);
                 } finally {
                     try {
