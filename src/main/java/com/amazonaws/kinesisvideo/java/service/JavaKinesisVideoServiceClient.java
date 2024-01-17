@@ -51,7 +51,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
     private static final String ABSOLUTE_TIMECODE = "ABSOLUTE";
     private static final String RELATIVE_TIMECODE = "RELATIVE";
 
-    private final Logger log;
+    private static Logger log = null;
     private KinesisVideoClientConfiguration configuration;
 
     private static AmazonKinesisVideo createAmazonKinesisVideoClient(
@@ -115,6 +115,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
         final KinesisVideoCredentials kinesisVideoCredentials = credentialsProvider.getCredentials();
 
         if (kinesisVideoCredentials == null) {
+            log.error("[createAwsCredentials] kinesisVideoCredentials is null");
             return null;
         }
 
@@ -171,7 +172,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                     final KinesisVideoCredentials kinesisVideoCredentials = credentialsProvider.getCredentials();
 
                     if (kinesisVideoCredentials == null) {
-                        throw new IllegalArgumentException("Credentials must not be null");
+                        throw new IllegalArgumentException("kinesisVideoCredentials must not be null while obtaining it from getCredentials");
                     }
 
                     if (kinesisVideoCredentials.getSessionToken() == null) {

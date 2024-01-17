@@ -163,11 +163,11 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
         try {
             final KinesisVideoCredentials credentials = kvsCredentialsProvider.getUpdatedCredentials();
 
-            // Serialize the credentials
             if (credentials == null) {
                 throw new IllegalArgumentException("Credentials must not be null");
             }
 
+            // Serialize the credentials
             expiration = credentials.getExpiration().getTime() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
 
             // Serialize the credentials as streaming token
