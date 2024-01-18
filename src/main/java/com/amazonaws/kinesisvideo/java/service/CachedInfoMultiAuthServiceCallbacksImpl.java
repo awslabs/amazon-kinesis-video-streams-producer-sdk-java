@@ -1,10 +1,12 @@
 package com.amazonaws.kinesisvideo.java.service;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
@@ -62,6 +64,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
      * StreamArn -> Tags for the stream
      */
     private Map<String, Tag[]> tagInfoMap = new HashMap<>();
+    private final Logger log = LogManager.getLogger(CachedInfoMultiAuthServiceCallbacksImpl.class);
 
 
     /**
@@ -164,7 +167,8 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
             final KinesisVideoCredentials credentials = kvsCredentialsProvider.getUpdatedCredentials();
 
             if (credentials == null) {
-                throw new IllegalArgumentException("Credentials must not be null");
+                log.error("Credentials must not be null");
+                throw new IllegalArgumentException();
             }
 
             // Serialize the credentials

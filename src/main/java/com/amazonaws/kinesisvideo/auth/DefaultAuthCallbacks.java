@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.auth;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
@@ -54,11 +55,10 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
     private long expiration;
 
     public DefaultAuthCallbacks(@Nonnull KinesisVideoCredentialsProvider credentialsProvider,
-                                @Nonnull final ScheduledExecutorService executor,
-                                @Nonnull Logger log) {
+                                @Nonnull final ScheduledExecutorService executor) {
         this.credentialsProvider = Preconditions.checkNotNull(credentialsProvider);
         this.executor = Preconditions.checkNotNull(executor);
-        this.log = Preconditions.checkNotNull(log);
+        this.log = LogManager.getLogger(DefaultAuthCallbacks.class);
     }
 
     @Nullable
@@ -79,6 +79,7 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
                 try {
                     final KinesisVideoCredentials credentials = credentialsProvider.getUpdatedCredentials();
                     if (credentials == null) {
+                        log.error("Credentials must not be null");
                         throw new IllegalArgumentException("Credentials must not be null");
                     }
                     expiration = credentials.getExpiration().getTime() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;

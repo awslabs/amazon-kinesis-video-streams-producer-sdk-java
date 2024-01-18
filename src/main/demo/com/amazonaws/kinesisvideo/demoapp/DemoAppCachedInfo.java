@@ -68,7 +68,7 @@ public final class DemoAppCachedInfo {
             // Create CachedInfoServiceCallback
             final CachedInfoMultiAuthServiceCallbacksImpl serviceCallbacks =
                     new CachedInfoMultiAuthServiceCallbacksImpl(log, executor,
-                            configuration, new JavaKinesisVideoServiceClient(log));
+                            configuration, new JavaKinesisVideoServiceClient());
             // create Kinesis Video high level client
             final KinesisVideoClient kinesisVideoClient = KinesisVideoJavaClientFactory
                     .createKinesisVideoClient(log, configuration, executor, null, serviceCallbacks);

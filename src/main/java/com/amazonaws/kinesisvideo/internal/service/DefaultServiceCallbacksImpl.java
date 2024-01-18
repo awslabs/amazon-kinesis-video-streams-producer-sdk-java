@@ -6,6 +6,7 @@ import com.amazonaws.kinesisvideo.auth.StaticCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
@@ -44,12 +45,14 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     private class CompletionCallback implements Consumer<Exception> {
         private final KinesisVideoProducerStream stream;
         private final long uploadHandle;
+        private final Logger log;
 
         public CompletionCallback(@Nonnull final KinesisVideoProducerStream stream,
                                   final long uploadHandle) {
 
             this.stream = Preconditions.checkNotNull(stream);
             this.uploadHandle = uploadHandle;
+            this.log = LogManager.getLogger(DefaultServiceCallbacksImpl.class);
         }
 
         @Override
@@ -340,7 +343,8 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 try {
                     final KinesisVideoCredentials credentials = credentialsProvider.getUpdatedCredentials();
                     if (credentials == null) {
-                        throw new IllegalArgumentException("Credentials must not be null");
+                        log.error("Credentials must not be null");
+                        throw new IllegalArgumentException();
                     }
 
                     // Serialize the credentials

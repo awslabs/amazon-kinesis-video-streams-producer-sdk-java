@@ -14,6 +14,7 @@ import com.amazonaws.kinesisvideo.client.PutMediaClient;
 import com.amazonaws.kinesisvideo.client.signing.KinesisVideoAWS4Signer;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.StreamDescription;
@@ -50,8 +51,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
     private static final int RECEIVE_TIMEOUT_1HR = 60 * 60 * 1000;
     private static final String ABSOLUTE_TIMECODE = "ABSOLUTE";
     private static final String RELATIVE_TIMECODE = "RELATIVE";
-
-    private static Logger log = null;
+    private static final Logger log = LogManager.getLogger(JavaKinesisVideoServiceClient.class);
     private KinesisVideoClientConfiguration configuration;
 
     private static AmazonKinesisVideo createAmazonKinesisVideoClient(
@@ -115,7 +115,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
         final KinesisVideoCredentials kinesisVideoCredentials = credentialsProvider.getCredentials();
 
         if (kinesisVideoCredentials == null) {
-            log.error("[createAwsCredentials] kinesisVideoCredentials is null");
+            log.error("kinesisVideoCredentials is null");
             return null;
         }
 
@@ -172,7 +172,8 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                     final KinesisVideoCredentials kinesisVideoCredentials = credentialsProvider.getCredentials();
 
                     if (kinesisVideoCredentials == null) {
-                        throw new IllegalArgumentException("kinesisVideoCredentials must not be null while obtaining it from getCredentials");
+                        log.error("kinesisVideoCredentials must not be null while obtaining it from getCredentials");
+                        throw new IllegalArgumentException();
                     }
 
                     if (kinesisVideoCredentials.getSessionToken() == null) {
@@ -232,10 +233,6 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withMaxConnections(DEFAULT_MAX_CONNECTIONS)
                 .withSocketTimeout(timeoutInMillis)
                 .withUserAgentPrefix(VersionUtil.getUserAgent());
-    }
-
-    public JavaKinesisVideoServiceClient(@Nonnull final Logger log) {
-        this.log = Preconditions.checkNotNull(log);
     }
 
     @Nonnull
@@ -344,7 +341,8 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
         try {
             if (streamDescription == null) {
-                throw new IllegalArgumentException("Stream description must not be null");
+                log.error("Stream description must not be null");
+                throw new IllegalArgumentException();
             }
 
             final DeleteStreamRequest deleteStreamRequest = new DeleteStreamRequest()
