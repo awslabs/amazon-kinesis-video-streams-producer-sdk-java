@@ -130,10 +130,9 @@ public class ProducerTestBase {
                 .withCredentialsProvider(new JavaCredentialsProviderImpl(awsCredentialsProvider))
                 .build();
 
-        serviceClient = new JavaKinesisVideoServiceClient(log);
+        serviceClient = new JavaKinesisVideoServiceClient();
         authCallbacks = new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
-                executor,
-                log);
+                executor);
         // use TestStorageCallbacks and TestStreamCallbacks to override the callbacks to update the flags in case of
         // overflow, errors and other events. The current ProducerTestBase object is passed to their constructors so
         // that they can access the flags to be updated

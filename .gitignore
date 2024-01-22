@@ -9,3 +9,5 @@
 cm-file
 .DS_Store
 target
+out/
+src/main/resources/META-INF/*

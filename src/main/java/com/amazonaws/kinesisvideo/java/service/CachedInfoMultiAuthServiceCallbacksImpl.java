@@ -1,10 +1,12 @@
 package com.amazonaws.kinesisvideo.java.service;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
@@ -62,6 +64,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
      * StreamArn -> Tags for the stream
      */
     private Map<String, Tag[]> tagInfoMap = new HashMap<>();
+    private final Logger log = LogManager.getLogger(CachedInfoMultiAuthServiceCallbacksImpl.class);
 
 
     /**
@@ -163,6 +166,11 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
         try {
             final KinesisVideoCredentials credentials = kvsCredentialsProvider.getUpdatedCredentials();
 
+            if (credentials == null) {
+                log.error("Credentials must not be null");
+                throw new IllegalArgumentException();
+            }
+
             // Serialize the credentials
             expiration = credentials.getExpiration().getTime() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
 
@@ -172,9 +180,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
             outputStream.flush();
             serializedCredentials = byteArrayOutputStream.toByteArray();
             outputStream.close();
-        } catch (final IOException e) {
-            log.error(e);
-        } catch (final KinesisVideoException e) {
+        } catch (final IOException | KinesisVideoException | IllegalArgumentException e) {
             log.error(e);
         } finally {
             try {
