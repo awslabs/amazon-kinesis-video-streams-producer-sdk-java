@@ -59,8 +59,7 @@ public final class JavaKinesisVideoClient extends NativeKinesisVideoClient {
             @Nonnull final StreamCallbacks streamCallbacks) {
         super(log,
                 new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
-                        executor,
-                        log),
+                        executor),
                 configuration.getStorageCallbacks(),
                 serviceCallbacks,
                 streamCallbacks);
