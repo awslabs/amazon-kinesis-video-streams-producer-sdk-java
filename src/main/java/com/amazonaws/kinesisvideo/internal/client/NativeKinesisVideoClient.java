@@ -19,6 +19,7 @@ import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
+import com.amazonaws.kinesisvideo.demoapp.DemoAppCachedInfo;
 import com.amazonaws.kinesisvideo.internal.mediasource.ProducerStreamSink;
 import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
 import com.amazonaws.kinesisvideo.producer.DeviceInfo;
@@ -115,7 +116,13 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
      */
     @Override
     public void initialize(@Nonnull final DeviceInfo deviceInfo) throws KinesisVideoException {
+        final Logger log = LogManager.getLogger(DemoAppCachedInfo.class);
+        log.info("[testing] calling initializeNewKinesisVideoProducer.");
+
         kinesisVideoProducer = initializeNewKinesisVideoProducer(deviceInfo);
+
+        log.info("[testing] done calling initializeNewKinesisVideoProducer.");
+
         super.initialize(deviceInfo);
     }
 
@@ -230,11 +237,17 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
      */
     @Nonnull
     public KinesisVideoProducer initializeNewKinesisVideoProducer(final DeviceInfo deviceInfo) throws ProducerException {
+        final Logger log = LogManager.getLogger(DemoAppCachedInfo.class);
+        log.info("[testing] creating NativeKinesisVideoProducerJni.");
+
         final KinesisVideoProducer kinesisVideoProducer = new NativeKinesisVideoProducerJni(
                 mAuthCallbacks,
                 mStorageCallbacks,
                 mServiceCallbacks,
                 mLog);
+        
+        log.info("[testing] calling createSync.");
+
         kinesisVideoProducer.createSync(deviceInfo);
         return kinesisVideoProducer;
     }

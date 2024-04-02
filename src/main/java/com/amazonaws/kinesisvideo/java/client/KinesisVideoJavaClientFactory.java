@@ -101,12 +101,18 @@ public final class KinesisVideoJavaClientFactory {
 
         final Logger log = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
+        log.info("[testing] creating JavaKinesisVideoServiceClient.");
+
         final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient();
+
+        log.info("[testing] creating JavaKinesisVideoClient.");
 
         final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(log,
                 configuration,
                 serviceClient,
                 executor);
+
+        log.info("[testing] initialize kinesisVideoClient.");
 
         kinesisVideoClient.initialize(deviceInfo);
 

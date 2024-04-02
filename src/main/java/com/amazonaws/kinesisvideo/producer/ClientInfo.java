@@ -42,6 +42,8 @@ public class ClientInfo {
 
     private final long mServiceConnectionTimeout;
 
+    //private final KvsRetryStrategyCallbacks mKvsRetryStrategyCallbacks;
+
 
     public ClientInfo() {
         mVersion = CLIENT_INFO_CURRENT_VERSION;
