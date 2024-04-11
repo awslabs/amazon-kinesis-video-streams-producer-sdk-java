@@ -11,3 +11,5 @@ cm-file
 target
 out/
 src/main/resources/META-INF/*
+*.log
+*.log.*

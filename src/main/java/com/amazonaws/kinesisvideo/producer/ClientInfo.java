@@ -42,7 +42,7 @@ public class ClientInfo {
 
     private final long mServiceConnectionTimeout;
 
-    //private final KvsRetryStrategyCallbacks mKvsRetryStrategyCallbacks;
+    private final KvsRetryStrategyCallbacks mKvsRetryStrategyCallbacks;
 
 
     public ClientInfo() {
@@ -56,6 +56,7 @@ public class ClientInfo {
         mAutomaticStreamingFlags = AutomaticStreamingFlags.AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
         mServiceConnectionTimeout = 0L;
         mServiceCompletionTimeout = 0L;
+        mKvsRetryStrategyCallbacks = new DefaultKvsRetryStrategyCallbacks();
     }
 
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
@@ -78,6 +79,7 @@ public class ClientInfo {
         mAutomaticStreamingFlags = flag;
         mServiceConnectionTimeout = 0L;
         mServiceCompletionTimeout = 0L;
+        mKvsRetryStrategyCallbacks = new DefaultKvsRetryStrategyCallbacks();
     }
 
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
@@ -94,6 +96,7 @@ public class ClientInfo {
         mAutomaticStreamingFlags = flag;
         mServiceConnectionTimeout = serviceConnectionTimeout;
         mServiceCompletionTimeout = serviceCompletionTimeout;
+        mKvsRetryStrategyCallbacks = new DefaultKvsRetryStrategyCallbacks();
     }
 
     public int getVersion() {
@@ -130,5 +133,9 @@ public class ClientInfo {
 
     public int getAutomaticStreamingFlags() {
         return mAutomaticStreamingFlags.getStreamingFlagValue();
+    }
+
+    public KvsRetryStrategyCallbacks getKvsRetryStrategyCallbacks() {
+        return mKvsRetryStrategyCallbacks;
     }
 }
