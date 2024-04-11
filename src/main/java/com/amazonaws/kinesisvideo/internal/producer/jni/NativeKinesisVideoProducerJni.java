@@ -3,13 +3,13 @@ package com.amazonaws.kinesisvideo.internal.producer.jni;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
-import com.amazonaws.kinesisvideo.demoapp.DemoAppCachedInfo;
 import com.amazonaws.kinesisvideo.internal.producer.*;
 import com.amazonaws.kinesisvideo.producer.AuthCallbacks;
 import com.amazonaws.kinesisvideo.producer.AuthInfo;
 import com.amazonaws.kinesisvideo.producer.DeviceInfo;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFragmentAck;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
+import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoMetrics;
 import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.StorageCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
@@ -219,28 +219,19 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     public void create(final @Nonnull DeviceInfo deviceInfo, final @Nonnull String nativeLibraryPath) throws ProducerException
     {
-        final Logger log = LogManager.getLogger(DemoAppCachedInfo.class);
-        log.info("[testing] calling checkNotNull.");
         Preconditions.checkNotNull(deviceInfo);
-        log.info("[testing] calling checkState.");
         Preconditions.checkState(!isInitialized());
 
         mDeviceInfo = deviceInfo;
-
-        log.info("[testing] synchronized.");
-
         synchronized (mSyncObject) {
             if (!mLibraryInitialized) {
-                log.info("[testing] calling initializeLibrary.");
                 initializeLibrary(nativeLibraryPath);
 
                 // We are initialized
                 mLibraryInitialized = true;
             }
 
-            log.info("[testing] Native calling createKinesisVideoClient.");
             mClientHandle = createKinesisVideoClient(deviceInfo);
-            log.info("[testing] Done Native calling createKinesisVideoClient.");
         }
     }
 
@@ -252,12 +243,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     public void createSync(final @Nonnull DeviceInfo deviceInfo, final @Nonnull String nativeLibraryPath) throws ProducerException
     {
-        final Logger log = LogManager.getLogger(DemoAppCachedInfo.class);
-        log.info("[testing] calling create.");
-
         create(deviceInfo, nativeLibraryPath);
-
-        log.info("[testing] Blocking until client is ready...");
 
         // Block until client is ready or it times out.
         try {
@@ -1185,26 +1171,18 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private void initializeLibrary(final @Nonnull String nativeLibraryPath) throws ProducerException
     {
-        final Logger log = LogManager.getLogger(DemoAppCachedInfo.class);
-        log.info("[testing] calling loadNativeLibrary.");
-                // Load the native library
+        // Load the native library
         if (!mLibraryLoader.loadNativeLibrary(nativeLibraryPath, PRODUCER_NATIVE_LIBRARY_NAME)) {
             throw new ProducerException("Failed loading native library", STATUS_INVALID_OPERATION);
         }
 
-        log.info("[testing] calling getNativeLibraryVersion.");
-
         // Check the library version info
         final String libraryVersion = getNativeLibraryVersion();
-
-        log.info("[testing] calling getNativeCodeCompileTime.");
 
         // Get the compile time for reporting purposes
         final String compileTime = getNativeCodeCompileTime();
 
         mLog.trace("{} library: version {}, compile time {}", PRODUCER_NATIVE_LIBRARY_NAME, libraryVersion, compileTime);
-
-        log.info("[testing] calling checkState.");
 
         Preconditions.checkState(libraryVersion.equals(EXPECTED_LIBRARY_VERSION),
                     String.format("FATAL DEPLOYMENT ERROR: This app is built "

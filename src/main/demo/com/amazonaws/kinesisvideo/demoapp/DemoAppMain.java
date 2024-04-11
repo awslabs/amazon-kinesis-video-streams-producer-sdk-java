@@ -14,9 +14,6 @@ import com.amazonaws.regions.Regions;
 
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.ABSOLUTE_TIMECODES;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 /**
  * Demo Java Producer.
  */
@@ -40,15 +37,11 @@ public final class DemoAppMain {
 
     public static void main(final String[] args) {
         try {
-            final Logger log = LogManager.getLogger(DemoAppCachedInfo.class);
-
-            log.info("[testing] calling createKinesisVideoClient.");
             // create Kinesis Video high level client
             final KinesisVideoClient kinesisVideoClient = KinesisVideoJavaClientFactory
                     .createKinesisVideoClient(
                             Regions.US_WEST_2,
                             AuthHelper.getSystemPropertiesCredentialsProvider());
-            log.info("[testing] done calling createKinesisVideoClient.");
 
             // create a media source. this class produces the data and pushes it into
             // Kinesis Video Producer lower level components
