@@ -135,7 +135,7 @@ public class ClientInfo {
         return mAutomaticStreamingFlags.getStreamingFlagValue();
     }
 
-    public KvsRetryStrategyCallbacks getKvsRetryStrategyCallbacks() {
-        return mKvsRetryStrategyCallbacks;
-    }
+    // public KvsRetryStrategyCallbacks getKvsRetryStrategyCallbacks() {
+    //     return mKvsRetryStrategyCallbacks;
+    // }
 }
