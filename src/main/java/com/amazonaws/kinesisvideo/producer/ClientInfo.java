@@ -82,8 +82,8 @@ public class ClientInfo {
         mKvsRetryStrategy = new KvsRetryStrategy();    }
 
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
-                      final long offlineBufferAvailabilityTimeout, final long serviceConnectionTimeout,
-                      final long serviceCompletionTimeout, final int logLevel,
+                      final long offlineBufferAvailabilityTimeout, final long serviceCallConnectionTimeou,
+                      final long serviceCallCompletionTimeout, final int logLevel,
                       final boolean logMetric, final AutomaticStreamingFlags flag) {
         mVersion = CLIENT_INFO_CURRENT_VERSION;
         mCreateClientTimeout = createClientTimeout;
@@ -93,8 +93,8 @@ public class ClientInfo {
         mLoggerLogLevel = logLevel;
         mLogMetric = logMetric;
         mAutomaticStreamingFlags = flag;
-        mServiceCallCompletionTimeout = serviceCompletionTimeout;
-        mServiceCallConnectionTimeout = serviceConnectionTimeout;
+        mServiceCallCompletionTimeout = serviceCallCompletionTimeout;
+        mServiceCallConnectionTimeout = serviceCallConnectionTimeou;
         mMetricLoggingPeriod = 0;
         mReservedCallbackPeriod = 0;
         mKvsRetryStrategyCallbacks = new DefaultKvsRetryStrategyCallbacks();
