@@ -14,14 +14,14 @@ public class KvsRetryStrategy {
 
 
     public long getRetryStrategy() {
-        return mRetryStrategy;
+        return 0;
     }
 
     public long getRetryStrategyConfig() {
-        return mRetryStrategyConfig;
+        return 0;
     }
 
     public KvsRetryStrategyType getKvsRetryStrategyType() {
-        return mKvsRetryStrategyType;
+        return null;
     }
 }
