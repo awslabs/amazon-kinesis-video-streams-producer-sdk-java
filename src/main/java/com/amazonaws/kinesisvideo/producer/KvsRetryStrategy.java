@@ -9,10 +9,13 @@ public class KvsRetryStrategy {
     public KvsRetryStrategy() {
         mRetryStrategy = 0;
         mRetryStrategyConfig = 0;
-        mKvsRetryStrategyType = KvsRetryStrategyType.DISABLED;
+        mKvsRetryStrategyType = KvsRetryStrategyType.EXPONENTIAL_BACKOFF_WAIT;
     }
 
-
+    /**
+     * NOTE: The below getters are not supported for setting/getting in Java. These will return
+     * null to be initialized to default/null values in the JNI and C layers.
+     */
     public long getRetryStrategy() {
         return 0;
     }
@@ -21,7 +24,7 @@ public class KvsRetryStrategy {
         return 0;
     }
 
-    public KvsRetryStrategyType getKvsRetryStrategyType() {
-        return null;
+    public int getRetryStrategyType() {
+        return mKvsRetryStrategyType.getKvsRetryStrategyType();
     }
 }
