@@ -146,11 +146,11 @@ public class ClientInfo {
      * null to be initialized to default/null values in the JNI and C layers.
      */
     public long getMetricLoggingPeriod() {
-        return 0;
+        return mMetricLoggingPeriod;
     }
     
     public long getReservedCallbackPeriod() {
-        return 0;
+        return mReservedCallbackPeriod;
     }
 
     public KvsRetryStrategy getKvsRetryStrategy() {
