@@ -140,11 +140,6 @@ public class ClientInfo {
         return mAutomaticStreamingFlags.getStreamingFlagValue();
     }
 
-
-    /**
-     * NOTE: The below getters are not supported for setting/getting in Java. These will return
-     * null to be initialized to default/null values in the JNI and C layers.
-     */
     public long getMetricLoggingPeriod() {
         return mMetricLoggingPeriod;
     }
@@ -154,9 +149,13 @@ public class ClientInfo {
     }
 
     public KvsRetryStrategy getKvsRetryStrategy() {
-        return null;
+        return mKvsRetryStrategy;
     }
-
+    
+    /**
+     * NOTE: The below getters are not supported for setting/getting in Java. These will return
+     * null to be initialized to default/null values in the JNI and C layers.
+     */
     public KvsRetryStrategyCallbacks getKvsRetryStrategyCallbacks() {
         return null;
     }
