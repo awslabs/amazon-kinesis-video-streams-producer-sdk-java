@@ -307,7 +307,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Creates an Kinesis Video stream
      * @param streamInfo      Stream information {@link StreamInfo} object
-     * @param streamCallbacks Optional stream callnbacks {@link StreamCallbacks}
+     * @param streamCallbacks Optional stream callbacks {@link StreamCallbacks}
      * @return Newly create Kinesis Video stream
      * @throws ProducerException
      */
