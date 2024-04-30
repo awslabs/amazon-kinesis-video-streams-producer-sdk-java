@@ -9,6 +9,8 @@
 cm-file
 .DS_Store
 target
+out/
+src/main/resources/META-INF/*
 logs
-hs_err_pid*.log
-
+*.log
+*.log.*

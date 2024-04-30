@@ -64,7 +64,7 @@ public interface KinesisVideoProducer {
      * Creates Kinesis Video stream
      *
      * @param streamInfo      Stream information {@link StreamInfo} object
-     * @param streamCallbacks Optional stream callnbacks {@link StreamCallbacks}
+     * @param streamCallbacks Optional stream callbacks {@link StreamCallbacks}
      * @return The newly created stream
      * @throws ProducerException
      */
@@ -76,7 +76,7 @@ public interface KinesisVideoProducer {
      * Creates Kinesis Video stream synchronously
      *
      * @param streamInfo      Stream information {@link StreamInfo} object
-     * @param streamCallbacks Optional stream callnbacks {@link StreamCallbacks}
+     * @param streamCallbacks Optional stream callbacks {@link StreamCallbacks}
      * @return The newly created stream
      * @throws ProducerException
      */

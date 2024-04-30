@@ -11,33 +11,33 @@ public class ClientInfo {
     /**
      * Current version for the structure as defined in the native code
      */
+
     public static final int CLIENT_INFO_CURRENT_VERSION = 3;
     public static final int DEFAULT_LOG_LEVEL = 4;
 
-    public static enum AutomaticStreamingFlags {
-        AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER(0), AUTOMATIC_STREAMING_ALWAYS_CONTINUOUS(256);
-        private final int streamingFlagValue;
-
-        private AutomaticStreamingFlags(int streamingFlagValue) {
-            this.streamingFlagValue = streamingFlagValue;
-        }
-
-        public int getStreamingFlagValue() {
-            return streamingFlagValue;
-        }
-
-    }
 
     private final int mVersion;
     private final long mCreateClientTimeout;
     private final long mCreateStreamTimeout;
     private final long mStopStreamTimeout;
     private final long mOfflineBufferAvailabilityTimeout;
-    private final int mLogLevel;
+
+    private final int mLoggerLogLevel;
     private final boolean mLogMetric;
     private final AutomaticStreamingFlags mAutomaticStreamingFlags;
+
     private final long mServiceCallCompletionTimeout;
     private final long mServiceCallConnectionTimeout;
+
+    /**
+     * NOTE: The below members are not supported for setting/getting in Java. These will be set to
+     * default values in the JNI and C layers.
+     */
+    private final long mMetricLoggingPeriod;
+    private final long mReservedCallbackPeriod;
+    private final KvsRetryStrategy mKvsRetryStrategy;
+    private final KvsRetryStrategyCallbacks mKvsRetryStrategyCallbacks;
+
 
     public ClientInfo() {
         mVersion = CLIENT_INFO_CURRENT_VERSION;
@@ -45,11 +45,15 @@ public class ClientInfo {
         mCreateStreamTimeout = 0L;
         mStopStreamTimeout = 0L;
         mOfflineBufferAvailabilityTimeout = 0L;
-        mLogLevel = DEFAULT_LOG_LEVEL;
+        mLoggerLogLevel = DEFAULT_LOG_LEVEL;
         mLogMetric = true;
         mAutomaticStreamingFlags = AutomaticStreamingFlags.AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER;
         mServiceCallCompletionTimeout = 0L;
         mServiceCallConnectionTimeout = 0L;
+        mMetricLoggingPeriod = 0;
+        mReservedCallbackPeriod = 0;
+        mKvsRetryStrategyCallbacks = new DefaultKvsRetryStrategyCallbacks();
+        mKvsRetryStrategy = new KvsRetryStrategy();
     }
 
     public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
@@ -68,11 +72,34 @@ public class ClientInfo {
         mCreateStreamTimeout = createStreamTimeout;
         mStopStreamTimeout = stopStreamTimeout;
         mOfflineBufferAvailabilityTimeout = offlineBufferAvailabilityTimeout;
-        mLogLevel = logLevel;
+        mLoggerLogLevel = logLevel;
+        mLogMetric = logMetric;
+        mAutomaticStreamingFlags = flag;
+        mServiceCallCompletionTimeout = 0L;
+        mServiceCallConnectionTimeout = 0L;
+        mMetricLoggingPeriod = 0;
+        mReservedCallbackPeriod = 0;
+        mKvsRetryStrategyCallbacks = new DefaultKvsRetryStrategyCallbacks();
+        mKvsRetryStrategy = new KvsRetryStrategy();    }
+
+    public ClientInfo(final long createClientTimeout, final long createStreamTimeout, final long stopStreamTimeout,
+                      final long offlineBufferAvailabilityTimeout, final long serviceCallConnectionTimeou,
+                      final long serviceCallCompletionTimeout, final int logLevel,
+                      final boolean logMetric, final AutomaticStreamingFlags flag) {
+        mVersion = CLIENT_INFO_CURRENT_VERSION;
+        mCreateClientTimeout = createClientTimeout;
+        mCreateStreamTimeout = createStreamTimeout;
+        mStopStreamTimeout = stopStreamTimeout;
+        mOfflineBufferAvailabilityTimeout = offlineBufferAvailabilityTimeout;
+        mLoggerLogLevel = logLevel;
         mLogMetric = logMetric;
         mAutomaticStreamingFlags = flag;
         mServiceCallCompletionTimeout = serviceCallCompletionTimeout;
-        mServiceCallConnectionTimeout = serviceCallConnectionTimeout;
+        mServiceCallConnectionTimeout = serviceCallConnectionTimeou;
+        mMetricLoggingPeriod = 0;
+        mReservedCallbackPeriod = 0;
+        mKvsRetryStrategyCallbacks = new DefaultKvsRetryStrategyCallbacks();
+        mKvsRetryStrategy = new KvsRetryStrategy();
     }
 
     public int getVersion() {
@@ -95,8 +122,16 @@ public class ClientInfo {
         return mOfflineBufferAvailabilityTimeout;
     }
 
+    public long getServiceCallCompletionTimeout() {
+        return mServiceCallCompletionTimeout;
+    }
+
+    public long getServiceCallConnectionTimeout() {
+        return mServiceCallConnectionTimeout;
+    }
+
     public int getLoggerLogLevel() {
-        return mLogLevel;
+        return mLoggerLogLevel;
     }
 
     public boolean getLogMetric() {
@@ -107,11 +142,23 @@ public class ClientInfo {
         return mAutomaticStreamingFlags.getStreamingFlagValue();
     }
 
-    public long getServiceCompletionTimeout() {
-        return mServiceCallCompletionTimeout;
+    public long getMetricLoggingPeriod() {
+        return mMetricLoggingPeriod;
     }
 
-    public long getServiceConnectionTimeout() {
-        return mServiceCallConnectionTimeout;
+    public long getReservedCallbackPeriod() {
+        return mReservedCallbackPeriod;
+    }
+
+    public KvsRetryStrategy getKvsRetryStrategy() {
+        return mKvsRetryStrategy;
+    }
+
+    /**
+     * NOTE: The below getters are not supported for setting/getting in Java. These will return
+     * null to be initialized to default/null values in the JNI and C layers.
+     */
+    public KvsRetryStrategyCallbacks getKvsRetryStrategyCallbacks() {
+        return null;
     }
 }
