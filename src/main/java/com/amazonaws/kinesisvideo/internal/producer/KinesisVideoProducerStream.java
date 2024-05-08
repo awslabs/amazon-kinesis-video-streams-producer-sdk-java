@@ -62,9 +62,14 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
     void putFrame(final @Nonnull KinesisVideoFrame kinesisVideoFrame) throws ProducerException;
 
     /**
-     * Puts a metadata into the stream.
+     * Puts a fragment metadata into the stream.
      */
     void putFragmentMetadata(final @Nonnull String metadataName, @Nonnull String metadataValue, boolean persistent) throws ProducerException;
+
+    /**
+     * Puts an event metadata into the stream.
+     */
+    void putEventMetadata(int event, @Nonnull StreamEventMetadata streamEventMetadata) throws ProducerException;
 
     /**
      * Reports an ACK for a fragment.

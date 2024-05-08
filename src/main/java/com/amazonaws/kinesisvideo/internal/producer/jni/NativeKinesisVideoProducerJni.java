@@ -490,7 +490,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Put a fragment metadata.
      *
-     * @param streamHandle the handle of the stream
+     * @param streamHandle  the handle of the stream
      * @param metadataName  metadata name
      * @param metadataValue  metadata value
      * @param persistent  whether this is persistent metadata or not
@@ -504,6 +504,26 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkNotNull(metadataValue);
 
         putKinesisVideoFragmentMetadata(mClientHandle, streamHandle, metadataName, metadataValue, persistent);
+    }
+
+    /**
+     * Put an event metadata.
+     *
+     * @param streamHandle  The handle of the stream.
+     * @param event  The type of event(s), a value from STREAM_EVENT_TYPE enum. If
+ *                   if you want to submit multiple events in one call it is suggested to use bit-wise
+ *                   OR combination from STREAM_EVENT_TYPE enum. ToDo: fix this.
+     * @param streamEventMetadata  Optional metadata. This metadata will be applied
+ *                                 to all events included in THIS function call.
+     * @throws ProducerException
+     */
+    public void putEventMetadata(final long streamHandle, final int event, final @Nonnull StreamEventMetadata streamEventMetadata)
+        throws ProducerException
+    {
+        Preconditions.checkState(isInitialized());
+        Preconditions.checkArgument(event >= 0);
+        Preconditions.checkNotNull(streamEventMetadata);
+        putKinesisVideoEventMetadata(streamHandle, event, streamEventMetadata);
     }
 
     /**
@@ -1304,7 +1324,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             throws ProducerException;
 
     /**
-     * Puts a Metadata into the native producer.
+     * Puts a fragment Metadata into the native producer.
      *
      * @param clientHandle Client handle
      * @param streamHandle Stream handle
@@ -1316,6 +1336,21 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     private native void putKinesisVideoFragmentMetadata(long clientHandle, long streamHandle,
                                                         final @Nonnull String metadataName,
                                                         final @Nonnull String metadataValue, boolean persistent)
+            throws ProducerException;
+
+    /**
+     * Puts an event Metadata into the native producer.
+     *
+     * @param clientHandle Client handle.
+     * @param streamHandle The handle of the stream.
+     * @param event  The type of event(s), a value from STREAM_EVENT_TYPE enum. If
+ *                   if you want to submit multiple events in one call it is suggested to use bit-wise
+ *                   OR combination from STREAM_EVENT_TYPE enum. ToDo: fix this.
+     * @param streamEventMetadata  Optional metadata. This metadata will be applied
+ *                                 to all events included in THIS function call.
+     * @throws ProducerException
+     */
+    private native void putKinesisVideoEventMetadata(long streamHandle, final int event, final StreamEventMetadata streamEventMetadata)
             throws ProducerException;
 
     /**

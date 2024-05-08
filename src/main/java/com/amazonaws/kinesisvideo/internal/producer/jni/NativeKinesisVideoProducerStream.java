@@ -14,6 +14,7 @@ import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.kinesisvideo.producer.DeviceInfo;
 import com.amazonaws.kinesisvideo.producer.Time;
+import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -287,6 +288,15 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         mKinesisVideoProducerJni.putFragmentMetadata(mStreamHandle, metadataName, metadataValue, persistent);
     }
 
+    @Override
+    public void putEventMetadata(final int event, @Nonnull StreamEventMetadata streamEventMetadata)
+            throws ProducerException {
+        Preconditions.checkArgument(event >= 0);
+        Preconditions.checkNotNull(streamEventMetadata);
+        Preconditions.checkState(mStreamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE);
+
+        mKinesisVideoProducerJni.putEventMetadata(mStreamHandle, event, streamEventMetadata);
+    }
 
     @Override
     public void fragmentAck(final long uploadHandle, final @Nonnull KinesisVideoFragmentAck kinesisVideoFragmentAck) throws ProducerException {
