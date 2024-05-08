@@ -3,11 +3,12 @@ package com.amazonaws.kinesisvideo.java.mediasource.file;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.mediasource.OnStreamDataAvailable;
-
+import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -90,6 +91,9 @@ public class ImageFrameSource {
                 if (isMetadataReady()) {
                     mkvDataAvailableCallback.onFragmentMetadataAvailable(metadataName + metadataCount,
                             Integer.toString(metadataCount++), false);
+                                
+                    StreamEventMetadata metadata = new StreamEventMetadata(null, (byte)0, new String[0], new String[0]);
+                    mkvDataAvailableCallback.onEventMetadataAvailable(1, metadata);
                 }
             }
 

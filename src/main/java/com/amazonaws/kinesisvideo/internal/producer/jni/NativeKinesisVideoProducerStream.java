@@ -289,13 +289,12 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     }
 
     @Override
-    public void putEventMetadata(final int event, @Nonnull StreamEventMetadata streamEventMetadata)
+    public void putEventMetadata(final int event, @Nullable StreamEventMetadata streamEventMetadata)
             throws ProducerException {
         Preconditions.checkArgument(event >= 0);
-        Preconditions.checkNotNull(streamEventMetadata);
         Preconditions.checkState(mStreamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE);
 
-        mKinesisVideoProducerJni.putEventMetadata(mStreamHandle, event, streamEventMetadata);
+        mKinesisVideoProducerJni.putEventMetadata(mStreamHandle, event, null);
     }
 
     @Override

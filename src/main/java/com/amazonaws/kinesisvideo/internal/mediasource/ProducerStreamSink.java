@@ -54,7 +54,7 @@ public class ProducerStreamSink implements MediaSourceSink {
     }
 
     @Override
-    public void onEventMetadata(final int event, @Nonnull final StreamEventMetadata streamEventMetadata)
+    public void onEventMetadata(final int event, @Nullable final StreamEventMetadata streamEventMetadata)
             throws KinesisVideoException {
         producerStream.putEventMetadata(event, streamEventMetadata);
     }

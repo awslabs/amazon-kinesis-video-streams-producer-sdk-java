@@ -517,13 +517,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
  *                                 to all events included in THIS function call.
      * @throws ProducerException
      */
-    public void putEventMetadata(final long streamHandle, final int event, final @Nonnull StreamEventMetadata streamEventMetadata)
+    public void putEventMetadata(final long streamHandle, final int event, final @Nullable StreamEventMetadata streamEventMetadata)
         throws ProducerException
     {
         Preconditions.checkState(isInitialized());
         Preconditions.checkArgument(event >= 0);
-        Preconditions.checkNotNull(streamEventMetadata);
-        putKinesisVideoEventMetadata(streamHandle, event, streamEventMetadata);
+        putKinesisVideoEventMetadata(mClientHandle, streamHandle, event, streamEventMetadata);
     }
 
     /**
@@ -1350,7 +1349,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
  *                                 to all events included in THIS function call.
      * @throws ProducerException
      */
-    private native void putKinesisVideoEventMetadata(long streamHandle, final int event, final StreamEventMetadata streamEventMetadata)
+    private native void putKinesisVideoEventMetadata(long clientHandle, long streamHandle, final int event, final StreamEventMetadata streamEventMetadata)
             throws ProducerException;
 
     /**
