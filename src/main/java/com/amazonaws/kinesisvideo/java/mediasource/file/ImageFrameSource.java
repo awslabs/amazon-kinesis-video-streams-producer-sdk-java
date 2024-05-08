@@ -91,9 +91,13 @@ public class ImageFrameSource {
                 if (isMetadataReady()) {
                     mkvDataAvailableCallback.onFragmentMetadataAvailable(metadataName + metadataCount,
                             Integer.toString(metadataCount++), false);
-                                
-                    StreamEventMetadata metadata = new StreamEventMetadata(null, (byte)0, new String[0], new String[0]);
-                    mkvDataAvailableCallback.onEventMetadataAvailable(1, metadata);
+                    
+                    if (isKeyFrame()) {
+                        StreamEventMetadata metadata;
+                        //metadata = null;
+                        metadata = new StreamEventMetadata(null, (byte)0, new String[0], new String[0]);
+                        mkvDataAvailableCallback.onEventMetadataAvailable(1, metadata);
+                    }
                 }
             }
 
