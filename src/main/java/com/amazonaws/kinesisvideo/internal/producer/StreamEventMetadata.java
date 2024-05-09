@@ -18,7 +18,8 @@ public class StreamEventMetadata {
     @Nullable
     String mImagePrefix;
 
-    // Optional optimization, stating how many pairs to be appended.
+    // Optional optimization stating how many name/value pairs to be appended.
+    // NOTE: This is NOT optional if using mNames and mValues, else the arrays will not be used.
     @Nullable
     byte mNumberOfPairs;
 
