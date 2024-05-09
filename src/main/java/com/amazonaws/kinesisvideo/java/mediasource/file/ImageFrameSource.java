@@ -93,10 +93,10 @@ public class ImageFrameSource {
                             Integer.toString(metadataCount++), false);
                     
                     if (isKeyFrame()) {
-                        StreamEventMetadata metadata;
-                        //metadata = null;
-                        metadata = new StreamEventMetadata(null, (byte)0, new String[0], new String[0]);
-                        mkvDataAvailableCallback.onEventMetadataAvailable(1, metadata);
+                        StreamEventMetadata testMetadata;
+                        //testMetadata = null;
+                        testMetadata = new StreamEventMetadata(null, (byte)1, new String[]{"AWS"}, new String[]{"AWS"});
+                        mkvDataAvailableCallback.onEventMetadataAvailable(1, testMetadata);
                     }
                 }
             }
