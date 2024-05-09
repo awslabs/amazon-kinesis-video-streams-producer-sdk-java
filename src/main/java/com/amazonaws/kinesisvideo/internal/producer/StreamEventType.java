@@ -1,6 +1,8 @@
 package com.amazonaws.kinesisvideo.internal.producer;
 
-
+//
+// NOTE: This enum is to coincide with the STREAM_EVENT_TYPE enum defined in PIC.
+//
 public enum StreamEventType {
 
     // KVS Stream events (bit flags)

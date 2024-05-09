@@ -510,9 +510,9 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * Put an event metadata.
      *
      * @param streamHandle  The handle of the stream.
-     * @param event  The type of event(s), a value from the STREAM_EVENT_TYPE enum defined in PIC.
+     * @param event  The type of event(s), a value from the StreamEventType enum.
  *                   If you want to submit multiple events in one call it is suggested to use bit-wise
- *                   OR combination from STREAM_EVENT_TYPE enum.
+ *                   OR combination from StreamEventType enum.
      * @param streamEventMetadata  Optional metadata. This metadata will be applied
  *                                 to all events included in THIS function call.
      * @throws ProducerException
@@ -1342,9 +1342,9 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      *
      * @param clientHandle The client handle.
      * @param streamHandle The handle of the stream.
-     * @param event  The type of event(s), a value from the STREAM_EVENT_TYPE enum defined in PIC.
+     * @param event  The type of event(s), a value from the StreamEventType enum.
  *                   If you want to submit multiple events in one call it is suggested to use bit-wise
- *                   OR combination from STREAM_EVENT_TYPE enum.
+ *                   OR combination from StreamEventType enum.
      * @param streamEventMetadata  Optional metadata. This metadata will be applied
  *                                 to all events included in THIS function call.
      * @throws ProducerException
