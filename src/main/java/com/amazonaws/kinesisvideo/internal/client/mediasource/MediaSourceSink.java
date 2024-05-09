@@ -5,6 +5,7 @@ import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
