@@ -294,7 +294,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         Preconditions.checkArgument(event >= 0);
         Preconditions.checkState(mStreamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE);
 
-        mKinesisVideoProducerJni.putEventMetadata(mStreamHandle, event, null);
+        mKinesisVideoProducerJni.putEventMetadata(mStreamHandle, event, streamEventMetadata);
     }
 
     @Override
