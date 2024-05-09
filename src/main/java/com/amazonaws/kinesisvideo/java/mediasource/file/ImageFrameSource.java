@@ -4,11 +4,11 @@ import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.mediasource.OnStreamDataAvailable;
 import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
+import com.amazonaws.kinesisvideo.internal.producer.StreamEventType;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -95,8 +95,8 @@ public class ImageFrameSource {
                     if (isKeyFrame()) {
                         StreamEventMetadata testMetadata;
                         //testMetadata = null;
-                        testMetadata = new StreamEventMetadata(null, (byte)1, new String[]{"AWS"}, new String[]{"AWS"});
-                        mkvDataAvailableCallback.onEventMetadataAvailable(1, testMetadata);
+                        testMetadata = new StreamEventMetadata(null, (byte)1, new String[]{"testName"}, new String[]{"testValue"});
+                        mkvDataAvailableCallback.onEventMetadataAvailable(StreamEventType.STREAM_EVENT_TYPE_IMAGE_GENERATION.getIntType(), testMetadata);
                     }
                 }
             }
