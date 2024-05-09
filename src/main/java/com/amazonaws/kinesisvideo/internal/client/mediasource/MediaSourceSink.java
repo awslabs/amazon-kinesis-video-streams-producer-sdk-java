@@ -5,7 +5,6 @@ import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
@@ -26,7 +25,7 @@ public interface MediaSourceSink {
     void onFragmentMetadata(final @Nonnull String metadataName, final @Nonnull String metadataValue, final boolean persistent)
             throws KinesisVideoException;
     
-    void onEventMetadata(final int event, @Nonnull final StreamEventMetadata streamEventMetadata)
+    void onEventMetadata(final int event, @Nullable final StreamEventMetadata streamEventMetadata)
             throws KinesisVideoException;
 
     KinesisVideoProducerStream getProducerStream();
