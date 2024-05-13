@@ -93,10 +93,12 @@ public class ImageFrameSource {
                             Integer.toString(metadataCount++), false);
                     
                     if (isKeyFrame()) {
-                        StreamEventMetadata testMetadata;
-                        //testMetadata = null;
-                        testMetadata = new StreamEventMetadata(null, (byte)1, new String[]{"testName"}, new String[]{"testValue"});
-                        mkvDataAvailableCallback.onEventMetadataAvailable(StreamEventType.STREAM_EVENT_TYPE_IMAGE_GENERATION.getIntType(), testMetadata);
+                        // Put event metadata on keyframes.
+                        StreamEventMetadata eventMetadata;
+                        String[] eventMetadataNames = new String[]{"eventMetadata-name-1"};
+                        String[] eventMetadataValues = new String[]{"eventMetadata-value-1"};
+                        eventMetadata = new StreamEventMetadata(null, (byte)eventMetadataNames.length, eventMetadataNames, eventMetadataValues);
+                        mkvDataAvailableCallback.onEventMetadataAvailable(StreamEventType.STREAM_EVENT_TYPE_IMAGE_GENERATION.getIntType(), eventMetadata);
                     }
                 }
             }
