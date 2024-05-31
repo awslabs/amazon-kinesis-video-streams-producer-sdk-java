@@ -1,6 +1,6 @@
 package com.amazonaws.kinesisvideo.internal.mediasource;
 
-import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceSink;
@@ -31,7 +31,7 @@ public class DefaultOnStreamDataAvailable implements OnStreamDataAvailable {
     }
 
     @Override
-    public void onEventMetadataAvailable(final int event, @Nonnull final StreamEventMetadata streamEventMetadata)
+    public void onEventMetadataAvailable(final int event, @Nullable final StreamEventMetadata streamEventMetadata)
             throws KinesisVideoException {
         mediaSourceSink.onEventMetadata(event, streamEventMetadata);
     }

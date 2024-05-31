@@ -41,6 +41,9 @@ public class ImageFrameSource {
     private final Log log = LogFactory.getLog(ImageFrameSource.class);
     private final String metadataName = "ImageLoop";
     private int metadataCount = 0;
+    private final String[] eventMetadataNames = new String[]{"eventMetadata-name-1"};
+    private final String[] eventMetadataValues = new String[]{"eventMetadata-value-1"};
+    private final StreamEventMetadata eventMetadata = new StreamEventMetadata(null, (byte)eventMetadataNames.length, eventMetadataNames, eventMetadataValues);
 
     public ImageFrameSource(final ImageFileMediaSourceConfiguration configuration) {
         this.configuration = configuration;
@@ -94,10 +97,6 @@ public class ImageFrameSource {
                     
                     if (isKeyFrame()) {
                         // Put event metadata on keyframes.
-                        StreamEventMetadata eventMetadata;
-                        String[] eventMetadataNames = new String[]{"eventMetadata-name-1"};
-                        String[] eventMetadataValues = new String[]{"eventMetadata-value-1"};
-                        eventMetadata = new StreamEventMetadata(null, (byte)eventMetadataNames.length, eventMetadataNames, eventMetadataValues);
                         mkvDataAvailableCallback.onEventMetadataAvailable(StreamEventType.STREAM_EVENT_TYPE_IMAGE_GENERATION.getIntType(), eventMetadata);
                     }
                 }
