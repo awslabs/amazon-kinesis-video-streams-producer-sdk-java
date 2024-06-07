@@ -20,7 +20,7 @@ public class StreamEventMetadata {
 
     // Optional optimization stating how many name/value pairs to be appended.
     // NOTE: This is NOT optional if using mNames and mValues, else the arrays will not be used.
-    private final byte mNumberOfPairs;
+    private final int mNumberOfPairs;
 
     // Optional custom data name/value pairs.
     // String lengths must be <= MKV_MAX_TAG_NAME_LEN as defined in the native code.
@@ -39,7 +39,7 @@ public class StreamEventMetadata {
     * @param  names The custom data names, to be paired with values, length must be <= MKV_MAX_TAG_NAME_LEN as defined in the native code.
     * @param  values The custom data values, to be paired with names, length must be <= MKV_MAX_TAG_VALUE_LEN as defined in the native code.
     */
-    public StreamEventMetadata(String imagePrefix, byte numberOfPairs, String[] names, String[] values) {
+    public StreamEventMetadata(String imagePrefix, int numberOfPairs, String[] names, String[] values) {
         mVersion = STREAM_EVENT_METADATA_CURRENT_VERSION;
         mImagePrefix = imagePrefix;
         mNumberOfPairs = numberOfPairs;
@@ -55,7 +55,7 @@ public class StreamEventMetadata {
         return mImagePrefix;
     }
 
-    public byte getNumberOfPairs() {
+    public int getNumberOfPairs() {
         return mNumberOfPairs;
     }
 
