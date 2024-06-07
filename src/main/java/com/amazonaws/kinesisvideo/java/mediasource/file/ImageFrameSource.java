@@ -3,7 +3,8 @@ package com.amazonaws.kinesisvideo.java.mediasource.file;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.mediasource.OnStreamDataAvailable;
-
+import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
+import com.amazonaws.kinesisvideo.internal.producer.StreamEventType;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +41,9 @@ public class ImageFrameSource {
     private final Log log = LogFactory.getLog(ImageFrameSource.class);
     private final String metadataName = "ImageLoop";
     private int metadataCount = 0;
+    private final String[] eventMetadataNames = new String[]{"eventMetadata-name-1"};
+    private final String[] eventMetadataValues = new String[]{"eventMetadata-value-1"};
+    private final StreamEventMetadata eventMetadata = new StreamEventMetadata(null, (byte)eventMetadataNames.length, eventMetadataNames, eventMetadataValues);
 
     public ImageFrameSource(final ImageFileMediaSourceConfiguration configuration) {
         this.configuration = configuration;
@@ -90,6 +94,11 @@ public class ImageFrameSource {
                 if (isMetadataReady()) {
                     mkvDataAvailableCallback.onFragmentMetadataAvailable(metadataName + metadataCount,
                             Integer.toString(metadataCount++), false);
+                    
+                    if (isKeyFrame()) {
+                        // Put event metadata on keyframes.
+                        mkvDataAvailableCallback.onEventMetadataAvailable(StreamEventType.STREAM_EVENT_TYPE_IMAGE_GENERATION.getIntType(), eventMetadata);
+                    }
                 }
             }
 
