@@ -49,24 +49,42 @@
     </licenses>
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-bom</artifactId>
-                <version>1.11.602</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+        <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/bom -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>bom</artifactId>
+            <version>2.26.16</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/sdk-core -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-core</artifactId>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sdk-core</artifactId>
+            <version>2.26.16</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/kinesisvideo -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-kinesisvideo</artifactId>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesisvideo</artifactId>
+            <version>2.26.16</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/http-auth-aws -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>http-auth-aws</artifactId>
+            <version>2.26.16</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/apache-client -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
+            <version>2.26.16</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.google.inject</groupId>

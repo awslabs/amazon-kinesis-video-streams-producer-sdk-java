@@ -1,6 +1,6 @@
 package com.amazonaws.kinesisvideo.java.client;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
@@ -18,13 +18,15 @@ import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.Tag;
 import com.amazonaws.kinesisvideo.storage.DefaultStorageCallbacks;
 import com.amazonaws.kinesisvideo.streaming.DefaultStreamCallbacks;
-import com.amazonaws.regions.Regions;
+import software.amazon.awssdk.regions.Region;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+
+import static software.amazon.awssdk.regions.Region.US_WEST_2;
 
 public final class KinesisVideoJavaClientFactory {
     private static final int DEVICE_VERSION = 1;
@@ -47,33 +49,33 @@ public final class KinesisVideoJavaClientFactory {
      * @throws KinesisVideoException
      */
     @Nonnull
-    public static KinesisVideoClient createKinesisVideoClient(@Nonnull final AWSCredentialsProvider credentialsProvider)
+    public static KinesisVideoClient createKinesisVideoClient(@Nonnull final AwsCredentialsProvider credentialsProvider)
             throws KinesisVideoException {
         Preconditions.checkNotNull(credentialsProvider);
-        return createKinesisVideoClient(Regions.DEFAULT_REGION, credentialsProvider);
+        return createKinesisVideoClient(US_WEST_2, credentialsProvider);
     }
 
     /**
      * Create Kinesis Video client.
      *
-     * @param regions Regions object
+     * @param region Regions object
      * @param awsCredentialsProvider Credentials provider
      * @return
      * @throws KinesisVideoException
      */
     @Nonnull
     public static KinesisVideoClient createKinesisVideoClient(
-            @Nonnull final Regions regions,
-            @Nonnull final AWSCredentialsProvider awsCredentialsProvider)
+            @Nonnull final Region region,
+            @Nonnull final AwsCredentialsProvider awsCredentialsProvider)
             throws KinesisVideoException {
-        Preconditions.checkNotNull(regions);
+        Preconditions.checkNotNull(region);
         Preconditions.checkNotNull(awsCredentialsProvider);
 
         final KinesisVideoCredentialsProvider kinesisVideoCredentialsProvider =
                 new JavaCredentialsProviderImpl(awsCredentialsProvider);
 
         final KinesisVideoClientConfiguration configuration = KinesisVideoClientConfiguration.builder()
-                .withRegion(regions.getName())
+                .withRegion(region.toString())
                 .withCredentialsProvider(kinesisVideoCredentialsProvider)
                 .withStorageCallbacks(new DefaultStorageCallbacks())
                 .build();

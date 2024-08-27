@@ -2,17 +2,16 @@ package com.amazonaws.kinesisvideo.client.signing;
 
 import java.net.URI;
 
-import com.amazonaws.DefaultRequest;
-import com.amazonaws.SignableRequest;
-import com.amazonaws.auth.AWS4Signer;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.http.HttpMethodName;
+import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.auth.signer.Aws4Signer;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.http.SdkHttpMethod;
 import com.amazonaws.kinesisvideo.config.ClientConfiguration;
 import com.amazonaws.kinesisvideo.http.HttpClient;
 import com.amazonaws.kinesisvideo.signing.KinesisVideoSigner;
 
-public class KinesisVideoAWS4Signer extends AWS4Signer implements KinesisVideoSigner {
+public abstract class KinesisVideoAWS4Signer implements KinesisVideoSigner {
 
     private static final String CONTENT_HASH_HEADER = "x-amz-content-sha256";
     private static final String CONTENT_UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
@@ -20,7 +19,7 @@ public class KinesisVideoAWS4Signer extends AWS4Signer implements KinesisVideoSi
     private static final String DATE_HEADER = "X-Amz-Date";
     private static final String SECURITY_TOKEN_HEADER = "X-Amz-Security-Token";
 
-    private final AWSCredentialsProvider mAWSCredentialsProvider;
+    private final AwsCredentialsProvider mAWSCredentialsProvider;
     private final ClientConfiguration mConfiguration;
 
     private static class SimpleSignableRequest extends DefaultRequest {
@@ -90,6 +89,6 @@ public class KinesisVideoAWS4Signer extends AWS4Signer implements KinesisVideoSi
     }
 
     protected boolean shouldAddContentUnsignedPayloadInHeader(final String httpMethodName) {
-        return HttpMethodName.POST.name().equals(httpMethodName);
+        return SdkHttpMethod.POST.name().equals(httpMethodName);
     }
 }

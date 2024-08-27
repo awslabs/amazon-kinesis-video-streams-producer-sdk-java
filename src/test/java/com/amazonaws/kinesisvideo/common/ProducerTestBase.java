@@ -5,7 +5,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import static org.junit.Assert.fail;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
@@ -21,15 +20,20 @@ import com.amazonaws.kinesisvideo.java.service.CachedInfoMultiAuthServiceCallbac
 import com.amazonaws.kinesisvideo.java.service.JavaKinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.producer.*;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
-import com.amazonaws.services.kinesisvideo.model.*;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.kinesisvideo.KinesisVideoClient;
+import software.amazon.awssdk.services.kinesisvideo.model.DescribeStreamRequest;
+import software.amazon.awssdk.services.kinesisvideo.model.DescribeStreamResponse;
+import software.amazon.awssdk.services.kinesisvideo.model.GetDataEndpointRequest;
+import software.amazon.awssdk.services.kinesisvideo.model.GetDataEndpointResponse;
 
 import static com.amazonaws.kinesisvideo.producer.StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.*;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RECALCULATE_METRICS;
+import static software.amazon.awssdk.regions.Region.US_WEST_2;
+import static software.amazon.awssdk.services.kinesisvideo.model.APIName.PUT_MEDIA;
 
 public class ProducerTestBase {
     protected static final long TEST_BUFFER_DURATION = 12000L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND; // 120 seconds
@@ -76,7 +80,7 @@ public class ProducerTestBase {
     // set by the createProducer method to be used throughout
     private StreamCallbacks streamCallbacks;
     private KinesisVideoClientConfiguration configuration;
-    private AWSCredentialsProvider awsCredentialsProvider;
+    private AwsCredentialsProvider awsCredentialsProvider;
     private JavaKinesisVideoServiceClient serviceClient;
     private ScheduledExecutorService executor;
     private NativeKinesisVideoClient kinesisVideoClient;
@@ -126,7 +130,7 @@ public class ProducerTestBase {
 
         awsCredentialsProvider = AuthHelper.getSystemPropertiesCredentialsProvider();
         configuration = KinesisVideoClientConfiguration.builder()
-                .withRegion(Regions.US_WEST_2.getName())
+                .withRegion(US_WEST_2.toString())
                 .withCredentialsProvider(new JavaCredentialsProviderImpl(awsCredentialsProvider))
                 .build();
 
@@ -258,21 +262,21 @@ public class ProducerTestBase {
                 cacheServiceCallbacks,
                 streamCallbacks);
         String region = configuration.getRegion();
-        AmazonKinesisVideo kvsClient = AmazonKinesisVideoClientBuilder.standard()
-                .withRegion(region)
-                .withCredentials(awsCredentialsProvider)
+        KinesisVideoClient kvsClient = KinesisVideoClient.builder()
+                .region(Region.of(region))
+                .credentialsProvider(awsCredentialsProvider)
                 .build();
 
         if(cacheAll) {
             cacheServiceCallbacks.addCredentialsProviderToCache(testStreamName, awsCredentialsProvider);
-            DescribeStreamResult streamInfo = kvsClient.describeStream(new DescribeStreamRequest()
-                    .withStreamName(testStreamName));
+            DescribeStreamResponse streamInfo = kvsClient.describeStream(DescribeStreamRequest.builder()
+                    .streamName(testStreamName).build());
             cacheServiceCallbacks.addStreamInfoToCache(testStreamName, streamInfo);
         }
 
-        GetDataEndpointResult dataEndpoint =
-                kvsClient.getDataEndpoint(new GetDataEndpointRequest().withAPIName(APIName.PUT_MEDIA)
-                        .withStreamName(testStreamName));
-        cacheServiceCallbacks.addStreamingEndpointToCache(testStreamName, dataEndpoint.getDataEndpoint());
+        GetDataEndpointResponse dataEndpoint =
+                kvsClient.getDataEndpoint(GetDataEndpointRequest.builder().apiName(PUT_MEDIA)
+                        .streamName(testStreamName).build());
+        cacheServiceCallbacks.addStreamingEndpointToCache(testStreamName, dataEndpoint.dataEndpoint());
     }
 }

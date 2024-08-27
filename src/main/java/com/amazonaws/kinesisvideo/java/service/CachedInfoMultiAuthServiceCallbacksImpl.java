@@ -14,13 +14,9 @@ import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.internal.service.DefaultServiceCallbacksImpl;
 import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsProviderImpl;
-import com.amazonaws.kinesisvideo.producer.ProducerException;
-import com.amazonaws.kinesisvideo.producer.StreamDescription;
-import com.amazonaws.kinesisvideo.producer.StreamStatus;
-import com.amazonaws.kinesisvideo.producer.Tag;
-import com.amazonaws.kinesisvideo.producer.Time;
-import com.amazonaws.services.kinesisvideo.model.DescribeStreamResult;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.services.kinesisvideo.model.DescribeStreamResponse;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -53,7 +49,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
     /**
      * StreamArn -> StreamInfo
      */
-    private Map<String, DescribeStreamResult> streamInfoMap = new HashMap<>();
+    private Map<String, DescribeStreamResponse> streamInfoMap = new HashMap<>();
 
     /**
      * StreamArn -> Data Endpoint
@@ -110,7 +106,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
             final KinesisVideoProducerStream stream) throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
-        final DescribeStreamResult streamInfo = streamInfoMap.get(streamName);
+        final DescribeStreamResponse streamInfo = streamInfoMap.get(streamName);
         if (streamInfo == null) {
             throw new ProducerException("Stream Description is not given for stream " + streamName, 0);
         }
@@ -276,7 +272,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
         executor.schedule(task, delay, TimeUnit.NANOSECONDS);
     }
 
-    public void addStreamInfoToCache(String streamName, DescribeStreamResult streamInfo) {
+    public void addStreamInfoToCache(String streamName, DescribeStreamResponse streamInfo) {
         Preconditions.checkArgument(!streamInfoMap.containsKey(streamName));
         streamInfoMap.put(streamName, streamInfo);
     }
@@ -291,7 +287,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
         endpointMap.put(streamName, endpoint);
     }
 
-    public void addCredentialsProviderToCache(String streamName, AWSCredentialsProvider credentialsProvider) {
+    public void addCredentialsProviderToCache(String streamName, AwsCredentialsProvider credentialsProvider) {
         Preconditions.checkArgument(!credentialsProviderMap.containsKey(streamName));
         final KinesisVideoCredentialsProvider kvsCredentialsProvider =
                 new JavaCredentialsProviderImpl(credentialsProvider);
@@ -310,18 +306,18 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
                 - System.currentTimeMillis() * Time.NANOS_IN_A_MILLISECOND);
     }
 
-    private static StreamDescription toStreamDescription(final @NonNull DescribeStreamResult result) {
-        checkNotNull(result);
+    private static StreamDescription toStreamDescription(final @NonNull DescribeStreamResponse response) {
+        checkNotNull(response);
         return new StreamDescription(
                 StreamDescription.STREAM_DESCRIPTION_CURRENT_VERSION,
-                result.getStreamInfo().getDeviceName(),
-                result.getStreamInfo().getStreamName(),
-                result.getStreamInfo().getMediaType(),
-                result.getStreamInfo().getVersion(),
-                result.getStreamInfo().getStreamARN(),
-                StreamStatus.valueOf(result.getStreamInfo().getStatus()),
-                result.getStreamInfo().getCreationTime().getTime(),
-                result.getStreamInfo().getDataRetentionInHours() * HUNDREDS_OF_NANOS_IN_AN_HOUR,
-                result.getStreamInfo().getKmsKeyId());
+                response.streamInfo().deviceName(),
+                response.streamInfo().streamName(),
+                response.streamInfo().mediaType(),
+                response.streamInfo().version(),
+                response.streamInfo().streamARN(),
+                StreamStatus.valueOf(String.valueOf(response.streamInfo().status())),
+                response.streamInfo().creationTime().toEpochMilli(),
+                response.streamInfo().dataRetentionInHours() * HUNDREDS_OF_NANOS_IN_AN_HOUR,
+                response.streamInfo().kmsKeyId());
     }
 }
