@@ -2,11 +2,9 @@ package com.amazonaws.kinesisvideo.java.service;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.http.SdkHttpClient;
-import software.amazon.awssdk.http.apache.ApacheHttpClient.Builder;
-import software.amazon.awssdk.core.SdkServiceClientConfiguration;
-import software.amazon.awssdk.core.SdkServiceClientConfiguration.Builder;
-import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
@@ -23,9 +21,9 @@ import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.StreamDescription;
 import com.amazonaws.kinesisvideo.producer.StreamStatus;
 import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
-import com.amazonaws.kinesisvideo.util.VersionUtil;
 import software.amazon.awssdk.services.kinesisvideo.KinesisVideoClient;
-import software.amazon.awssdk.services.kinesisvideo.KinesisVideoServiceClientConfiguration;
+import software.amazon.awssdk.services.kinesisvideo.endpoints.KinesisVideoEndpointParams;
+import software.amazon.awssdk.services.kinesisvideo.endpoints.KinesisVideoEndpointProvider;
 import software.amazon.awssdk.services.kinesisvideo.model.CreateStreamRequest;
 import software.amazon.awssdk.services.kinesisvideo.model.CreateStreamResponse;
 import software.amazon.awssdk.services.kinesisvideo.model.DeleteStreamRequest;
@@ -36,12 +34,13 @@ import software.amazon.awssdk.services.kinesisvideo.model.GetDataEndpointRequest
 import software.amazon.awssdk.services.kinesisvideo.model.GetDataEndpointResponse;
 import software.amazon.awssdk.services.kinesisvideo.model.TagStreamRequest;
 import software.amazon.awssdk.services.kinesisvideo.model.TagStreamResponse;
-import software.amazon.awssdk.core.Protocol;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.net.URI;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Map;
 
@@ -70,8 +69,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
             final AwsCredentialsProvider awsCredentialsProvider,
             final Region region,
             final String endpoint,
-            final int timeoutInMillis)
-            throws KinesisVideoException {
+            final int timeoutInMillis) {
 
         final AwsCredentials credentials = awsCredentialsProvider.resolveCredentials();
         return createAwsKinesisVideoClient(credentials, region, endpoint, timeoutInMillis);
@@ -80,30 +78,28 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
     private static KinesisVideoClient createAwsKinesisVideoClient(final AwsCredentials credentials,
             final Region region,
             final String endpoint,
-            final int timeoutInMillis)
-            throws KinesisVideoException {
+            final int timeoutInMillis) {
 
-        SdkHttpClient apacheHttpClient = ApacheHttpClient.builder()
-                .proxyConfiguration(ProxyConfiguration.builder()
-                        .useSystemPropertyValues(Boolean.FALSE)
-                        .build())
+        SdkHttpClient apacheHttpClient = createClientConfiguration(timeoutInMillis);
+
+        final KinesisVideoEndpointParams kinesisVideoEndpointParams = KinesisVideoEndpointParams.builder()
+                .endpoint(endpoint)
+                .region(region)
+                .useDualStack(true)
                 .build();
-        final ApacheHttpClient clientConfiguration = createClientConfiguration(timeoutInMillis);
-        final KinesisVideoClient amazonKinesisVideoClient = KinesisVideoClient.builder()
-                .withClientConfiguration(clientConfiguration)
-                .withCredentials(new AwsCredentialsProvider() {
 
-                    @Override
-                    public AwsCredentials resolveCredentials() {
-                        // TODO Auto-generated method stub
-                        return credentials;
-                    }
+        final KinesisVideoEndpointProvider kinesisVideoEndpointProvider = (KinesisVideoEndpointProvider) KinesisVideoEndpointProvider
+                .defaultProvider()
+                .resolveEndpoint(kinesisVideoEndpointParams);
+
+        return KinesisVideoClient.builder()
+                .httpClient(apacheHttpClient)
+                .credentialsProvider(() -> {
+                    // TODO Auto-generated method stub
+                    return credentials;
                 })
-                // .withRegion(region.getName())
-                .withEndpointConfiguration(new EndpointConfiguration(endpoint, region.getName()))
+                .endpointProvider(kinesisVideoEndpointProvider)
                 .build();
-
-        return amazonKinesisVideoClient;
     }
 
     private static AwsCredentials createAwsCredentials(
@@ -120,7 +116,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
             return null;
         }
 
-        AWSCredentials credentials = null;
+        AwsCredentials credentials;
 
         if (kinesisVideoCredentials.getSessionToken() == null) {
             credentials = new AwsCredentials() {
@@ -152,53 +148,49 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
             return null;
         }
 
-        return new AwsCredentialsProvider() {
+        return () -> {
+            AwsCredentials awsCredentials = null;
+            try {
+                final KinesisVideoCredentials kinesisVideoCredentials = credentialsProvider.getCredentials();
 
-            @Override
-            public AwsCredentials resolveCredentials() {
-                AwsCredentials awsCredentials = null;
-                try {
-                    final KinesisVideoCredentials kinesisVideoCredentials = credentialsProvider.getCredentials();
-
-                    if (kinesisVideoCredentials == null) {
-                        log.error("kinesisVideoCredentials must not be null while obtaining it from getCredentials");
-                        throw new IllegalArgumentException();
-                    }
-
-                    if (kinesisVideoCredentials.getSessionToken() == null) {
-                        awsCredentials = new AwsCredentials() {
-                            @Override
-                            public String accessKeyId() {
-                                return kinesisVideoCredentials.getAccessKey();
-                            }
-
-                            @Override
-                            public String secretAccessKey() {
-                                return kinesisVideoCredentials.getSecretKey();
-                            }
-                        };
-                    } else {
-                        awsCredentials = AwsSessionCredentials.create(kinesisVideoCredentials.getAccessKey(),
-                                kinesisVideoCredentials.getSecretKey(),
-                                kinesisVideoCredentials.getSessionToken());
-                    }
-                } catch (final KinesisVideoException | IllegalArgumentException e) {
-                    log.error("Getting credentials threw an exception.", e);
-                    awsCredentials = null;
+                if (kinesisVideoCredentials == null) {
+                    log.error("kinesisVideoCredentials must not be null while obtaining it from getCredentials");
+                    throw new IllegalArgumentException();
                 }
 
-                return awsCredentials;
+                if (kinesisVideoCredentials.getSessionToken() == null) {
+                    awsCredentials = new AwsCredentials() {
+                        @Override
+                        public String accessKeyId() {
+                            return kinesisVideoCredentials.getAccessKey();
+                        }
+
+                        @Override
+                        public String secretAccessKey() {
+                            return kinesisVideoCredentials.getSecretKey();
+                        }
+                    };
+                } else {
+                    awsCredentials = AwsSessionCredentials.create(kinesisVideoCredentials.getAccessKey(),
+                            kinesisVideoCredentials.getSecretKey(),
+                            kinesisVideoCredentials.getSessionToken());
+                }
+            } catch (final KinesisVideoException | IllegalArgumentException e) {
+                log.error("Getting credentials threw an exception.", e);
             }
+
+            return awsCredentials;
         };
     }
 
-    private static ApacheHttpClient createClientConfiguration(final int timeoutInMillis) {
-        return new ClientConfiguration()
-                .withProtocol(Protocol.HTTPS)
-                .withConnectionTimeout(timeoutInMillis)
-                .withMaxConnections(DEFAULT_MAX_CONNECTIONS)
-                .withSocketTimeout(timeoutInMillis)
-                .withUserAgentPrefix(VersionUtil.getUserAgent());
+    private static SdkHttpClient createClientConfiguration(final int timeoutInMillis) {
+        return ApacheHttpClient.builder()
+                .proxyConfiguration(ProxyConfiguration.builder()
+                        .useSystemPropertyValues(Boolean.FALSE)
+                        .build())
+                .connectionTimeout(Duration.of(timeoutInMillis, ChronoUnit.MILLIS))
+                .socketTimeout(Duration.of(timeoutInMillis, ChronoUnit.MILLIS))
+                .build();
     }
 
     @Nonnull
@@ -303,7 +295,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
         final StreamDescription streamDescription = describeStream(streamName, timeoutInMillis, credentialsProvider);
 
-        final DeleteStreamResult deleteStreamResult;
+        final DeleteStreamResponse deleteStreamResult;
 
         try {
             if (streamDescription == null) {
@@ -311,15 +303,16 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 throw new IllegalArgumentException();
             }
 
-            final DeleteStreamRequest deleteStreamRequest = new DeleteStreamRequest()
-                    .withStreamARN(streamDescription.getStreamArn())
-                    .withCurrentVersion(streamDescription.getUpdateVersion());
+            final DeleteStreamRequest deleteStreamRequest = DeleteStreamRequest.builder()
+                    .streamARN(streamDescription.getStreamArn())
+                    .currentVersion(streamDescription.getUpdateVersion())
+                    .build();
 
             log.debug("calling delete stream: {}", deleteStreamRequest.toString());
             deleteStreamResult = serviceClient.deleteStream(deleteStreamRequest);
             log.debug("delete stream result: {}", deleteStreamResult.toString());
-        } catch (final AmazonClientException e) {
-            log.error("Service call failed.", e);
+        } catch (final SdkException e) {
+            log.error("Service call failed.");
             throw new KinesisVideoException(e);
         } catch (final IllegalArgumentException e) {
             log.error("Stream description null.", e);
@@ -428,7 +421,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
         putMediaClient.putMediaInBackground();
     }
 
-    private static StreamDescription toStreamDescription(@Nonnull final DescribeStreamResponse result) {
+    private StreamDescription toStreamDescription(@Nonnull final DescribeStreamResponse result) {
         Preconditions.checkNotNull(result);
         return new StreamDescription(
                 StreamDescription.STREAM_DESCRIPTION_CURRENT_VERSION,
