@@ -1,11 +1,11 @@
 package com.amazonaws.kinesisvideo.demoapp.auth;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.SystemPropertiesCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.SystemPropertyCredentialsProvider;
 
 public final class AuthHelper {
-    public static AWSCredentialsProvider getSystemPropertiesCredentialsProvider() {
-        return new SystemPropertiesCredentialsProvider();
+    public static AwsCredentialsProvider getSystemPropertiesCredentialsProvider() {
+        return SystemPropertyCredentialsProvider.create();
     }
 
     private AuthHelper() {

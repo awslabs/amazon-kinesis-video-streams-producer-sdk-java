@@ -1,7 +1,11 @@
 package com.amazonaws.kinesisvideo.demoapp;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
+import software.amazon.awssdk.services.kinesisvideo.model.DescribeStreamRequest;
+import software.amazon.awssdk.services.kinesisvideo.model.DescribeStreamResponse;
+import software.amazon.awssdk.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,18 +19,14 @@ import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSourceConf
 import com.amazonaws.kinesisvideo.java.service.CachedInfoMultiAuthServiceCallbacksImpl;
 import com.amazonaws.kinesisvideo.java.service.JavaKinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.storage.DefaultStorageCallbacks;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
-import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
-import com.amazonaws.services.kinesisvideo.model.APIName;
-import com.amazonaws.services.kinesisvideo.model.DescribeStreamRequest;
-import com.amazonaws.services.kinesisvideo.model.DescribeStreamResult;
-import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
-import com.amazonaws.services.kinesisvideo.model.GetDataEndpointResult;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import software.amazon.awssdk.services.kinesisvideo.model.GetDataEndpointResponse;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+
+import static software.amazon.awssdk.regions.Region.US_WEST_2;
+import static software.amazon.awssdk.services.kinesisvideo.model.APIName.PUT_MEDIA;
 
 /**
  * Demo Java Producer with Cached Stream Information to lower start latency.
@@ -56,9 +56,9 @@ public final class DemoAppCachedInfo {
         try {
             final ScheduledExecutorService executor = Executors.newScheduledThreadPool(NUMBER_OF_THREADS_IN_POOL,
                     new ThreadFactoryBuilder().setNameFormat("KVS-JavaClientExecutor-%d").build());
-            final AWSCredentialsProvider awsCredentialsProvider = AuthHelper.getSystemPropertiesCredentialsProvider();
+            final AwsCredentialsProvider awsCredentialsProvider = AuthHelper.getSystemPropertiesCredentialsProvider();
             final KinesisVideoClientConfiguration configuration = KinesisVideoClientConfiguration.builder()
-                    .withRegion(Regions.US_WEST_2.getName())
+                    .withRegion(US_WEST_2.toString())
                     .withCredentialsProvider(new JavaCredentialsProviderImpl(awsCredentialsProvider))
                     .withStorageCallbacks(new DefaultStorageCallbacks())
                     .build();
@@ -68,7 +68,7 @@ public final class DemoAppCachedInfo {
             // Create CachedInfoServiceCallback
             final CachedInfoMultiAuthServiceCallbacksImpl serviceCallbacks =
                     new CachedInfoMultiAuthServiceCallbacksImpl(log, executor,
-                            configuration, new JavaKinesisVideoServiceClient(log));
+                            configuration, new JavaKinesisVideoServiceClient());
             // create Kinesis Video high level client
             final KinesisVideoClient kinesisVideoClient = KinesisVideoJavaClientFactory
                     .createKinesisVideoClient(log, configuration, executor, null, serviceCallbacks);
@@ -147,22 +147,23 @@ public final class DemoAppCachedInfo {
 
     private static void addCachedStreamInfoWithCredentialsProvider(CachedInfoMultiAuthServiceCallbacksImpl serviceCallbacks,
                                                                    String streamName,
-                                                                   AWSCredentialsProvider credentialsProvider,
+                                                                   AwsCredentialsProvider credentialsProvider,
                                                                    String region) {
         // Set up credentials provider for the stream name
         serviceCallbacks.addCredentialsProviderToCache(streamName, credentialsProvider);
 
         // Set up stream info for the stream name
-        AmazonKinesisVideo kvsClient = AmazonKinesisVideoClientBuilder.standard()
-                .withRegion(region)
-                .withCredentials(credentialsProvider)
+        software.amazon.awssdk.services.kinesisvideo.KinesisVideoClient kvsClient = software.amazon.awssdk.services.kinesisvideo.KinesisVideoClient.builder()
+                .region(Region.of(region))
+                .credentialsProvider(credentialsProvider)
                 .build();
-        DescribeStreamResult streamInfo = kvsClient.describeStream(new DescribeStreamRequest().withStreamName(streamName));
+
+        DescribeStreamResponse streamInfo = kvsClient.describeStream(DescribeStreamRequest.builder().streamName(streamName).build());
         serviceCallbacks.addStreamInfoToCache(streamName, streamInfo);
 
         // Set up endpoint for the stream name
-        GetDataEndpointResult dataEndpoint =
-                kvsClient.getDataEndpoint(new GetDataEndpointRequest().withAPIName(APIName.PUT_MEDIA).withStreamName(streamName));
-        serviceCallbacks.addStreamingEndpointToCache(streamName, dataEndpoint.getDataEndpoint());
+        GetDataEndpointResponse dataEndpoint =
+                kvsClient.getDataEndpoint(GetDataEndpointRequest.builder().apiName(PUT_MEDIA).streamName(streamName).build());
+        serviceCallbacks.addStreamingEndpointToCache(streamName, dataEndpoint.dataEndpoint());
     }
 }
