@@ -87,8 +87,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
             @Nonnull final ScheduledExecutorService executor) {
         this(log,
                 new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
-                        executor,
-                        log),
+                        executor),
                 configuration.getStorageCallbacks(),
                 new DefaultServiceCallbacksImpl(log, executor, configuration, serviceClient),
                 new DefaultStreamCallbacks());
