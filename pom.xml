@@ -49,10 +49,11 @@
     </licenses>
     <dependencyManagement>
         <dependencies>
+            <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/bom -->
             <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-bom</artifactId>
-                <version>1.11.602</version>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>2.26.16</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -60,13 +61,29 @@
     </dependencyManagement>
 
     <dependencies>
+            <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/sdk-core -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-core</artifactId>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sdk-core</artifactId>
+            <version>2.26.16</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/kinesisvideo -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-kinesisvideo</artifactId>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesisvideo</artifactId>
+            <version>2.26.16</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/http-auth-aws -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>http-auth-aws</artifactId>
+            <version>2.26.16</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/apache-client -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
+            <version>2.26.16</version>
         </dependency>
         <dependency>
             <groupId>com.google.inject</groupId>
@@ -152,6 +169,16 @@
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
             <version>2.17.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.16</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>2.0.16</version>
         </dependency>
 
     </dependencies>

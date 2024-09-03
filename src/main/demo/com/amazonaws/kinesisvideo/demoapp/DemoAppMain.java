@@ -10,7 +10,7 @@ import com.amazonaws.kinesisvideo.java.mediasource.file.AudioVideoFileMediaSourc
 import com.amazonaws.kinesisvideo.java.mediasource.file.AudioVideoFileMediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSource;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSourceConfiguration;
-import com.amazonaws.regions.Regions;
+import static software.amazon.awssdk.regions.Region.US_WEST_2;
 
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.ABSOLUTE_TIMECODES;
 
@@ -40,7 +40,7 @@ public final class DemoAppMain {
             // create Kinesis Video high level client
             final KinesisVideoClient kinesisVideoClient = KinesisVideoJavaClientFactory
                     .createKinesisVideoClient(
-                            Regions.US_WEST_2,
+                            US_WEST_2,
                             AuthHelper.getSystemPropertiesCredentialsProvider());
 
             // create a media source. this class produces the data and pushes it into

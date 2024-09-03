@@ -1,8 +1,8 @@
 package com.amazonaws.kinesisvideo.java.auth;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSSessionCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import com.amazonaws.kinesisvideo.auth.AbstractKinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
@@ -16,7 +16,7 @@ import java.util.Date;
  */
 public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentialsProvider {
 
-    private final AWSCredentialsProvider credentialsProvider;
+    private final AwsCredentialsProvider credentialsProvider;
     private Date tokenExpiration;
     private final long rotationPeriodInMillis;
 
@@ -25,7 +25,7 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
      *
      * @param awsCredentialsProvider credential provider
      */
-    public JavaCredentialsProviderImpl(@Nonnull final AWSCredentialsProvider awsCredentialsProvider) {
+    public JavaCredentialsProviderImpl(@Nonnull final AwsCredentialsProvider awsCredentialsProvider) {
         this.credentialsProvider = Preconditions.checkNotNull(awsCredentialsProvider);
         tokenExpiration = KinesisVideoCredentials.CREDENTIALS_NEVER_EXPIRE;
         rotationPeriodInMillis = 0;
@@ -38,7 +38,7 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
      * @param awsCredentialsProvider credential provider
      * @param rotationPeriodInMillis token expire periodically for every rotationPeriodInMillis milliseconds
      */
-    public JavaCredentialsProviderImpl(@Nonnull final AWSCredentialsProvider awsCredentialsProvider,
+    public JavaCredentialsProviderImpl(@Nonnull final AwsCredentialsProvider awsCredentialsProvider,
                                        final long rotationPeriodInMillis) {
         this.credentialsProvider = Preconditions.checkNotNull(awsCredentialsProvider);
         this.rotationPeriodInMillis = rotationPeriodInMillis;
@@ -48,23 +48,23 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
     @Override
     protected KinesisVideoCredentials updateCredentials() throws KinesisVideoException {
         // Refresh the token first
-        credentialsProvider.refresh();
+//        credentialsProvider.refresh();
 
         // Get the AWS credentials and create Kinesis Video Credentials
-        final AWSCredentials awsCredentials = credentialsProvider.getCredentials();
+        final AwsCredentials awsCredentials = credentialsProvider.resolveCredentials();
 
         String sessionToken = null;
-        if (awsCredentials instanceof AWSSessionCredentials) {
-            final AWSSessionCredentials sessionCredentials = (AWSSessionCredentials) awsCredentials;
-            sessionToken = sessionCredentials.getSessionToken();
+        if (awsCredentials instanceof AwsSessionCredentials) {
+            final AwsSessionCredentials sessionCredentials = (AwsSessionCredentials) awsCredentials;
+            sessionToken = sessionCredentials.sessionToken();
         }
 
         if (tokenExpiration != KinesisVideoCredentials.CREDENTIALS_NEVER_EXPIRE) {
             tokenExpiration = new Date(System.currentTimeMillis() + rotationPeriodInMillis);
         }
 
-        return new KinesisVideoCredentials(awsCredentials.getAWSAccessKeyId(),
-                awsCredentials.getAWSSecretKey(),
+        return new KinesisVideoCredentials(awsCredentials.accessKeyId(),
+                awsCredentials.secretAccessKey(),
                 sessionToken,
                 tokenExpiration);
     }
