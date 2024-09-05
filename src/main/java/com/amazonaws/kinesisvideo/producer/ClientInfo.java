@@ -120,11 +120,11 @@ public class ClientInfo {
         return mOfflineBufferAvailabilityTimeout;
     }
 
-    public long getServiceCallCompletionTimeout() {
+    public long getServiceCompletionTimeout() {
         return mServiceCallCompletionTimeout;
     }
 
-    public long getServiceCallConnectionTimeout() {
+    public long getServiceConnectionTimeout() {
         return mServiceCallConnectionTimeout;
     }
 
