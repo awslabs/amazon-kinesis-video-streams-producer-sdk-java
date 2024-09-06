@@ -70,8 +70,8 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .build();
 
         final KinesisVideoEndpointProvider kinesisVideoEndpointProvider = (KinesisVideoEndpointProvider) KinesisVideoEndpointProvider
-                .defaultProvider()
-                .resolveEndpoint(kinesisVideoEndpointParams);
+                .defaultProvider();
+                // .resolveEndpoint(kinesisVideoEndpointParams);
 
         return KinesisVideoClient.builder()
                 .httpClient(apacheHttpClient)
@@ -177,9 +177,6 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 Region.of(configuration.getRegion()),
                 configuration.getEndpoint(),
                 (int) timeoutInMillis);
-
-        log.debug("PPPPPPPPPPPPPPPPPPPPPPPPPPP");
-        log.debug("PPPPPPPPPPPPPPPPPPPPPPPPPPP");
 
         final CreateStreamRequest createStreamRequest = CreateStreamRequest.builder()
                 .streamName(streamName)

@@ -14,19 +14,10 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
  */
 public class AWSKinesisVideoV4Signer extends KinesisVideoAWS4Signer {
 
-    private final boolean mIsStreamingPayload;
-
     public AWSKinesisVideoV4Signer(
             final AwsCredentialsProvider credentialsProvider,
-            final ClientConfiguration config,
-            final boolean isStreamingPayload) {
+            final ClientConfiguration config) {
         super(credentialsProvider, config);
-        mIsStreamingPayload = isStreamingPayload;
-    }
-
-    @Override
-    protected boolean shouldAddContentUnsignedPayloadInHeader(final String httpMethodName) {
-        return mIsStreamingPayload;
     }
 }
 
