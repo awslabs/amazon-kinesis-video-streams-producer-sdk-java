@@ -8,7 +8,6 @@ import com.amazonaws.kinesisvideo.signing.KinesisVideoSigner;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
-import software.amazon.awssdk.http.ContentStreamProvider;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.http.auth.aws.signer.AwsV4HttpSigner;
@@ -61,24 +60,23 @@ public class KinesisVideoAWS4Signer implements KinesisVideoSigner {
 
             SdkHttpRequest signableRequest = requestBuilder.build();
 
-            ContentStreamProvider requestPayload =
-                    ContentStreamProvider.fromInputStream(httpClient.getContent());
-
             SignedRequest signedRequest = mSigner.sign(r -> r.identity(identity)
                     .request(signableRequest)
-                    .payload(requestPayload)
                     .putProperty(AwsV4HttpSigner.SERVICE_SIGNING_NAME, "kinesis-video")
                     .putProperty(AwsV4HttpSigner.PAYLOAD_SIGNING_ENABLED, false)
                     .putProperty(AwsV4HttpSigner.REGION_NAME, mConfiguration.getRegion()).build());
 
             httpClient.getHeaders().put(AUTH_HEADER, signedRequest.request().headers().get(AUTH_HEADER).get(0));
             httpClient.getHeaders().put(DATE_HEADER, signedRequest.request().headers().get(DATE_HEADER).get(0));
-            httpClient.getHeaders().put(CONTENT_HASH_HEADER, CONTENT_UNSIGNED_PAYLOAD);
 
             if (signableRequest.headers().containsKey(SECURITY_TOKEN_HEADER) &&
                     !signableRequest.headers().get(SECURITY_TOKEN_HEADER).isEmpty()) {
                 httpClient.getHeaders().put(SECURITY_TOKEN_HEADER, signableRequest.headers()
                         .get(SECURITY_TOKEN_HEADER).get(0));
+            }
+
+            if (httpClient.getMethod().name().equals(SdkHttpMethod.POST.name())) {
+                httpClient.getHeaders().put(CONTENT_HASH_HEADER, CONTENT_UNSIGNED_PAYLOAD);
             }
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
