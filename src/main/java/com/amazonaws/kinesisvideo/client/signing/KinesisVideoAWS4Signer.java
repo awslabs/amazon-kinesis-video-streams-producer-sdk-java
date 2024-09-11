@@ -1,18 +1,21 @@
 package com.amazonaws.kinesisvideo.client.signing;
 
 import java.net.URI;
-
-import com.amazonaws.DefaultRequest;
-import com.amazonaws.SignableRequest;
-import com.amazonaws.auth.AWS4Signer;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.http.HttpMethodName;
+import java.net.URISyntaxException;
 import com.amazonaws.kinesisvideo.config.ClientConfiguration;
 import com.amazonaws.kinesisvideo.http.HttpClient;
 import com.amazonaws.kinesisvideo.signing.KinesisVideoSigner;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+import software.amazon.awssdk.http.SdkHttpMethod;
+import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.http.auth.aws.signer.AwsV4HttpSigner;
+import software.amazon.awssdk.http.auth.spi.signer.SignedRequest;
+import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
+import software.amazon.awssdk.identity.spi.AwsSessionCredentialsIdentity;
 
-public class KinesisVideoAWS4Signer extends AWS4Signer implements KinesisVideoSigner {
+public class KinesisVideoAWS4Signer implements KinesisVideoSigner {
 
     private static final String CONTENT_HASH_HEADER = "x-amz-content-sha256";
     private static final String CONTENT_UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
@@ -20,76 +23,63 @@ public class KinesisVideoAWS4Signer extends AWS4Signer implements KinesisVideoSi
     private static final String DATE_HEADER = "X-Amz-Date";
     private static final String SECURITY_TOKEN_HEADER = "X-Amz-Security-Token";
 
-    private final AWSCredentialsProvider mAWSCredentialsProvider;
+    private final AwsCredentialsProvider mAWSCredentialsProvider;
     private final ClientConfiguration mConfiguration;
-
-    private static class SimpleSignableRequest extends DefaultRequest {
-
-        public SimpleSignableRequest(final HttpClient httpClient) {
-            super("kinesisvideo");
-            try {
-                setHttpMethod(HttpMethodName.fromValue(httpClient.getMethod().name()));
-                setEndpoint(new URI(httpClient.getUri().getScheme() + "://" + httpClient.getUri().getHost()));
-                setResourcePath(httpClient.getUri().getPath());
-                setHeaders(httpClient.getHeaders());
-                setContent(httpClient.getContent());
-            } catch (final Throwable e) {
-                throw new RuntimeException("Exception while creating signable request ! ", e);
-            }
-        }
-    }
+    private final AwsV4HttpSigner mSigner = AwsV4HttpSigner.create();
 
     public KinesisVideoAWS4Signer(
-            final AWSCredentialsProvider credentialsProvider,
+            final AwsCredentialsProvider credentialsProvider,
             final ClientConfiguration config) {
         mAWSCredentialsProvider = credentialsProvider;
         mConfiguration = config;
     }
 
-    @Override
-    protected String calculateContentHash(final SignableRequest<?> request) {
-        if (shouldAddContentUnsignedPayloadInHeader(request.getHttpMethod().name())) {
-            return CONTENT_UNSIGNED_PAYLOAD;
-        }
-        return  super.calculateContentHash(request);
-    }
-
-
-    @Override
     public void sign(final HttpClient httpClient) {
-        setServiceName(mConfiguration.getServiceName());
-        setRegionName(mConfiguration.getRegion());
+        AwsCredentials awsCredentials = mAWSCredentialsProvider.resolveCredentials();
+        AwsCredentialsIdentity identity;
 
-        final SignableRequest signableRequest = toSignableRequest(httpClient);
-        final AWSCredentials credentials = mAWSCredentialsProvider.getCredentials();
-
-        sign(signableRequest, credentials);
-        // TODO: Implement logging
-        httpClient.getHeaders().put(AUTH_HEADER, (String) signableRequest.getHeaders().get(AUTH_HEADER));
-        httpClient.getHeaders().put(DATE_HEADER, (String) signableRequest.getHeaders().get(DATE_HEADER));
-        addSecurityToken(httpClient, signableRequest);
-        addContentHeader(httpClient);
-
-    }
-
-    public SignableRequest<?> toSignableRequest(final HttpClient httpClient) {
-        return new SimpleSignableRequest(httpClient);
-    }
-
-    private void addSecurityToken(final HttpClient httpClient, final SignableRequest signableRequest) {
-        final Object securityToken = signableRequest.getHeaders().get(SECURITY_TOKEN_HEADER);
-        if (securityToken != null) {
-            httpClient.getHeaders().put(SECURITY_TOKEN_HEADER, (String) securityToken);
+        if (awsCredentials instanceof AwsSessionCredentials) {
+            identity = (AwsSessionCredentialsIdentity) AwsSessionCredentialsIdentity.builder()
+                    .accessKeyId(awsCredentials.accessKeyId())
+                    .secretAccessKey(awsCredentials.secretAccessKey())
+                    .sessionToken(((AwsSessionCredentials) awsCredentials).sessionToken());
+        } else {
+            identity = AwsCredentialsIdentity.builder()
+                    .accessKeyId(awsCredentials.accessKeyId())
+                    .secretAccessKey(awsCredentials.secretAccessKey())
+                    .build();
         }
-    }
 
-    private void addContentHeader(final HttpClient httpClient) {
-        if (shouldAddContentUnsignedPayloadInHeader(httpClient.getMethod().name())) {
-            httpClient.getHeaders().put(CONTENT_HASH_HEADER, CONTENT_UNSIGNED_PAYLOAD);
+        SdkHttpRequest.Builder requestBuilder = SdkHttpRequest.builder();
+        try {
+            requestBuilder.uri(new URI(httpClient.getUri().getScheme() + "://" + httpClient.getUri().getHost()
+                            + httpClient.getUri().getPath()))
+                    .method(SdkHttpMethod.valueOf(httpClient.getMethod().name()));
+
+            httpClient.getHeaders().forEach(requestBuilder::putHeader);
+
+            SdkHttpRequest signableRequest = requestBuilder.build();
+
+            SignedRequest signedRequest = mSigner.sign(r -> r.identity(identity)
+                    .request(signableRequest)
+                    .putProperty(AwsV4HttpSigner.SERVICE_SIGNING_NAME, "kinesis-video")
+                    .putProperty(AwsV4HttpSigner.PAYLOAD_SIGNING_ENABLED, false)
+                    .putProperty(AwsV4HttpSigner.REGION_NAME, mConfiguration.getRegion()).build());
+
+            httpClient.getHeaders().put(AUTH_HEADER, signedRequest.request().headers().get(AUTH_HEADER).get(0));
+            httpClient.getHeaders().put(DATE_HEADER, signedRequest.request().headers().get(DATE_HEADER).get(0));
+
+            if (signableRequest.headers().containsKey(SECURITY_TOKEN_HEADER) &&
+                    !signableRequest.headers().get(SECURITY_TOKEN_HEADER).isEmpty()) {
+                httpClient.getHeaders().put(SECURITY_TOKEN_HEADER, signableRequest.headers()
+                        .get(SECURITY_TOKEN_HEADER).get(0));
+            }
+
+            if (httpClient.getMethod().name().equals(SdkHttpMethod.POST.name())) {
+                httpClient.getHeaders().put(CONTENT_HASH_HEADER, CONTENT_UNSIGNED_PAYLOAD);
+            }
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
         }
-    }
-
-    protected boolean shouldAddContentUnsignedPayloadInHeader(final String httpMethodName) {
-        return HttpMethodName.POST.name().equals(httpMethodName);
     }
 }

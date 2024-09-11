@@ -1,7 +1,7 @@
 package com.amazonaws.kinesisvideo.client.signing;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.config.ClientConfiguration;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 /**
  * This is an extended class of {@link KinesisVideoAWS4Signer} which decides whether to
@@ -14,19 +14,10 @@ import com.amazonaws.kinesisvideo.config.ClientConfiguration;
  */
 public class AWSKinesisVideoV4Signer extends KinesisVideoAWS4Signer {
 
-    private final boolean mIsStreamingPayload;
-
     public AWSKinesisVideoV4Signer(
-            final AWSCredentialsProvider credentialsProvider,
-            final ClientConfiguration config,
-            final boolean isStreamingPayload) {
+            final AwsCredentialsProvider credentialsProvider,
+            final ClientConfiguration config) {
         super(credentialsProvider, config);
-        mIsStreamingPayload = isStreamingPayload;
-    }
-
-    @Override
-    protected boolean shouldAddContentUnsignedPayloadInHeader(final String httpMethodName) {
-        return mIsStreamingPayload;
     }
 }
 
