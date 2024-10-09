@@ -19,7 +19,7 @@ The Amazon Kinesis Video Streams Producer SDK Java makes it easy to build an on-
 
 ### Prerequisites
 
-* You can find available pre-built KinesisVideoProducerJNI library in [src/main/resources/lib/](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/tree/master/src/main/resources/lib) for Mac (x64), Ubuntu (x64) and Raspian (x86) and Windows 10. If pre-built libraries did not work for you, ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp) native library needs to be built first before running the Java demo application. Please follow the steps  in the section **Build the native library (KinesisVideoProducerJNI) to run Java Demo App** in Producer SDK CPP [readme](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp).
+* You can find available pre-built KinesisVideoProducerJNI library in [src/main/resources/lib/](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/tree/master/src/main/resources/lib) for Mac (x64), Ubuntu (x64) and Raspbian (x86) and Windows 10. If pre-built libraries did not work for you, ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp) native library needs to be built first before running the Java demo application. Please follow the steps  in the section **Build the native library (KinesisVideoProducerJNI) to run Java Demo App** in Producer SDK CPP [readme](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp).
 
 ### Building from Source
 
@@ -95,7 +95,7 @@ for **non-temporary** AWS credential.
 #### Pre-built KinesisVideoProducerJNI library supported platforms
 * Mac OS X (El capitan 10.11 or above)
 * Ubuntu (14.04 or above)
-* Raspian (9 stretch or above)
+* Raspbian (9 stretch or above)
 
 #### Additional Examples
 
@@ -242,7 +242,7 @@ The repository is using `develop` branch as the aggregation and all of the featu
 
 ### Release 1.3.0 (15 March 2018)
 
-* Provide pre-built KinesisVideoProducerJNI library for Mac (x64), Ubuntu (x64) and Raspian (x86).
+* Provide pre-built KinesisVideoProducerJNI library for Mac (x64), Ubuntu (x64) and Raspbian (x86).
 * Remove Lombok dependency on Java Producer SDK.
 * Update instruction in README about KinsisVideoProducerJNI build.
 * Compatible changes in Java Adapter to work with latest changes in [Kinesis Video Streams Producer SDK CPP](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp/blob/master/README.md).
