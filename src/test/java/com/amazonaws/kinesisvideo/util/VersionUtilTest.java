@@ -2,33 +2,47 @@ package com.amazonaws.kinesisvideo.util;
 
 import org.junit.Test;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
-import java.io.Reader;
 
 import static com.amazonaws.kinesisvideo.util.VersionUtil.AWS_SDK_KVS_PRODUCER_VERSION_STRING;
-import static org.junit.Assert.*;
+import static com.amazonaws.kinesisvideo.util.VersionUtil.getUserAgent;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class VersionUtilTest {
 
     @Test
     public void test_versionString_isNotNullOrEmpty() {
-        final String userAgent = AWS_SDK_KVS_PRODUCER_VERSION_STRING;
-        assertNotNull(userAgent);
-        assertNotEquals("", userAgent);
+        final String producerVersionString = AWS_SDK_KVS_PRODUCER_VERSION_STRING;
+        assertNotNull(producerVersionString);
+        assertNotEquals("", producerVersionString);
     }
 
     @Test
     public void test_versionString_isEqualToDeclaredInPomXML() {
-        final String version = extractVersionFromPomXML("pom.xml");
+        final String producerVersionString = extractVersionFromPomXML("pom.xml");
 
-        assertNotNull("project.version was not found in pom.xml!", version);
-        assertNotEquals("", version);
-        assertEquals(version, AWS_SDK_KVS_PRODUCER_VERSION_STRING);
+        assertNotNull("project.version was not found in pom.xml!", producerVersionString);
+        assertNotEquals("", producerVersionString);
+        assertEquals(producerVersionString, AWS_SDK_KVS_PRODUCER_VERSION_STRING);
+    }
+
+    @Test
+    public void test_userAgent_containsProjectVersion() {
+        final String userAgent = getUserAgent();
+        final String pomDefinedProjectVersion = extractVersionFromPomXML("pom.xml");
+
+        assertNotNull(userAgent);
+        assertNotEquals("", userAgent);
+
+        assertNotNull(pomDefinedProjectVersion);
+        assertNotEquals("", pomDefinedProjectVersion);
+
+        assertTrue(userAgent.contains(pomDefinedProjectVersion));
     }
 
     private String extractVersionFromPomXML(final String pomFilePath) {
@@ -38,7 +52,7 @@ public class VersionUtilTest {
                     .map(line -> line.replace("<version>", "")
                             .replace("</version>", "").trim())
                     .findFirst()
-                    .orElse(null);
+                    .orElseThrow(() -> new IllegalStateException("'<version>{version}</version>' is not found in pom.xml"));
         } catch (final Exception ex) {
             fail("Error reading pom.xml: " + ex.getMessage());
             return null; // This return is unreachable because of fail(), but required for compilation
