@@ -8,15 +8,17 @@ import java.util.Properties;
 
 public final class VersionUtil {
 
+    private static final String POM_PROPERTIES_FILE = "pom.properties";
+    private static final String POM_PROPERTIES_VERSION_KEY = "version";
     public static final String AWS_SDK_KVS_PRODUCER_VERSION_STRING;
 
     static {
         try {
             final Properties properties = new Properties();
-            properties.load(VersionUtil.class.getClassLoader().getResourceAsStream("pom.properties"));
-            AWS_SDK_KVS_PRODUCER_VERSION_STRING = properties.getProperty("version");
+            properties.load(VersionUtil.class.getClassLoader().getResourceAsStream(POM_PROPERTIES_FILE));
+            AWS_SDK_KVS_PRODUCER_VERSION_STRING = properties.getProperty(POM_PROPERTIES_VERSION_KEY);
         } catch (IOException e) {
-            throw new ExceptionInInitializerError("Failed to get project version from pom.xml: " + e);
+            throw new ExceptionInInitializerError("Unable to get project version from pom.xml: " + e);
         }
     }
 

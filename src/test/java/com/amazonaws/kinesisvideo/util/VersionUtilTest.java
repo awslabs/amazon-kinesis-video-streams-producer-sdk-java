@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
 
 import static com.amazonaws.kinesisvideo.util.VersionUtil.AWS_SDK_KVS_PRODUCER_VERSION_STRING;
 import static com.amazonaws.kinesisvideo.util.VersionUtil.getUserAgent;
@@ -11,9 +12,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class VersionUtilTest {
+
+    private static final String POM_XML_LOCATION = "pom.xml";
 
     @Test
     public void test_versionString_isNotNullOrEmpty() {
@@ -23,8 +25,8 @@ public class VersionUtilTest {
     }
 
     @Test
-    public void test_versionString_isEqualToDeclaredInPomXML() {
-        final String producerVersionString = extractVersionFromPomXML("pom.xml");
+    public void test_versionString_isEqualToDeclaredInPomXML() throws IOException {
+        final String producerVersionString = extractVersionFromPomXML();
 
         assertNotNull("project.version was not found in pom.xml!", producerVersionString);
         assertNotEquals("", producerVersionString);
@@ -32,9 +34,9 @@ public class VersionUtilTest {
     }
 
     @Test
-    public void test_userAgent_containsProjectVersion() {
+    public void test_userAgent_containsProjectVersion() throws IOException {
         final String userAgent = getUserAgent();
-        final String pomDefinedProjectVersion = extractVersionFromPomXML("pom.xml");
+        final String pomDefinedProjectVersion = extractVersionFromPomXML();
 
         assertNotNull(userAgent);
         assertNotEquals("", userAgent);
@@ -45,17 +47,14 @@ public class VersionUtilTest {
         assertTrue(userAgent.contains(pomDefinedProjectVersion));
     }
 
-    private String extractVersionFromPomXML(final String pomFilePath) {
-        try (final BufferedReader reader = new BufferedReader(new FileReader(pomFilePath))) {
+    private String extractVersionFromPomXML() throws IOException {
+        try (final BufferedReader reader = new BufferedReader(new FileReader(POM_XML_LOCATION))) {
             return reader.lines()
                     .filter(line -> line.contains("<version>"))
                     .map(line -> line.replace("<version>", "")
                             .replace("</version>", "").trim())
                     .findFirst()
-                    .orElseThrow(() -> new IllegalStateException("'<version>{version}</version>' is not found in pom.xml"));
-        } catch (final Exception ex) {
-            fail("Error reading pom.xml: " + ex.getMessage());
-            return null; // This return is unreachable because of fail(), but required for compilation
+                    .orElseThrow(() -> new IllegalStateException("'<version>projectVersion</version>' is not found in " + POM_XML_LOCATION));
         }
     }
 }
