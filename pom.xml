@@ -10,6 +10,7 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <argLine/>
     </properties>
 
     <groupId>com.amazonaws</groupId>
@@ -220,6 +221,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M5</version>
                 <configuration>
+                    <!-- ${argLine} refers to the -DargLine JVM argument and @{argLine} is set by jacoco -->
+                    <argLine>@{argLine} ${argLine}</argLine>
                     <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                 </configuration>
             </plugin>
