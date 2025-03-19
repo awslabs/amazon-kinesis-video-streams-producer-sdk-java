@@ -20,6 +20,8 @@ jobs:
           brew install gh
 
       - name: Check PR Description
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           pr_link="https://github.com/${GITHUB_REPOSITORY}/pull/${{ github.event.pull_request.number }}"
           
