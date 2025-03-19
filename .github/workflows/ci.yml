@@ -11,15 +11,118 @@ on:
       - master
 
 jobs:
-  build:
-    strategy:
-      # Unit and integration tests are not thread safe as they all use the same stream names.
-      max-parallel: 1
-      matrix:
-        os: [ macos-14, ubuntu-22.04, windows-2022 ]
-        java: [ 8, 11, 17, 21 ]
+  load-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      build_jni_matrix: ${{ steps.set-matrix.outputs.build_jni_matrix }}
+      unit_test_matrix: ${{ steps.set-matrix.outputs.unit_test_matrix }}
+      sample_matrix: ${{ steps.set-matrix.outputs.sample_matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    runs-on: ${{ matrix.os }}
+      - name: Load matrix from YAML
+        id: set-matrix
+        run: |
+          MATRIX=$(yq eval '.matrix | explode(.)' .github/matrix.yaml -o=json)
+
+          BUILD_JNI_MATRIX=$(echo "$MATRIX" | jq -c '{platform: .platform}')
+          UNIT_TEST_MATRIX=$(echo "$MATRIX" | jq -c '{platform: .platform, java: .java}')
+          SAMPLE_MATRIX=$(echo "$MATRIX" | jq -c '.')
+
+          echo "build_jni_matrix=$BUILD_JNI_MATRIX" >> $GITHUB_OUTPUT
+          echo "unit_test_matrix=$UNIT_TEST_MATRIX" >> $GITHUB_OUTPUT
+          echo "sample_matrix=$SAMPLE_MATRIX" >> $GITHUB_OUTPUT
+
+  build-jni:
+    needs: load-matrix
+    strategy:
+      matrix: ${{ fromJson(needs.load-matrix.outputs.build_jni_matrix) }}
+      fail-fast: false
+
+    runs-on: ${{ matrix.platform.os }}
+
+    env:
+      BRANCH_NAME: develop
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Build JNI (Mac and Linux)
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        run: |
+          git clone https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp.git --single-branch -b ${{ env.BRANCH_NAME }}
+          cd amazon-kinesis-video-streams-producer-sdk-cpp
+          mkdir build
+          cd build
+          cmake .. -DBUILD_JNI_ONLY=ON
+          make -j
+
+      - name: Build JNI (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: cmd
+        run: |
+          @echo on
+
+          :: Create a shorter directory to avoid long path issues
+          mkdir D:\work || exit /b 1
+          git clone https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp.git D:\work\producer --single-branch -b ${{ env.BRANCH_NAME }} || exit /b 1
+
+          :: Ensure cloning succeeded
+          if not exist "D:\work\producer" (
+              echo "Error: Clone failed, directory does not exist."
+              exit /b 1
+          )
+
+          cd D:\work\producer || exit /b 1
+
+          :: Create build directory
+          mkdir build || exit /b 1
+          cd build || exit /b 1
+
+          :: Run CMake with the correct path
+          cmake .. -DBUILD_JNI_ONLY=ON -G "Visual Studio 17 2022" || exit /b 1
+          cmake --build . --config Release --verbose || exit /b 1
+
+          :: Move the compiled library to the expected location
+          :: Note: Using Visual Studio generator, the output file gets put in Release\KinesisVideoProducerJNI.dll
+          :: rather than in the build folder directly
+          cd "%GITHUB_WORKSPACE%" || exit /b 1
+          mkdir amazon-kinesis-video-streams-producer-sdk-cpp || exit /b 1
+          mkdir amazon-kinesis-video-streams-producer-sdk-cpp\build || exit /b 1
+          move D:\work\producer\build\Release\KinesisVideoProducerJNI.dll amazon-kinesis-video-streams-producer-sdk-cpp\build || exit /b 1
+
+      - name: Upload JNI Library
+        uses: actions/upload-artifact@v4
+        with:
+          name: jni-library-${{ matrix.platform.name }}
+          path: |
+            amazon-kinesis-video-streams-producer-sdk-cpp/build/libKinesisVideoProducerJNI.so
+            amazon-kinesis-video-streams-producer-sdk-cpp/build/libKinesisVideoProducerJNI.dylib
+            amazon-kinesis-video-streams-producer-sdk-cpp/build/KinesisVideoProducerJNI.dll
+          retention-days: 1
+
+  run-unit-tests:
+    needs:
+      - load-matrix
+      - build-jni
+    strategy:
+      matrix: ${{ fromJson(needs.load-matrix.outputs.unit_test_matrix) }}
+      fail-fast: false
+
+    env:
+      TEST_STREAMS_PREFIX: producer-java-${{ matrix.platform.os }}-java-${{ matrix.java }}_
+      JNI_FOLDER: ${{ github.workspace }}/jni
+
+    runs-on: ${{ matrix.platform.os }}
     permissions:
       id-token: write
       contents: read
@@ -28,33 +131,171 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          role-session-name: ${{ secrets.AWS_ROLE_SESSION_NAME }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
           distribution: 'adopt'
           cache: maven
 
+      - name: Download JNI Library
+        uses: actions/download-artifact@v4
+        with:
+          name: jni-library-${{ matrix.platform.name }}
+          path: jni/
+
       - name: Build with Maven
         run: mvn clean compile assembly:single
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Run tests
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/ubuntu/ -Dlog4j.configurationFile=log4j2.xml"
-          elif [ "$RUNNER_OS" == "Windows" ]; then
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/windows/ -Dlog4j.configurationFile=log4j2.xml"
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/mac/ -Dlog4j.configurationFile=log4j2.xml"
-          else
-            echo "$RUNNER_OS not supported"
+          mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=${JNI_FOLDER} -Dlog4j.configurationFile=log4j2.xml"
+        shell: bash
+
+  run-samples:
+    needs:
+      - load-matrix
+      - build-jni
+    strategy:
+      matrix: ${{ fromJson(needs.load-matrix.outputs.sample_matrix) }}
+      fail-fast: false
+
+    env:
+      STREAM_NAME: producer-java-${{ matrix.platform.os }}-java-${{ matrix.java }}_${{ matrix.sample }}
+      JNI_FOLDER: ${{ github.workspace }}/jni
+
+    runs-on: ${{ matrix.platform.os }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Download JNI Library
+        uses: actions/download-artifact@v4
+        with:
+          name: jni-library-${{ matrix.platform.name }}
+          path: jni/
+
+      - name: Install dependencies (MacOS)
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          brew install coreutils # For `gtimeout`
+
+      - name: Build with Maven
+        run: mvn clean compile assembly:single
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Create the stream (DemoAppCachedInfo)
+        # This sample needs a pre-created stream: `${NAME}`
+        if: ${{ matrix.sample == 'DemoAppMain' }}
+        working-directory: scripts
+        run: |
+          ./prepareStream.sh "$STREAM_NAME"
+
+        shell: bash
+
+      - name: Create the stream (DemoAppCachedInfo)
+        # This sample needs 2 pre-created streams: `${NAME}-account-1` and `${NAME}-account-2`
+        if: ${{ matrix.sample == 'DemoAppCachedInfo' }}
+        working-directory: scripts
+        run: |
+          ./prepareStream.sh "$STREAM_NAME-account-1"
+          ./prepareStream.sh "$STREAM_NAME-account-2"
+
+        shell: bash
+
+      - name: Run the sample
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        run: |
+          set +e
+
+          JAR_FILE=$(find target -name '*jar-with-dependencies.jar' | head -n 1)
+
+          if [ -z "$JAR_FILE" ]; then
+            echo "Error: JAR file not found!"
             exit 1
           fi
+
+          echo "Using JAR file: $JAR_FILE"
+
+          # Use gtimeout on macOS and timeout on Linux
+          if [ "${{ runner.os }}" == "macOS" ]; then
+            TIMEOUT_CMD="gtimeout"
+          else
+            TIMEOUT_CMD="timeout"
+          fi
+
+          $TIMEOUT_CMD 30s java -classpath "$JAR_FILE" \
+            -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
+            -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
+            -Daws.sessionToken=${AWS_SESSION_TOKEN} \
+            -Djava.library.path=${JNI_FOLDER} \
+            -Dkvs-stream=$STREAM_NAME \
+            -Dlog4j.configurationFile=log4j2.xml \
+            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample }}
+
+          EXIT_CODE=$?
+
+          set -e
+
+          # Check if the process was forcefully killed
+          if [ $EXIT_CODE -eq 124 ]; then
+            echo "Error: Sample application exceeded 30 seconds and was forcefully terminated."
+            exit 1
+          fi
+
+          # Preserve original exit code
+          echo "Process exited with code: $EXIT_CODE"
+          exit $EXIT_CODE
+
         shell: bash
+
+      - name: Run the sample (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: cmd
+        run: |
+          for /f "delims=" %%F in ('dir /b /s target\*jar-with-dependencies.jar') do set JAR_FILE=%%F
+
+          if not defined JAR_FILE (
+            echo Error: JAR file not found!
+            exit /b 1
+          )
+
+          echo Using JAR file: %JAR_FILE%
+
+          timeout /t 30 /nobreak && exit /b 124
+
+          java -classpath "%JAR_FILE%" ^
+            -Daws.accessKeyId=%AWS_ACCESS_KEY_ID% ^
+            -Daws.secretKey=%AWS_SECRET_ACCESS_KEY% ^
+            -Daws.sessionToken=%AWS_SESSION_TOKEN% ^
+            -Djava.library.path=%JNI_FOLDER% ^
+            -Dkvs-stream=%STREAM_NAME% ^
+            -Dlog4j.configurationFile=log4j2.xml ^
+            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample }}
+
+          set EXIT_CODE=%ERRORLEVEL%
+
+          echo Process exited with code: %EXIT_CODE%
+          exit /b %EXIT_CODE%

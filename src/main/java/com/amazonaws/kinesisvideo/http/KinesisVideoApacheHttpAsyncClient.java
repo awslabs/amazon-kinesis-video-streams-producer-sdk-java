@@ -3,17 +3,22 @@ package com.amazonaws.kinesisvideo.http;
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Map;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpException;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.concurrent.FutureCallback;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.routing.HttpRoute;
+import org.apache.http.conn.routing.HttpRoutePlanner;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
@@ -63,12 +68,26 @@ public final class KinesisVideoApacheHttpAsyncClient extends HttpClientBase {
 
             final SSLIOSessionStrategy sslSessionStrategy = new SSLIOSessionStrategy(sslContext);
 
+            final HttpRoutePlanner httpRoutePlanner = (httpHost, httpRequest, httpContext) -> {
+                try {
+                    return Arrays.stream(new KvsFilteredDnsResolver(mBuilder.mIPVersionFilter)
+                                    .resolve(httpHost.getHostName()))
+                            .findAny()
+                            .map(inetAddress -> new HttpHost(inetAddress.getHostAddress(), httpHost.getPort(), httpHost.getSchemeName()))
+                            .map(HttpRoute::new)
+                            .orElseThrow(UnknownHostException::new);
+                } catch (final UnknownHostException e) {
+                    throw new HttpException("Unable to resolve the host " + httpHost, e);
+                }
+            };
+
             return HttpAsyncClientBuilder.create()
                     .setSSLStrategy(sslSessionStrategy)
                     .setDefaultRequestConfig(RequestConfig.custom()
                             .setConnectTimeout(mBuilder.mConnectionTimeoutInMillis)
                             .setSocketTimeout(mBuilder.mSocketTimeoutInMillis)
                             .build())
+                    .setRoutePlanner(httpRoutePlanner)
                     .build();
         } catch (final KeyManagementException e) {
             throw new RuntimeException("Exception while building Apache http client", e);

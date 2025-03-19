@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.demoapp;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.kinesisvideo.client.IPVersionFilter;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import org.apache.logging.log4j.LogManager;
@@ -24,7 +25,11 @@ import com.amazonaws.services.kinesisvideo.model.DescribeStreamResult;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointResult;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.logging.log4j.core.config.Configurator;
 
+import java.lang.invoke.MethodHandles;
+import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -32,13 +37,26 @@ import java.util.concurrent.ScheduledExecutorService;
  * Demo Java Producer with Cached Stream Information to lower start latency.
  */
 public final class DemoAppCachedInfo {
+
+    private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+
     // Use a different stream name when testing audio/video sample
-    private static final String STREAM_NAME = "my-stream-cached";
+    private static final String STREAM_NAME = Optional.ofNullable(System.getProperty("kvs-stream")).orElse("my-stream-cached");
     private static final int FPS_25 = 25;
     private static final int RETENTION_ONE_HOUR = 1;
     private static final String IMAGE_DIR = "src/main/resources/data/h264/";
     private static final String FRAME_DIR = "src/main/resources/data/audio-video-frames";
-    private static final int STREAM_DURATION_IN_MS = 10000;
+    private static final Duration DEFAULT_DURATION_TO_STREAM = Duration.ofSeconds(10);
+    private static final Duration DURATION_TO_STREAM = Optional.ofNullable(System.getProperty("stream-duration-ms"))
+            .map(value -> {
+                try {
+                    return Duration.ofMillis(Long.parseLong(value));
+                } catch (final NumberFormatException e) {
+                    log.error("Invalid stream-duration value: {}. Using default {} ms.", value, DEFAULT_DURATION_TO_STREAM.toMillis());
+                    return null;
+                }
+            })
+            .orElse(DEFAULT_DURATION_TO_STREAM);
     // CHECKSTYLE:SUPPRESS:LineLength
     // This is a reference pipline to extract frames. Need to get key frame configured properly so the output can be
     // decoded. h264 files can be decoded using gstreamer plugin
@@ -61,6 +79,7 @@ public final class DemoAppCachedInfo {
                     .withRegion(Regions.US_WEST_2.getName())
                     .withCredentialsProvider(new JavaCredentialsProviderImpl(awsCredentialsProvider))
                     .withStorageCallbacks(new DefaultStorageCallbacks())
+                    .withIPVersionFilter(IPVersionFilter.IPV4_AND_IPV6)
                     .build();
 
             final Logger log = LogManager.getLogger(DemoAppCachedInfo.class);
@@ -103,12 +122,10 @@ public final class DemoAppCachedInfo {
             // start streaming
             mediaSource2.start();
 
-            // Run for 10 seconds then stop
-            try {
-                Thread.sleep(STREAM_DURATION_IN_MS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            // Run for a while
+            log.info("Main thread sleeping {} ms.", DURATION_TO_STREAM.toMillis());
+            Thread.sleep(DURATION_TO_STREAM.toMillis());
+            log.info("Stopping stream...");
 
             // unregister stream from client and free client
             serviceCallbacks.removeStreamFromCache(streamName1);
@@ -117,7 +134,7 @@ public final class DemoAppCachedInfo {
             kinesisVideoClient.unregisterMediaSource(mediaSource2);
             kinesisVideoClient.free();
             executor.shutdown();
-        } catch (final KinesisVideoException e) {
+        } catch (final KinesisVideoException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

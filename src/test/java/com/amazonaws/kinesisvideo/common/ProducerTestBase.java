@@ -1,8 +1,11 @@
 package com.amazonaws.kinesisvideo.common;
 
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+
+import static com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni.PRODUCER_NATIVE_LIBRARY_NAME;
 import static org.junit.Assert.fail;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -101,6 +104,15 @@ public class ProducerTestBase {
         frameDuration_ = 1000 * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND / fps_;
     }
 
+    protected static boolean isJNILoaded() {
+        try {
+            System.loadLibrary(PRODUCER_NATIVE_LIBRARY_NAME);
+            return true;
+        } catch (final UnsatisfiedLinkError e) {
+            return false;
+        }
+    }
+
     protected long getFragmentDurationMs() {
         return keyFrameInterval_ * frameDuration_ / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
     }
@@ -179,9 +191,13 @@ public class ProducerTestBase {
                 (byte) 0x88, (byte) 0x46, (byte) 0xE0, (byte) 0x01, (byte) 0x00, (byte) 0x04, (byte) 0x28, (byte) 0xCE,
                 (byte) 0x1F, (byte) 0x20};
 
+        final String prefix = Optional.ofNullable(System.getenv("TEST_STREAMS_PREFIX")).orElse("");
+        final String finalStreamName = prefix + streamName;
+        prepareStream(finalStreamName);
+
         StreamInfo streamInfo = new StreamInfo(
                 StreamInfo.STREAM_INFO_CURRENT_VERSION,
-                streamName,
+                finalStreamName,
                 streamingType,
                 "video/h264",
                 NO_KMS_KEY_ID,
@@ -219,6 +235,68 @@ public class ProducerTestBase {
             fail();
         }
         return kinesisVideoProducerStream;
+    }
+
+    /**
+     * Create the stream if it doesn't exist. Calls describe to check if it exists first.
+     * Also verifies the retention period and updates it if it's 0.
+     *
+     * @param streamName the stream to create
+     */
+    protected void prepareStream(final String streamName) {
+        final AmazonKinesisVideo kvs = AmazonKinesisVideoClientBuilder.standard()
+                .withRegion(configuration.getRegion())
+                .withCredentials(awsCredentialsProvider)
+                .build();
+
+        boolean created = false;
+        try {
+            final DescribeStreamRequest describeStreamRequest = new DescribeStreamRequest();
+            describeStreamRequest.setStreamName(streamName);
+
+            final DescribeStreamResult describeStreamResult = kvs.describeStream(describeStreamRequest);
+            log.debug("Stream exists! {}", describeStreamResult.getStreamInfo().getStreamARN());
+
+
+            if (describeStreamResult.getStreamInfo().getDataRetentionInHours() == 0) {
+                log.info("Stream {} does not have any retention. Updating...", streamName);
+
+                final UpdateDataRetentionRequest updateDataRetentionRequest = new UpdateDataRetentionRequest();
+                updateDataRetentionRequest.setStreamName(streamName);
+                updateDataRetentionRequest.setCurrentVersion(describeStreamResult.getStreamInfo().getVersion());
+                updateDataRetentionRequest.setOperation(UpdateDataRetentionOperation.INCREASE_DATA_RETENTION.toString());
+                updateDataRetentionRequest.setDataRetentionChangeInHours(2);
+                kvs.updateDataRetention(updateDataRetentionRequest);
+            }
+
+        } catch (final Exception e) {
+            final CreateStreamRequest createStreamRequest = new CreateStreamRequest();
+            createStreamRequest.setStreamName(streamName);
+            createStreamRequest.setDataRetentionInHours(2);
+            final CreateStreamResult createStreamResult = kvs.createStream(createStreamRequest);
+            log.debug("Stream created! {}", createStreamResult.getStreamARN());
+            created = true;
+        }
+
+        // In case the stream hasn't finished being created yet
+        if (created) {
+            for (int i = 0; i < 5; i++) {
+                try {
+                    final DescribeStreamRequest describeStreamRequest = new DescribeStreamRequest();
+                    describeStreamRequest.setStreamName(streamName);
+
+                    final DescribeStreamResult describeStreamResult = kvs.describeStream(describeStreamRequest);
+                    log.debug("Stream exists now. ARN: {}", describeStreamResult.getStreamInfo().getStreamARN());
+                } catch (final Exception e) {
+                    log.info("Stream is still creating... {}/{}", i, 3, e);
+                    try {
+                        Thread.sleep(1000L * (1 << i));
+                    } catch (InterruptedException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            }
+        }
     }
 
     /**

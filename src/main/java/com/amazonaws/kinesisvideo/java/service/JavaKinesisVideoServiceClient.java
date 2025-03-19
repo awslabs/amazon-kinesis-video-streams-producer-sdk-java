@@ -9,16 +9,17 @@ import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
+import com.amazonaws.kinesisvideo.client.IPVersionFilter;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.client.PutMediaClient;
 import com.amazonaws.kinesisvideo.client.signing.KinesisVideoAWS4Signer;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
+import com.amazonaws.kinesisvideo.http.KvsFilteredDnsResolver;
+import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.producer.StreamDescription;
 import com.amazonaws.kinesisvideo.producer.StreamStatus;
-import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.util.VersionUtil;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
@@ -34,6 +35,7 @@ import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointResult;
 import com.amazonaws.services.kinesisvideo.model.TagStreamRequest;
 import com.amazonaws.services.kinesisvideo.model.TagStreamResult;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -58,11 +60,12 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
             final KinesisVideoCredentialsProvider credentialsProvider,
             final Region region,
             final String endpoint,
-            final int timeoutInMillis)
+            final int timeoutInMillis,
+            final IPVersionFilter ipVersionFilter)
             throws KinesisVideoException {
 
         final AWSCredentials credentials = createAwsCredentials(credentialsProvider);
-        return createAwsKinesisVideoClient(credentials, region, endpoint, timeoutInMillis);
+        return createAwsKinesisVideoClient(credentials, region, endpoint, timeoutInMillis, ipVersionFilter);
     }
 
     private static AmazonKinesisVideo createAmazonKinesisVideoClient(
@@ -73,16 +76,17 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
             throws KinesisVideoException {
 
         final AWSCredentials credentials = awsCredentialsProvider.getCredentials();
-        return createAwsKinesisVideoClient(credentials, region, endpoint, timeoutInMillis);
+        return createAwsKinesisVideoClient(credentials, region, endpoint, timeoutInMillis, null);
     }
 
     private static AmazonKinesisVideo createAwsKinesisVideoClient(final AWSCredentials credentials,
-            final Region region,
-            final String endpoint,
-            final int timeoutInMillis)
+                                                                  final Region region,
+                                                                  final String endpoint,
+                                                                  final int timeoutInMillis,
+                                                                  final IPVersionFilter ipVersionFilter)
             throws KinesisVideoException {
 
-        final ClientConfiguration clientConfiguration = createClientConfiguration(timeoutInMillis);
+        final ClientConfiguration clientConfiguration = createClientConfiguration(timeoutInMillis, ipVersionFilter);
         final AmazonKinesisVideo amazonKinesisVideoClient = AmazonKinesisVideoClient.builder()
                 .withClientConfiguration(clientConfiguration)
                 .withCredentials(new AWSCredentialsProvider() {
@@ -98,7 +102,6 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                         return credentials;
                     }
                 })
-                // .withRegion(region.getName())
                 .withEndpointConfiguration(new EndpointConfiguration(endpoint, region.getName()))
                 .build();
 
@@ -216,13 +219,15 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
         };
     }
 
-    private static ClientConfiguration createClientConfiguration(final int timeoutInMillis) {
+    private static ClientConfiguration createClientConfiguration(final int timeoutInMillis,
+                                                                 @Nullable final IPVersionFilter ipVersionFilter) {
         return new ClientConfiguration()
                 .withProtocol(Protocol.HTTPS)
                 .withConnectionTimeout(timeoutInMillis)
                 .withMaxConnections(DEFAULT_MAX_CONNECTIONS)
                 .withSocketTimeout(timeoutInMillis)
-                .withUserAgentPrefix(VersionUtil.getUserAgent());
+                .withUserAgentPrefix(VersionUtil.getUserAgent())
+                .withDnsResolver(new KvsFilteredDnsResolver(ipVersionFilter));
     }
 
     public JavaKinesisVideoServiceClient(@Nonnull final Logger log) {
@@ -250,17 +255,18 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
     @Override
     public String createStream(@Nonnull final String streamName,
-            @Nonnull final String deviceName,
-            @Nonnull final String contentType,
-            @Nullable final String kmsKeyId,
-            final long retentionPeriodInHours,
-            final long timeoutInMillis,
-            @Nullable final KinesisVideoCredentialsProvider credentialsProvider)
+                               @Nonnull final String deviceName,
+                               @Nonnull final String contentType,
+                               @Nullable final String kmsKeyId,
+                               final long retentionPeriodInHours,
+                               final long timeoutInMillis,
+                               @Nullable final KinesisVideoCredentialsProvider credentialsProvider)
             throws KinesisVideoException {
         final AmazonKinesisVideo serviceClient = createAmazonKinesisVideoClient(credentialsProvider,
                 Region.getRegion(Regions.fromName(configuration.getRegion())),
                 configuration.getEndpoint(),
-                (int) timeoutInMillis);
+                (int) timeoutInMillis,
+                configuration.getIpVersionFilter());
 
         final CreateStreamRequest createStreamRequest = new CreateStreamRequest()
                 .withStreamName(streamName)
@@ -288,13 +294,14 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
     @Override
     public StreamDescription describeStream(@Nonnull final String streamName,
-            final long timeoutInMillis,
-            @Nullable final KinesisVideoCredentialsProvider credentialsProvider)
+                                            final long timeoutInMillis,
+                                            @Nullable final KinesisVideoCredentialsProvider credentialsProvider)
             throws KinesisVideoException {
         final AmazonKinesisVideo serviceClient = createAmazonKinesisVideoClient(credentialsProvider,
                 Region.getRegion(Regions.fromName(configuration.getRegion())),
                 configuration.getEndpoint(),
-                (int) timeoutInMillis);
+                (int) timeoutInMillis,
+                configuration.getIpVersionFilter());
 
         final DescribeStreamRequest describeStreamRequest = new DescribeStreamRequest()
                 .withStreamName(streamName);
@@ -320,14 +327,15 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
     @Override
     public void deleteStream(@Nonnull final String streamName,
-            @Nonnull final String version,
-            final Date creationTime,
-            final long timeoutInMillis,
-            @Nullable final KinesisVideoCredentialsProvider credentialsProvider) throws KinesisVideoException {
+                             @Nonnull final String version,
+                             final Date creationTime,
+                             final long timeoutInMillis,
+                             @Nullable final KinesisVideoCredentialsProvider credentialsProvider) throws KinesisVideoException {
         final AmazonKinesisVideo serviceClient = createAmazonKinesisVideoClient(credentialsProvider,
                 Region.getRegion(Regions.fromName(configuration.getRegion())),
                 configuration.getEndpoint(),
-                (int) timeoutInMillis);
+                (int) timeoutInMillis,
+                configuration.getIpVersionFilter());
 
         final StreamDescription streamDescription = describeStream(streamName, timeoutInMillis, credentialsProvider);
 
@@ -350,14 +358,15 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
     @Override
     public void tagStream(@Nonnull final String streamArn,
-            @Nullable final Map<String, String> tags,
-            final long timeoutInMillis,
-            @Nullable final KinesisVideoCredentialsProvider credentialsProvider)
+                          @Nullable final Map<String, String> tags,
+                          final long timeoutInMillis,
+                          @Nullable final KinesisVideoCredentialsProvider credentialsProvider)
             throws KinesisVideoException {
         final AmazonKinesisVideo serviceClient = createAmazonKinesisVideoClient(credentialsProvider,
                 Region.getRegion(Regions.fromName(configuration.getRegion())),
                 configuration.getEndpoint(),
-                (int) timeoutInMillis);
+                (int) timeoutInMillis,
+                configuration.getIpVersionFilter());
 
         final TagStreamRequest tagStreamRequest = new TagStreamRequest()
                 .withStreamARN(streamArn)
@@ -378,14 +387,15 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
     @Override
     public String getDataEndpoint(@Nonnull final String streamName,
-            @Nonnull final String apiName,
-            final long timeoutInMillis,
-            @Nullable final KinesisVideoCredentialsProvider credentialsProvider)
+                                  @Nonnull final String apiName,
+                                  final long timeoutInMillis,
+                                  @Nullable final KinesisVideoCredentialsProvider credentialsProvider)
             throws KinesisVideoException {
         final AmazonKinesisVideo serviceClient = createAmazonKinesisVideoClient(credentialsProvider,
                 Region.getRegion(Regions.fromName(configuration.getRegion())),
                 configuration.getEndpoint(),
-                (int) timeoutInMillis);
+                (int) timeoutInMillis,
+                configuration.getIpVersionFilter());
 
         final GetDataEndpointRequest getDataEndpointRequest = new GetDataEndpointRequest()
                 .withStreamName(streamName)
@@ -410,26 +420,28 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
     // CHECKSTYLE:SUPPRESS:ParameterNumber
     @Override
     public void putMedia(@Nonnull final String streamName,
-            @Nonnull final String containerType,
-            final long streamStartTimeInMillis,
-            final boolean absoluteFragmentTimes,
-            final boolean ackRequired,
-            @Nonnull final String dataEndpoint,
-            final long timeoutInMillis,
-            @Nullable final KinesisVideoCredentialsProvider credentialsProvider,
-            @Nonnull final InputStream dataInputStream,
-            @Nonnull final Consumer<InputStream> acksConsumer,
-            @Nullable final Consumer<Exception> completionCallback)
+                         @Nonnull final String containerType,
+                         final long streamStartTimeInMillis,
+                         final boolean absoluteFragmentTimes,
+                         final boolean ackRequired,
+                         @Nonnull final String dataEndpoint,
+                         final long timeoutInMillis,
+                         @Nullable final KinesisVideoCredentialsProvider credentialsProvider,
+                         @Nonnull final InputStream dataInputStream,
+                         @Nonnull final Consumer<InputStream> acksConsumer,
+                         @Nullable final Consumer<Exception> completionCallback)
             throws KinesisVideoException {
         final AWSCredentialsProvider awsCredentialsProvider = createAwsCredentialsProvider(credentialsProvider, log);
         final com.amazonaws.kinesisvideo.config.ClientConfiguration clientConfiguration =
                 com.amazonaws.kinesisvideo.config.ClientConfiguration
-                .builder()
-                .serviceName("kinesisvideo")
-                .region(configuration.getRegion())
-                .build();
+                        .builder()
+                        .serviceName("kinesisvideo")
+                        .region(configuration.getRegion())
+                        .build();
         final KinesisVideoAWS4Signer signer = new KinesisVideoAWS4Signer(awsCredentialsProvider, clientConfiguration);
+
         final URI putMediaUri = URI.create(dataEndpoint + "/putMedia");
+
         final String timecodeType = absoluteFragmentTimes ? ABSOLUTE_TIMECODE : RELATIVE_TIMECODE;
 
         final PutMediaClient.Builder putMediaClientBuilder = PutMediaClient
@@ -442,7 +454,8 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .streamName(streamName)
                 .mkvStream(dataInputStream)
                 .fragmentTimecodeType(timecodeType)
-                .putMediaDestinationUri(putMediaUri);
+                .putMediaDestinationUri(putMediaUri)
+                .ipVersionFilter(clientConfiguration.getIpVersionFilter());
 
         final PutMediaClient putMediaClient = putMediaClientBuilder.build();
 

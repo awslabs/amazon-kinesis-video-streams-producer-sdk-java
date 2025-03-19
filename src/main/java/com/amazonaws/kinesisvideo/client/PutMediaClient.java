@@ -76,6 +76,7 @@ public final class PutMediaClient {
         clientBuilder.header(FRAGMENT_TIME_CODE_TYPE_HEADER, mBuilder.mFragmentTimecodeType);
         clientBuilder.completionCallback(mBuilder.mCompletion);
         clientBuilder.setSenderCallback(sender);
+        clientBuilder.setIPVersionFilter(mBuilder.mIPVersionFilter);
         // Timeout if no response is received from the server for put(i.e., acks)
         // Socket will/should be closed by the consumer by throwing the SocketTimeoutException
         clientBuilder.setTimeout(mBuilder.mReceiveTimeout);
@@ -221,6 +222,7 @@ public final class PutMediaClient {
         private Consumer<Exception> mCompletion;
         // TODO: Set to correct output channel
         private Map<String, String> unsignedHeaders;
+        private IPVersionFilter mIPVersionFilter;
 
         public Builder putMediaDestinationUri(final URI uri) {
             mUri = uri;
@@ -287,6 +289,11 @@ public final class PutMediaClient {
 
         public Builder upstreamKbps(final long kbps) {
             upstreamKbps = kbps;
+            return this;
+        }
+
+        public Builder ipVersionFilter(final IPVersionFilter ipVersionFilter) {
+            mIPVersionFilter = ipVersionFilter;
             return this;
         }
 

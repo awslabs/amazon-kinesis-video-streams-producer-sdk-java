@@ -27,7 +27,7 @@ import java.security.cert.X509Certificate;
 
      A custom TrustManager that supports hostname verification via org.apache.http.conn.ssl.DefaultHostnameVerifier.
      *
-     * We attempt to perform verification using just the IP address first and if that fails will attempt to perform a
+     * We attempt to perform verification using just the IP address first (skippable) and if that fails will attempt to perform a
      * reverse DNS lookup and verify using the hostname.
 */
 
@@ -37,12 +37,20 @@ public class HostnameVerifyingX509ExtendedTrustManager extends X509ExtendedTrust
             PublicSuffixMatcherLoader.getDefault());
     private Logger log = LogManager.getLogger(HostnameVerifyingX509ExtendedTrustManager.class);
     private final boolean clientSideHostnameVerificationEnabled;
+    private final boolean skipHostAddressVerification;
 
     private final X509ExtendedTrustManager x509ExtendedTrustManager;
 
     public HostnameVerifyingX509ExtendedTrustManager(final boolean clientSideHostnameVerificationEnabled) {
+        this(clientSideHostnameVerificationEnabled, false);
+    }
+
+    public HostnameVerifyingX509ExtendedTrustManager(
+            final boolean clientSideHostnameVerificationEnabled,
+            final boolean skipHostAddressVerification) {
         this.x509ExtendedTrustManager = getX509ExtendedTrustManager();
         this.clientSideHostnameVerificationEnabled = clientSideHostnameVerificationEnabled;
+        this.skipHostAddressVerification = skipHostAddressVerification;
     }
 
     private X509ExtendedTrustManager getX509ExtendedTrustManager() {
@@ -56,7 +64,7 @@ public class HostnameVerifyingX509ExtendedTrustManager extends X509ExtendedTrust
             throw new RuntimeException("Unable to initialize default TrustManagerFactory", nse);
         }
 
-        for (TrustManager tm: factory.getTrustManagers()) {
+        for (TrustManager tm : factory.getTrustManagers()) {
             if (tm instanceof X509ExtendedTrustManager) {
                 return (X509ExtendedTrustManager) tm;
             }
@@ -146,9 +154,11 @@ public class HostnameVerifyingX509ExtendedTrustManager extends X509ExtendedTrust
     /**
      * Compares peer's hostname with the one stored in the provided client certificate. Performs verification
      * with the help of provided HostnameVerifier.
+     * We attempt to perform verification using just the IP address first (skippable) and if that fails will
+     * attempt to perform a reverse DNS lookup and verify using the hostname.
      *
      * @param hostAddress Peer's host address.
-     * @param hostName Peer's host name.
+     * @param hostName    Peer's host name.
      * @param certificate Peer's certificate
      * @throws CertificateException Thrown if the provided certificate doesn't match the peer hostname.
      */
@@ -157,21 +167,29 @@ public class HostnameVerifyingX509ExtendedTrustManager extends X509ExtendedTrust
             final String hostName,
             final X509Certificate certificate
     ) throws CertificateException {
-        try {
-            DEFAULT_HOSTNAME_VERIFIER.verify(hostAddress, certificate);
-        } catch (SSLException addressVerificationException) {
+        SSLException addressVerificationException = null;
+        if (!skipHostAddressVerification) {
             try {
+                DEFAULT_HOSTNAME_VERIFIER.verify(hostAddress, certificate);
+                return;
+            } catch (final SSLException ex) {
+                addressVerificationException = ex;
                 log.debug(
                         "Failed to verify host address: {} attempting to verify host name with reverse dns lookup {}",
                         hostAddress,
                         addressVerificationException);
-                DEFAULT_HOSTNAME_VERIFIER.verify(hostName, certificate);
-            } catch (SSLException hostnameVerificationException) {
-                log.error("Failed to verify host address: {}", hostAddress, addressVerificationException);
-                log.error("Failed to verify hostname: {}", hostName, hostnameVerificationException);
-                throw new CertificateException("Failed to verify both host address and host name",
-                        hostnameVerificationException);
             }
+        }
+
+        try {
+            DEFAULT_HOSTNAME_VERIFIER.verify(hostName, certificate);
+        } catch (final SSLException hostnameVerificationException) {
+            if (!skipHostAddressVerification) {
+                log.error("Failed to verify host address: {}", hostAddress, addressVerificationException);
+            }
+            log.error("Failed to verify hostname: {}", hostName, hostnameVerificationException);
+            throw new CertificateException("Failed to verify both host address and host name",
+                    hostnameVerificationException);
         }
     }
 }

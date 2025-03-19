@@ -39,7 +39,6 @@ public final class KinesisVideoApacheHttpClient extends HttpClientBase {
     }
 
     public CloseableHttpResponse executeRequest() {
-
         final HttpPost request = new HttpPost(mBuilder.mUri);
         for (Map.Entry<String, String> entry : mBuilder.mHeaders.entrySet()) {
             request.addHeader(entry.getKey(), entry.getValue());
@@ -56,7 +55,7 @@ public final class KinesisVideoApacheHttpClient extends HttpClientBase {
     private CloseableHttpClient buildHttpClient() {
         try {
             final SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
-            sslContext.init(null, new X509ExtendedTrustManager[] {
+            sslContext.init(null, new X509ExtendedTrustManager[]{
                     new HostnameVerifyingX509ExtendedTrustManager(true)}, new SecureRandom());
 
             final SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(sslContext);
@@ -69,6 +68,7 @@ public final class KinesisVideoApacheHttpClient extends HttpClientBase {
                     .setDefaultSocketConfig(SocketConfig.custom()
                             .setSoTimeout(mBuilder.mSocketTimeoutInMillis)
                             .build())
+                    .setDnsResolver(new KvsFilteredDnsResolver(mBuilder.mIPVersionFilter))
                     .build();
         } catch (final KeyManagementException e) {
             throw new RuntimeException("Exception while building Apache http client", e);
@@ -81,9 +81,9 @@ public final class KinesisVideoApacheHttpClient extends HttpClientBase {
     public void closeClient() throws IOException {
         this.mHttpClient.close();
     }
-    
+
     public static final class Builder extends BuilderBase<Builder> {
-        
+
         public KinesisVideoApacheHttpClient build() {
             checkNotNull(mUri);
             return new KinesisVideoApacheHttpClient(this);
