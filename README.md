@@ -1,4 +1,7 @@
 ## Amazon Kinesis Video Streams Producer SDK Java
+<p align="center">
+  <a href="https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/actions/workflows/ci.yml"> <img src="https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/actions/workflows/ci.yml/badge.svg"> </a>
+</p>
 
 ## License
 
@@ -73,6 +76,14 @@ $ java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.12.1-j
 ```
 $ mvn clean test -DargLine="-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml"
 ```
+
+##### Generate code coverage report
+
+```shell
+mvn clean verify -DargLine="-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml"
+```
+
+This will run the tests and generate a code coverage report. It will get output in `target/site/jacoco`. You can open `target/site/jacoco/index.html` in a web browser of your choice. 
 
 ##### Run the demo application from Docker
 
