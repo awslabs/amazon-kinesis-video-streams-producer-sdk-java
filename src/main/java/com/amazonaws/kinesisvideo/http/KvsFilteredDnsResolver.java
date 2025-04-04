@@ -25,6 +25,8 @@ public class KvsFilteredDnsResolver implements DnsResolver, com.amazonaws.DnsRes
     @Nonnull
     private final IPVersionFilter ipVersionFilter;
 
+    private DnsResolver dnsResolver = SystemDefaultDnsResolver.INSTANCE;
+
     /**
      * Constructs a new {@code KvsFilteredDnsResolver} with the specified IP version filter.
      *
@@ -52,7 +54,7 @@ public class KvsFilteredDnsResolver implements DnsResolver, com.amazonaws.DnsRes
     @Override
     public InetAddress[] resolve(final String host) throws UnknownHostException {
         log.debug("Resolving {}", host);
-        final InetAddress[] resolvedAddresses = Arrays.stream(SystemDefaultDnsResolver.INSTANCE.resolve(host))
+        final InetAddress[] resolvedAddresses = Arrays.stream(dnsResolver.resolve(host))
                 .peek(inetAddr -> log.debug("Resolved IP: {}", inetAddr))
                 .filter(this.ipVersionFilter::matches)
                 .toArray(InetAddress[]::new);
@@ -65,5 +67,10 @@ public class KvsFilteredDnsResolver implements DnsResolver, com.amazonaws.DnsRes
 
         // Will always return an array with at least 1 element
         return resolvedAddresses;
+    }
+
+    // Override the default DNS resolver. Used in the tests.
+    protected void setDnsResolver(final DnsResolver dnsResolver) {
+        this.dnsResolver = dnsResolver;
     }
 }

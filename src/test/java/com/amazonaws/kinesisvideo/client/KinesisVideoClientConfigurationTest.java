@@ -1,7 +1,13 @@
 package com.amazonaws.kinesisvideo.client;
 
+import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
+import com.amazonaws.kinesisvideo.auth.StaticCredentialsProvider;
+import com.amazonaws.kinesisvideo.internal.service.DefaultServiceCallbacksImpl;
 import com.amazonaws.kinesisvideo.producer.StorageCallbacks;
+import com.amazonaws.kinesisvideo.storage.DefaultStorageCallbacks;
+import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClient;
+import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoPutMediaClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -10,6 +16,8 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 @RunWith(Parameterized.class)
@@ -21,8 +29,8 @@ public class KinesisVideoClientConfigurationTest {
     private final String expectedRegion;
     private final String expectedEndpoint;
 
-    public KinesisVideoClientConfigurationTest(String region, String endpoint, Boolean isLegacyEndpoint,
-                                               String expectedRegion, String expectedEndpoint) {
+    public KinesisVideoClientConfigurationTest(final String region, final String endpoint, final Boolean isLegacyEndpoint,
+                                               final String expectedRegion, final String expectedEndpoint) {
         this.region = region;
         this.endpoint = endpoint;
         this.isLegacyEndpoint = isLegacyEndpoint;
@@ -53,7 +61,7 @@ public class KinesisVideoClientConfigurationTest {
 
     @Test
     public void testRegionAndEndpoint() {
-        KinesisVideoClientConfiguration.Builder builder = KinesisVideoClientConfiguration.builder();
+        final KinesisVideoClientConfiguration.Builder builder = KinesisVideoClientConfiguration.builder();
 
         if (region != null) {
             builder.withRegion(region);
@@ -65,7 +73,7 @@ public class KinesisVideoClientConfigurationTest {
             builder.withIsLegacyEndpoint(isLegacyEndpoint);
         }
 
-        KinesisVideoClientConfiguration config = builder.build();
+        final KinesisVideoClientConfiguration config = builder.build();
 
         assertEquals(expectedRegion, config.getRegion());
         assertEquals(expectedEndpoint, config.getEndpoint());
@@ -73,9 +81,9 @@ public class KinesisVideoClientConfigurationTest {
 
     @Test
     public void testCustomStorageCallbacks() {
-        StorageCallbacks mockStorageCallbacks = mock(StorageCallbacks.class);
+        final StorageCallbacks mockStorageCallbacks = mock(StorageCallbacks.class);
 
-        KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
+        final KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
                 .withStorageCallbacks(mockStorageCallbacks)
                 .withIsLegacyEndpoint(true)
                 .build();
@@ -85,9 +93,9 @@ public class KinesisVideoClientConfigurationTest {
 
     @Test
     public void testCustomCredentialsProvider() {
-        KinesisVideoCredentialsProvider mockProvider = mock(KinesisVideoCredentialsProvider.class);
+        final KinesisVideoCredentialsProvider mockProvider = mock(KinesisVideoCredentialsProvider.class);
 
-        KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
+        final KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
                 .withCredentialsProvider(mockProvider)
                 .withIsLegacyEndpoint(true)
                 .build();
@@ -97,7 +105,7 @@ public class KinesisVideoClientConfigurationTest {
 
     @Test
     public void testIpVersionDefault() {
-        KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
+        final KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
                 .build();
 
         assertEquals(KinesisVideoClientConfigurationDefaults.BOTH_IPV4_AND_IPV6, config.getIpVersionFilter());
@@ -105,10 +113,51 @@ public class KinesisVideoClientConfigurationTest {
 
     @Test
     public void testIpVersionSet() {
-        KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
+        final KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
                 .withIPVersionFilter(IPVersionFilter.IPV6)
                 .build();
 
         assertEquals(IPVersionFilter.IPV6, config.getIpVersionFilter());
+    }
+
+    @Test
+    public void testToStringDoesntThrowNullPointerException() {
+        final KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder().build();
+        final String toStringOutput = config.toString();
+
+        // Ensure it's not the default Object.toString() output
+        // (which typically contains "@" and class name)
+        final boolean looksDefault = toStringOutput.matches(".*@\\p{XDigit}+");
+        assertFalse("Expected toString() to be overridden, but was " + toStringOutput, looksDefault);
+    }
+
+    @Test
+    public void testToStringIsNotDefaultImplementation() {
+        final KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
+                .withCredentialsProvider(new StaticCredentialsProvider(new KinesisVideoCredentials("ak", "sk")))
+                .withStorageCallbacks(new DefaultStorageCallbacks())
+                .withRegion("us-east-1")
+                .withEndpoint("custom-endpoint.amazonaws.com")
+                .withIsLegacyEndpoint(true)
+                .build();
+
+        final String toStringOutput = config.toString();
+
+        // Ensure it's not the default Object.toString() output
+        // (which typically contains "@" and class name)
+        final boolean looksDefault = toStringOutput.matches(".*@\\p{XDigit}+");
+        assertFalse("Expected toString() to be overridden, but was " + toStringOutput, looksDefault);
+
+        // Sanity check it contains useful field info
+        assertTrue("Expected toString() to contain 'us-east-1'", toStringOutput.contains("us-east-1"));
+        assertTrue("Expected toString() to contain 'custom-endpoint' which was set", toStringOutput.contains("custom-endpoint"));
+    }
+
+    @Test
+    public void checkServiceName() {
+        final KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
+                .build();
+
+        assertEquals("kinesisvideo", config.getServiceName());
     }
 }

@@ -49,7 +49,7 @@ public class SocketWithIpFilterTest {
     @Test
     public void testCreateSocket_WithIpFilter() throws Exception {
         try (final ServerSocket server = new ServerSocket(port)) {
-            final URI uri = new URI("https://localhost:" + port);
+            final URI uri = new URI("http" + (port == httpPort ? "" : "s") + "://localhost:" + port);
             final Socket socket = new SocketFactory().createSocket(uri, ipVersionFilter);
 
             assertNotNull(socket);
