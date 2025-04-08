@@ -60,10 +60,20 @@ mvn clean compile assembly:single
 
 #### Preparing a stream
 
+##### AWS Management Console
+
 You can create a stream using the AWS management console using the instructions [here](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/gs-createstream.html).
 
-If you have AWS CLI installed and configured, you can also run the [prepareStream.sh](./scripts/prepareStream.sh) script to verify the stream exists and has data retention enabled.
-If either or both conditions fail, it will fix them for you. To use it:
+You can also edit the data retention in the AWS management console in the section under the media player.
+
+##### AWS CLI
+
+If you have AWS CLI and `jq` installed and configured, you can also run the [prepareStream.sh](./scripts/prepareStream.sh).
+
+This script will create a stream with the given name if the stream doesn't exist.
+
+> [!NOTE]
+> The script will increase the data retention of your stream to 2 hours if it's 0.
 
 ```shell
 ./scripts/prepareStream.sh <YourKinesisVideoStreamName>
@@ -119,6 +129,26 @@ Locate the log4j configuration file `log4j2.xml`, and change the level (currentl
 </Loggers>
 ```
 
+###### To change log level for a single class
+
+To change the log level for a single class, add a `<Logger>` element inside the `<Loggers>` section.
+
+```xml
+<Logger name="com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory" level="TRACE" additivity="false">
+    <AppenderRef ref="ConsoleAppender"/>
+    <AppenderRef ref="RollingFile"/>
+</Logger>
+```
+
+In the example above, we set the JNI logs to `TRACE`.
+
+Log levels to PIC equivalents:
+* `TRACE` = 1 -- `LOG_LEVEL_VERBOSE`
+* `DEBUG` = 2 -- `LOG_LEVEL_DEBUG`
+* `INFO` = 3 -- `LOG_LEVEL_INFO`
+* `WARN` = 4 -- `LOG_LEVEL_WARN`
+* `ERROR` = 5+ -- `LOG_LEVEL_ERROR`
+
 ##### Run API and functionality tests
 ```sh
 mvn clean test -DargLine="\
@@ -130,7 +160,7 @@ mvn clean test -DargLine="\
 ```
 
 > [!NOTE]
-> The tests require pre-provisioned streams and require data retention enabled. If either or both conditions are not met, the tests will attempt to fix them before starting.
+> The tests require pre-provisioned streams and require data retention enabled. If either or both conditions are not met, the tests will attempt to fix them before starting. Make sure this is OK in your account before running. Set the `TEST_STREAMS_PREFIX` environment variable to add a prefix to the streams used in the integration tests.
 
 ##### Generate code coverage report
 
@@ -171,6 +201,17 @@ For additional examples on using Kinesis Video Streams Java SDK and  Kinesis Vid
 ##### [Kinesis Video Streams Android](https://github.com/awslabs/aws-sdk-android-samples/tree/master/AmazonKinesisVideoDemoApp)
 
 ### Troubleshooting
+
+#### Class not found
+
+If you receive an error like this:
+
+```log
+Error: Could not find or load main class com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+Caused by: java.lang.ClassNotFoundException: com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+```
+
+Check the file path to the `.jar` is correct, and that the class name is correct.
 
 #### Unsatisfied link error - no KinesisVideoProducerJNI in java.library.path
 
@@ -223,24 +264,31 @@ See instructions [here](https://github.com/awslabs/amazon-kinesis-video-streams-
 > [!NOTE]
 > If you run into issues building the JNI on your system, please raise an issue in repository where the JNI source code is located.
 
-#### Untrusted developer
+#### macOS security warning
 
 If you receive an error like this when trying to use the JNI:
 
 > `Apple could not verify "libKinesisVideoProducerJNI.dylib" is free of malware that may harm your Mac or compromise your privacy.`
 
-It is likely that you downloaded the file through the internet through a browser, email attachment, etc. (e.g. through the GitHub interface) instead of through `git clone`.
+This usually means the file was downloaded from the internet using a browser, email attachment, or similar method
+(e.g., from the GitHub interface as a release artifact), rather than via `git clone` or directly from Maven Central.
 
 > [!IMPORTANT]
-> Make sure the file came from a trusted source before proceeding.
+> Only download files from trusted sources. Always verify the checksum.
 
-You can remove the quarantine flag like this:
+To remove the Gatekeeper quarantine flag, run:
 
 ```shell
 sudo xattr -d -r com.apple.quarantine /path/to/libKinesisVideoProducerJNI.dylib
 ```
 
+> [!TIP]
+> Use `man xattr` for more information, or see https://ss64.com/mac/xattr.html.
+
 If you prefer a GUI, you can go to `Preferences` > `Privacy & Security`, scroll down and choose "Allow Anyway".
+
+> [!NOTE]
+> For more information about Gatekeeper, see [Apple Documentation](https://support.apple.com/en-gb/102445).
 
 ## Development
 
