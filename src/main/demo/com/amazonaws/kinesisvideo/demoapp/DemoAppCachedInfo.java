@@ -25,9 +25,7 @@ import com.amazonaws.services.kinesisvideo.model.DescribeStreamResult;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointResult;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.logging.log4j.core.config.Configurator;
 
-import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.Executors;
@@ -38,7 +36,7 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public final class DemoAppCachedInfo {
 
-    private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+    private static final Logger log = LogManager.getLogger(DemoAppCachedInfo.class);
 
     // Use a different stream name when testing audio/video sample
     private static final String STREAM_NAME = Optional.ofNullable(System.getProperty("kvs-stream")).orElse("my-stream-cached");

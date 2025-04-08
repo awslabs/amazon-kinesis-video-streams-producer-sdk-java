@@ -19,7 +19,7 @@ import java.util.Arrays;
  */
 public class KvsFilteredDnsResolver implements DnsResolver, com.amazonaws.DnsResolver {
 
-    private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+    private static final Logger log = LogManager.getLogger(KvsFilteredDnsResolver.class);
 
     /** The IP version filter used for filtering resolved addresses. */
     @Nonnull

@@ -6,6 +6,7 @@ import com.amazonaws.kinesisvideo.client.IPVersionFilter;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
@@ -37,7 +38,7 @@ public final class KinesisVideoJavaClientFactory {
     private static final String STORAGE_PATH = "/tmp";
     private static final int NUMBER_OF_THREADS_IN_POOL = 2;
 
-    private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+    private static final Logger log = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
     private KinesisVideoJavaClientFactory() {
         throw new UnsupportedOperationException();
@@ -83,7 +84,7 @@ public final class KinesisVideoJavaClientFactory {
             @Nonnull final String endpointOverride,
             @Nullable final IPVersionFilter ipVersionFilter)
             throws KinesisVideoException {
-        return createKinesisVideoClient(regions, awsCredentialsProvider, endpointOverride, false, ipVersionFilter);
+        return createKinesisVideoClient(regions, awsCredentialsProvider, endpointOverride, null, ipVersionFilter);
     }
 
     /**
@@ -94,7 +95,7 @@ public final class KinesisVideoJavaClientFactory {
             @Nonnull final Regions regions,
             @Nonnull final AWSCredentialsProvider awsCredentialsProvider,
             @Nullable final String endpointOverride,
-            final boolean isLegacyEndpoint,
+            @Nullable final Boolean isLegacyEndpoint,
             @Nullable final IPVersionFilter ipVersionFilter)
             throws KinesisVideoException {
         Preconditions.checkNotNull(regions);
@@ -112,7 +113,7 @@ public final class KinesisVideoJavaClientFactory {
             builder.withIPVersionFilter(ipVersionFilter);
         }
 
-        if (endpointOverride != null && !endpointOverride.isEmpty()) {
+        if (!StringUtils.isNullOrEmpty(endpointOverride)) {
             builder.withEndpoint(endpointOverride);
         } else {
             builder.withIsLegacyEndpoint(isLegacyEndpoint);

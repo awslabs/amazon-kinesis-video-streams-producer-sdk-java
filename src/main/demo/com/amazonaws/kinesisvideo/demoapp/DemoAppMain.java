@@ -14,9 +14,7 @@ import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSourceConf
 import com.amazonaws.regions.Regions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.config.Configurator;
 
-import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -27,7 +25,7 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.ABSOLUTE_TIMEC
  */
 public final class DemoAppMain {
 
-    private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+    private static final Logger log = LogManager.getLogger(DemoAppMain.class);
 
     // Use a different stream name when testing audio/video sample
     private static final String STREAM_NAME = Optional.ofNullable(System.getProperty("kvs-stream")).orElse("");

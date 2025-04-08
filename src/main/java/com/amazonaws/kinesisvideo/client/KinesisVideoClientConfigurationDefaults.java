@@ -38,17 +38,12 @@ public final class KinesisVideoClientConfigurationDefaults {
     }
 
     /**
-     * Construct either the KVS control plane legacy or dual-stack endpoint (excluding {@code https://}).
+     * Construct the KVS dual-stack endpoint (excluding {@code https://}).
      *
      * @param region region
-     * @param isLegacyEndpoint which endpoint to construct (false = dual-stack)
      * @return endpoint host name
      */
-    public static String getControlPlaneEndpoint(final @Nonnull String region, final boolean isLegacyEndpoint) {
-        if (isLegacyEndpoint) {
-            return getControlPlaneEndpoint(region);
-        }
-
+    public static String getDualStackControlPlaneEndpoint(final @Nonnull String region) {
         if (region.startsWith("cn-")) {
             return String.format(PROD_CONTROL_PLANE_ENDPOINT_FORMAT_DUAL_STACK_CN, region);
         }

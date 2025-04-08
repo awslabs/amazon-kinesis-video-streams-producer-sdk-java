@@ -49,6 +49,12 @@ public class KinesisVideoClientConfigurationDefaultsTest {
 
     @Test
     public void testGetControlPlaneEndpoint() {
-        assertEquals(expectedEndpoint, KinesisVideoClientConfigurationDefaults.getControlPlaneEndpoint(region, isLegacyEndpoint));
+        if (isLegacyEndpoint) {
+            assertEquals(expectedEndpoint, KinesisVideoClientConfigurationDefaults
+                    .getControlPlaneEndpoint(region));
+        } else {
+            assertEquals(expectedEndpoint, KinesisVideoClientConfigurationDefaults
+                    .getDualStackControlPlaneEndpoint(region));
+        }
     }
 }

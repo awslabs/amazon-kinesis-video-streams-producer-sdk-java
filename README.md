@@ -3,8 +3,6 @@
   <br>
 </h1>
 
-<h4 align="center"> Amazon Kinesis Video Streams | Secure Video Ingestion for Analysis &amp; Storage </h4>
-
 <p align="center">
   <a href="#building-from-source">Build</a> •
   <a href="#run-examples">Run</a> •
@@ -30,9 +28,19 @@ The Amazon Kinesis Video Streams Producer SDK Java makes it easy to build an on-
 
 ### Prerequisites
 
-* You can find available pre-built KinesisVideoProducerJNI library in [src/main/resources/lib/](./src/main/resources/lib) for Mac (x64), Ubuntu (x64) and Raspbian (x86) and Windows 10. If pre-built libraries did not work for you, KinesisVideoProducerJNI native library needs to be built first before running the Java demo application. Please follow the steps [here](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/wiki/Building-and-Using-JNI).
+* Java 11, 17, or 21
+* maven
+* JNI libraries
 
-### Building from Source
+#### Using pre-built JNI libraries
+
+* You can find available pre-built KinesisVideoProducerJNI library in [src/main/resources/lib/](./src/main/resources/lib) for Mac (x64), Ubuntu (x64) and Raspbian (x86) and Windows 10.
+
+#### Building JNI libraries
+
+* If pre-built libraries did not work for you, KinesisVideoProducerJNI native library needs to be built first before running the Java demo application. Please follow the steps [here](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/wiki/Building-and-Using-JNI).
+
+### Building the Java Producer SDK and Demo Applications from Source
 
 #### In an IDE
 
@@ -70,7 +78,7 @@ To run [`DemoAppMain.java`](./src/main/demo/com/amazonaws/kinesisvideo/demoapp/D
 
 1. Credentials: `aws.accessKeyId`, `aws.secretKey`, `aws.sessionToken` (optional)
 2. Stream name: `kvs-stream`
-3. JNI library path: `java.library.path`
+3. Path to JNI library directory: `java.library.path`
 4. Log4j configuration file: `log4j.configurationFile`
 
 ```sh

@@ -44,18 +44,22 @@ public class KinesisVideoClientConfigurationTest {
                 // Default values should be applied when no region/endpoint is provided
                 {null, null, true, "us-west-2", "kinesisvideo.us-west-2.amazonaws.com"},
                 {null, null, false, "us-west-2", "kinesisvideo.us-west-2.api.aws"},
+                {null, null, null, "us-west-2", "kinesisvideo.us-west-2.amazonaws.com"},
 
                 // Specified region but no endpoint, SDK should construct the endpoint
                 {"eu-central-1", null, true, "eu-central-1", "kinesisvideo.eu-central-1.amazonaws.com"},
                 {"eu-central-1", null, false, "eu-central-1", "kinesisvideo.eu-central-1.api.aws"},
+                {"eu-central-1", null, null, "eu-central-1", "kinesisvideo.eu-central-1.amazonaws.com"},
 
                 // If endpoint override provided, use that
                 {null, "custom-endpoint.amazonaws.com", true, "us-west-2", "custom-endpoint.amazonaws.com"},
                 {null, "custom-endpoint.api.aws", false, "us-west-2", "custom-endpoint.api.aws"},
+                {null, "custom-endpoint.amazonaws.com", null, "us-west-2", "custom-endpoint.amazonaws.com"},
 
                 // Check CN regions since they have a different format
                 {"cn-north-1", null, true, "cn-north-1", "kinesisvideo.cn-north-1.amazonaws.com.cn"},
                 {"cn-north-1", null, false, "cn-north-1", "kinesisvideo.cn-north-1.api.amazonwebservices.com.cn"},
+                {"cn-north-1", null, null, "cn-north-1", "kinesisvideo.cn-north-1.amazonaws.com.cn"},
         });
     }
 
@@ -138,7 +142,7 @@ public class KinesisVideoClientConfigurationTest {
                 .withStorageCallbacks(new DefaultStorageCallbacks())
                 .withRegion("us-east-1")
                 .withEndpoint("custom-endpoint.amazonaws.com")
-                .withIsLegacyEndpoint(true)
+                .withIsLegacyEndpoint(null)
                 .build();
 
         final String toStringOutput = config.toString();

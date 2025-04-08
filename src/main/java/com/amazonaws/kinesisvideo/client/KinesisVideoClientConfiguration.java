@@ -6,7 +6,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
-import java.lang.invoke.MethodHandles;
 import java.util.Optional;
 
 /**
@@ -14,13 +13,14 @@ import java.util.Optional;
  */
 public final class KinesisVideoClientConfiguration {
 
-    private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+    private static final Logger log = LogManager.getLogger(KinesisVideoClientConfiguration.class);
 
     private final String region;
     private final KinesisVideoCredentialsProvider credentialsProvider;
     private final StorageCallbacks storageCallbacks;
     private final String endpoint;
     private final IPVersionFilter ipVersionFilter;
+
     private KinesisVideoClientConfiguration(final Builder builder) {
         this.region = builder.region;
         this.credentialsProvider = builder.credentialsProvider;
@@ -38,7 +38,14 @@ public final class KinesisVideoClientConfiguration {
 
         if (builder.region == null && builder.endpoint == null) {
             builder.withRegion(KinesisVideoClientConfigurationDefaults.US_WEST_2);
-            builder.withEndpoint(KinesisVideoClientConfigurationDefaults.getControlPlaneEndpoint(builder.region, isLegacyEndpoint));
+
+            if (isLegacyEndpoint) {
+                builder.withEndpoint(KinesisVideoClientConfigurationDefaults
+                        .getControlPlaneEndpoint(builder.region));
+            } else {
+                builder.withEndpoint(KinesisVideoClientConfigurationDefaults
+                        .getDualStackControlPlaneEndpoint(builder.region));
+            }
 
             log.info("Using default region: {}", builder.region);
         }
@@ -50,7 +57,13 @@ public final class KinesisVideoClientConfiguration {
         }
 
         if (builder.endpoint == null) {
-            builder.withEndpoint(KinesisVideoClientConfigurationDefaults.getControlPlaneEndpoint(builder.region, isLegacyEndpoint));
+            if (isLegacyEndpoint) {
+                builder.withEndpoint(KinesisVideoClientConfigurationDefaults
+                        .getControlPlaneEndpoint(builder.region));
+            } else {
+                builder.withEndpoint(KinesisVideoClientConfigurationDefaults
+                        .getDualStackControlPlaneEndpoint(builder.region));
+            }
         }
 
         if (builder.ipVersionFilter == null) {
@@ -80,7 +93,9 @@ public final class KinesisVideoClientConfiguration {
         return this.endpoint;
     }
 
-    public IPVersionFilter getIpVersionFilter() { return this.ipVersionFilter; }
+    public IPVersionFilter getIpVersionFilter() {
+        return this.ipVersionFilter;
+    }
 
     @Override
     public String toString() {
@@ -122,8 +137,8 @@ public final class KinesisVideoClientConfiguration {
             return this;
         }
 
-        public Builder withIsLegacyEndpoint(final boolean isLegacyEndpoint) {
-            this.isLegacyEndpoint = Optional.of(isLegacyEndpoint);
+        public Builder withIsLegacyEndpoint(final Boolean isLegacyEndpoint) {
+            this.isLegacyEndpoint = Optional.ofNullable(isLegacyEndpoint);
             return this;
         }
 
