@@ -52,7 +52,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Name of the native library
      */
-    private static final String PRODUCER_NATIVE_LIBRARY_NAME = "KinesisVideoProducerJNI";
+    public static final String PRODUCER_NATIVE_LIBRARY_NAME = "KinesisVideoProducerJNI";
 
     /**
      * The expected library version.

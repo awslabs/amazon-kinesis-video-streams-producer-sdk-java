@@ -148,6 +148,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
         try {
             this.kinesisVideoServiceClient.initialize(configuration);
+            log.debug("Initialized service client with configuration {}", configuration);
         } catch (final KinesisVideoException e) {
             log.error(e);
         }

@@ -2,9 +2,11 @@ package com.amazonaws.kinesisvideo.java.client;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
+import com.amazonaws.kinesisvideo.client.IPVersionFilter;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
@@ -23,6 +25,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.invoke.MethodHandles;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -34,6 +37,8 @@ public final class KinesisVideoJavaClientFactory {
     private static final String DEVICE_NAME = "java-demo-application";
     private static final String STORAGE_PATH = "/tmp";
     private static final int NUMBER_OF_THREADS_IN_POOL = 2;
+
+    private static final Logger log = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
     private KinesisVideoJavaClientFactory() {
         throw new UnsupportedOperationException();
@@ -66,17 +71,56 @@ public final class KinesisVideoJavaClientFactory {
             @Nonnull final Regions regions,
             @Nonnull final AWSCredentialsProvider awsCredentialsProvider)
             throws KinesisVideoException {
+
+        return createKinesisVideoClient(regions,
+                awsCredentialsProvider,
+                null, true, null);
+    }
+
+    @Nonnull
+    public static KinesisVideoClient createKinesisVideoClient(
+            @Nonnull final Regions regions,
+            @Nonnull final AWSCredentialsProvider awsCredentialsProvider,
+            @Nonnull final String endpointOverride,
+            @Nullable final IPVersionFilter ipVersionFilter)
+            throws KinesisVideoException {
+        return createKinesisVideoClient(regions, awsCredentialsProvider, endpointOverride, null, ipVersionFilter);
+    }
+
+    /**
+     * Create Kinesis Video client.
+     */
+    @Nonnull
+    public static KinesisVideoClient createKinesisVideoClient(
+            @Nonnull final Regions regions,
+            @Nonnull final AWSCredentialsProvider awsCredentialsProvider,
+            @Nullable final String endpointOverride,
+            @Nullable final Boolean isLegacyEndpoint,
+            @Nullable final IPVersionFilter ipVersionFilter)
+            throws KinesisVideoException {
         Preconditions.checkNotNull(regions);
         Preconditions.checkNotNull(awsCredentialsProvider);
 
         final KinesisVideoCredentialsProvider kinesisVideoCredentialsProvider =
                 new JavaCredentialsProviderImpl(awsCredentialsProvider);
 
-        final KinesisVideoClientConfiguration configuration = KinesisVideoClientConfiguration.builder()
+        final KinesisVideoClientConfiguration.Builder builder = KinesisVideoClientConfiguration.builder()
                 .withRegion(regions.getName())
                 .withCredentialsProvider(kinesisVideoCredentialsProvider)
-                .withStorageCallbacks(new DefaultStorageCallbacks())
-                .build();
+                .withStorageCallbacks(new DefaultStorageCallbacks());
+
+        if (ipVersionFilter != null) {
+            builder.withIPVersionFilter(ipVersionFilter);
+        }
+
+        if (!StringUtils.isNullOrEmpty(endpointOverride)) {
+            builder.withEndpoint(endpointOverride);
+        } else {
+            builder.withIsLegacyEndpoint(isLegacyEndpoint);
+        }
+
+        final KinesisVideoClientConfiguration configuration = builder.build();
+        log.debug("KinesisVideoClientConfiguration: {}", configuration);
 
         final ScheduledExecutorService executor = Executors.newScheduledThreadPool(NUMBER_OF_THREADS_IN_POOL,
                 new ThreadFactoryBuilder().setNameFormat("KVS-JavaClientExecutor-%d").build());

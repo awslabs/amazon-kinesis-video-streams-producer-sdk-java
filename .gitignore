@@ -9,3 +9,6 @@
 cm-file
 .DS_Store
 target
+logs
+hs_err_pid*.log
+
