@@ -270,25 +270,7 @@ If you receive an error like this when trying to use the JNI:
 
 > `Apple could not verify "libKinesisVideoProducerJNI.dylib" is free of malware that may harm your Mac or compromise your privacy.`
 
-This usually means the file was downloaded from the internet using a browser, email attachment, or similar method
-(e.g., from the GitHub interface as a release artifact), rather than via `git clone` or directly from Maven Central.
-
-> [!IMPORTANT]
-> Only download files from trusted sources. Always verify the checksum.
-
-To remove the Gatekeeper quarantine flag, run:
-
-```shell
-sudo xattr -d -r com.apple.quarantine /path/to/libKinesisVideoProducerJNI.dylib
-```
-
-> [!TIP]
-> Use `man xattr` for more information, or see https://ss64.com/mac/xattr.html.
-
-If you prefer a GUI, you can go to `Preferences` > `Privacy & Security`, scroll down and choose "Allow Anyway".
-
-> [!NOTE]
-> For more information about Gatekeeper, see [Apple Documentation](https://support.apple.com/en-gb/102445).
+The above error should not appear if you cloned the repository using `git clone`. Download the artifacts using `git clone`.
 
 ## Development
 
