@@ -43,7 +43,7 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
 
     env:
-      BRANCH_NAME: develop
+      BRANCH_NAME: jni-clientinfo
 
     steps:
       - name: Checkout the repository
