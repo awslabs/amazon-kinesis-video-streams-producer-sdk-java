@@ -57,7 +57,8 @@ public class ProducerUnitTests extends ProducerTestBase {
                 null,
                 trackInfoList,
                 FrameOrderMode.FRAME_ORDER_MODE_PASS_THROUGH,
-                StreamInfo.StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_OOM);
+                StreamInfo.StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_OOM,
+                false);
 
         assertEquals(StreamInfo.StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM.getIntValue(),
                 streamInfo.getStorePressurePolicy());
