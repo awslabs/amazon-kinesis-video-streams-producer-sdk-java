@@ -1,7 +1,8 @@
 package com.amazonaws.kinesisvideo.producer;
 
-import javax.annotation.Nullable;
-
+/**
+ * No-op implementation.
+ */
 public class DefaultKvsRetryStrategyCallbacks implements KvsRetryStrategyCallbacks {
 
     @Override

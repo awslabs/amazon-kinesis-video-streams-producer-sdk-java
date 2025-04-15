@@ -6,6 +6,7 @@ matrix:
       name: macos-aarch64
     - os: ubuntu-22.04
       name: ubuntu-22.04
+      upload_coverage: true
     - os: windows-2022
       name: windows-2022
   java:
