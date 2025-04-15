@@ -109,7 +109,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
         return amazonKinesisVideoClient;
     }
 
-    private static AWSCredentials createAwsCredentials(
+    static AWSCredentials createAwsCredentials(
             @Nullable final KinesisVideoCredentialsProvider credentialsProvider)
             throws KinesisVideoException {
         if (null == credentialsProvider) {
@@ -123,7 +123,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
             return null;
         }
 
-        AWSCredentials credentials = null;
+        AWSCredentials credentials;
 
         if (kinesisVideoCredentials.getSessionToken() == null) {
             credentials = new AWSCredentials() {
@@ -159,7 +159,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
         return credentials;
     }
 
-    private static AWSCredentialsProvider createAwsCredentialsProvider(
+    static AWSCredentialsProvider createAwsCredentialsProvider(
             @Nullable final KinesisVideoCredentialsProvider credentialsProvider,
             @Nonnull final Logger log)
             throws KinesisVideoException {
@@ -171,46 +171,10 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
         return new AWSCredentialsProvider() {
             @Override
             public AWSCredentials getCredentials() {
-                AWSCredentials awsCredentials = null;
+                AWSCredentials awsCredentials;
                 try {
-                    final KinesisVideoCredentials kinesisVideoCredentials = credentialsProvider.getCredentials();
-
-                    if (kinesisVideoCredentials == null) {
-                        logger.error("kinesisVideoCredentials must not be null while obtaining it from getCredentials");
-                        throw new IllegalArgumentException();
-                    }
-
-                    if (kinesisVideoCredentials.getSessionToken() == null) {
-                        awsCredentials = new AWSCredentials() {
-                            @Override
-                            public String getAWSAccessKeyId() {
-                                return kinesisVideoCredentials.getAccessKey();
-                            }
-
-                            @Override
-                            public String getAWSSecretKey() {
-                                return kinesisVideoCredentials.getSecretKey();
-                            }
-                        };
-                    } else {
-                        awsCredentials = new AWSSessionCredentials() {
-                            @Override
-                            public String getSessionToken() {
-                                return kinesisVideoCredentials.getSessionToken();
-                            }
-
-                            @Override
-                            public String getAWSAccessKeyId() {
-                                return kinesisVideoCredentials.getAccessKey();
-                            }
-
-                            @Override
-                            public String getAWSSecretKey() {
-                                return kinesisVideoCredentials.getSecretKey();
-                            }
-                        };
-                    }
-                } catch (final KinesisVideoException | IllegalArgumentException e) {
+                    awsCredentials = createAwsCredentials(credentialsProvider);
+                } catch (final KinesisVideoException e) {
                     log.error("Getting credentials threw an exception.", e);
                     awsCredentials = null;
                 }
@@ -239,6 +203,10 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withSocketTimeout(timeoutInMillis)
                 .withUserAgentPrefix(VersionUtil.getUserAgent())
                 .withDnsResolver(new KvsFilteredDnsResolver(ipVersionFilter));
+    }
+
+    public JavaKinesisVideoServiceClient() {
+        this(LogManager.getLogger(JavaKinesisVideoServiceClient.class));
     }
 
     public JavaKinesisVideoServiceClient(@Nonnull final Logger log) {
@@ -480,7 +448,7 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
         putMediaClient.putMediaInBackground();
     }
 
-    private static StreamDescription toStreamDescription(@Nonnull final DescribeStreamResult result) {
+    static StreamDescription toStreamDescription(@Nonnull final DescribeStreamResult result) {
         Preconditions.checkNotNull(result);
         return new StreamDescription(
                 StreamDescription.STREAM_DESCRIPTION_CURRENT_VERSION,

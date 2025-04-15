@@ -99,9 +99,9 @@ public class StreamInfo {
             NAL_ADAPTATION_ANNEXB_NALS.getIntValue()
                 | NAL_ADAPTATION_ANNEXB_CPD_NALS.getIntValue());
 
-        private int value;
+        private final int value;
 
-        private NalAdaptationFlags(final int i) {
+        NalAdaptationFlags(final int i) {
             value = i;
         }
 
@@ -135,9 +135,9 @@ public class StreamInfo {
          */
         CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM(1);
 
-        private int value;
+        private final int value;
 
-        private StorePressurePolicy(final int i) {
+        StorePressurePolicy(final int i) {
             value = i;
         }
 
