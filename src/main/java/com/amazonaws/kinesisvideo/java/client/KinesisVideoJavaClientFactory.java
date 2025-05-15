@@ -1,0 +1,234 @@
+package com.amazonaws.kinesisvideo.java.client;
+
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
+import com.amazonaws.kinesisvideo.client.IPVersionFilter;
+import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
+import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
+import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.util.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
+import com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks;
+import com.amazonaws.kinesisvideo.internal.service.DefaultServiceCallbacksImpl;
+import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsProviderImpl;
+import com.amazonaws.kinesisvideo.java.service.JavaKinesisVideoServiceClient;
+import com.amazonaws.kinesisvideo.producer.DeviceInfo;
+import com.amazonaws.kinesisvideo.producer.StorageInfo;
+import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
+import com.amazonaws.kinesisvideo.producer.Tag;
+import com.amazonaws.kinesisvideo.storage.DefaultStorageCallbacks;
+import com.amazonaws.kinesisvideo.streaming.DefaultStreamCallbacks;
+import com.amazonaws.regions.Regions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.lang.invoke.MethodHandles;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
+public final class KinesisVideoJavaClientFactory {
+    private static final int DEVICE_VERSION = 0;
+    private static final int TEN_STREAMS = 10;
+    private static final int SPILL_RATIO_90_PERCENT = 90;
+    private static final int STORAGE_SIZE_MEGS = 256 * 1000 * 1000;
+    private static final String DEVICE_NAME = "java-demo-application";
+    private static final String STORAGE_PATH = "/tmp";
+    private static final int NUMBER_OF_THREADS_IN_POOL = 2;
+
+    private static final Logger log = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
+
+    private KinesisVideoJavaClientFactory() {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Create Kinesis Video client.
+     *
+     * @param credentialsProvider Credentials provider
+     * @return
+     * @throws KinesisVideoException
+     */
+    @Nonnull
+    public static KinesisVideoClient createKinesisVideoClient(@Nonnull final AWSCredentialsProvider credentialsProvider)
+            throws KinesisVideoException {
+        Preconditions.checkNotNull(credentialsProvider);
+        return createKinesisVideoClient(Regions.DEFAULT_REGION, credentialsProvider);
+    }
+
+    /**
+     * Create Kinesis Video client.
+     *
+     * @param regions Regions object
+     * @param awsCredentialsProvider Credentials provider
+     * @return
+     * @throws KinesisVideoException
+     */
+    @Nonnull
+    public static KinesisVideoClient createKinesisVideoClient(
+            @Nonnull final Regions regions,
+            @Nonnull final AWSCredentialsProvider awsCredentialsProvider)
+            throws KinesisVideoException {
+
+        return createKinesisVideoClient(regions,
+                awsCredentialsProvider,
+                null, true, null);
+    }
+
+    @Nonnull
+    public static KinesisVideoClient createKinesisVideoClient(
+            @Nonnull final Regions regions,
+            @Nonnull final AWSCredentialsProvider awsCredentialsProvider,
+            @Nonnull final String endpointOverride,
+            @Nullable final IPVersionFilter ipVersionFilter)
+            throws KinesisVideoException {
+        return createKinesisVideoClient(regions, awsCredentialsProvider, endpointOverride, null, ipVersionFilter);
+    }
+
+    /**
+     * Create Kinesis Video client.
+     */
+    @Nonnull
+    public static KinesisVideoClient createKinesisVideoClient(
+            @Nonnull final Regions regions,
+            @Nonnull final AWSCredentialsProvider awsCredentialsProvider,
+            @Nullable final String endpointOverride,
+            @Nullable final Boolean isLegacyEndpoint,
+            @Nullable final IPVersionFilter ipVersionFilter)
+            throws KinesisVideoException {
+        Preconditions.checkNotNull(regions);
+        Preconditions.checkNotNull(awsCredentialsProvider);
+
+        final KinesisVideoCredentialsProvider kinesisVideoCredentialsProvider =
+                new JavaCredentialsProviderImpl(awsCredentialsProvider);
+
+        final KinesisVideoClientConfiguration.Builder builder = KinesisVideoClientConfiguration.builder()
+                .withRegion(regions.getName())
+                .withCredentialsProvider(kinesisVideoCredentialsProvider)
+                .withStorageCallbacks(new DefaultStorageCallbacks());
+
+        if (ipVersionFilter != null) {
+            builder.withIPVersionFilter(ipVersionFilter);
+        }
+
+        if (!StringUtils.isNullOrEmpty(endpointOverride)) {
+            builder.withEndpoint(endpointOverride);
+        } else {
+            builder.withIsLegacyEndpoint(isLegacyEndpoint);
+        }
+
+        final KinesisVideoClientConfiguration configuration = builder.build();
+        log.debug("KinesisVideoClientConfiguration: {}", configuration);
+
+        final ScheduledExecutorService executor = Executors.newScheduledThreadPool(NUMBER_OF_THREADS_IN_POOL,
+                new ThreadFactoryBuilder().setNameFormat("KVS-JavaClientExecutor-%d").build());
+
+        return createKinesisVideoClient(configuration,
+                getDeviceInfo(),
+                executor);
+    }
+
+    /**
+     * Create Kinesis Video client.
+     */
+    @Nonnull
+    public static KinesisVideoClient createKinesisVideoClient(
+            @Nonnull final KinesisVideoClientConfiguration configuration,
+            @Nonnull final DeviceInfo deviceInfo,
+            @Nonnull final ScheduledExecutorService executor)
+            throws KinesisVideoException {
+        Preconditions.checkNotNull(configuration);
+        Preconditions.checkNotNull(deviceInfo);
+        Preconditions.checkNotNull(executor);
+
+        final Logger log = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
+
+        final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(log);
+
+        final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(log,
+                configuration,
+                serviceClient,
+                executor);
+
+        kinesisVideoClient.initialize(deviceInfo);
+
+        return kinesisVideoClient;
+    }
+
+    /**
+     * Create Kinesis Video client.
+     */
+    @Nonnull
+    public static KinesisVideoClient createKinesisVideoClient(
+            @Nonnull final KinesisVideoClientConfiguration configuration,
+            @Nonnull final DeviceInfo deviceInfo,
+            @Nonnull final ScheduledExecutorService executor,
+            @Nonnull final StreamCallbacks streamCallbacks)
+            throws KinesisVideoException {
+        Preconditions.checkNotNull(configuration);
+        Preconditions.checkNotNull(deviceInfo);
+        Preconditions.checkNotNull(executor);
+
+        final Logger log =  LogManager.getLogger(KinesisVideoJavaClientFactory.class);
+
+        final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(log);
+
+        final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(log,
+                configuration,
+                serviceClient,
+                executor,
+                streamCallbacks);
+
+        kinesisVideoClient.initialize(deviceInfo);
+
+        return kinesisVideoClient;
+    }
+
+    @Nonnull
+    public static KinesisVideoClient createKinesisVideoClient(
+            @Nonnull final Logger log,
+            @Nonnull final KinesisVideoClientConfiguration configuration,
+            @Nonnull final ScheduledExecutorService executor,
+            @Nullable final StreamCallbacks streamCallbacks,
+            @Nullable final ServiceCallbacks serviceCallbacks)
+            throws KinesisVideoException {
+        Preconditions.checkNotNull(configuration);
+        Preconditions.checkNotNull(executor);
+
+        final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(log,
+                configuration,
+                serviceCallbacks == null ? new DefaultServiceCallbacksImpl(log, executor, configuration,
+                        new JavaKinesisVideoServiceClient(log)) : serviceCallbacks,
+                executor,
+                streamCallbacks == null ? new DefaultStreamCallbacks() : streamCallbacks);
+
+        kinesisVideoClient.initialize(getDeviceInfo());
+
+        return kinesisVideoClient;
+    }
+
+    private static DeviceInfo getDeviceInfo() {
+        return new DeviceInfo(
+                DEVICE_VERSION,
+                DEVICE_NAME,
+                getStorageInfo(),
+                TEN_STREAMS,
+                getDeviceTags());
+    }
+
+    private static StorageInfo getStorageInfo() {
+        return new StorageInfo(0,
+                StorageInfo.DeviceStorageType.DEVICE_STORAGE_TYPE_IN_MEM,
+                STORAGE_SIZE_MEGS,
+                SPILL_RATIO_90_PERCENT,
+                STORAGE_PATH);
+    }
+
+    private static Tag[] getDeviceTags() {
+        // Tags for devices are not supported yet
+
+        return null;
+    }
+}
