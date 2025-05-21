@@ -186,16 +186,24 @@ jobs:
           distribution: 'adopt'
           cache: maven
 
+      - name: Set up Python 3.12
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        working-directory: scripts/python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
       - name: Download JNI Library
         uses: actions/download-artifact@v4
         with:
           name: jni-library-${{ matrix.platform.name }}
           path: jni/
-
-      - name: Install dependencies (MacOS)
-        if: ${{ runner.os == 'macOS' }}
-        run: |
-          brew install coreutils # For `gtimeout`
 
       - name: Build with Maven
         run: mvn clean compile assembly:single
@@ -206,7 +214,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Create the stream (DemoAppCachedInfo)
+      - name: Create the stream (DemoAppMain)
         # This sample needs a pre-created stream: `${NAME}`
         if: ${{ matrix.sample == 'DemoAppMain' }}
         working-directory: scripts
@@ -238,24 +246,35 @@ jobs:
           fi
 
           echo "Using JAR file: $JAR_FILE"
-
-          # Use gtimeout on macOS and timeout on Linux
-          if [ "${{ runner.os }}" == "macOS" ]; then
-            TIMEOUT_CMD="gtimeout"
-          else
-            TIMEOUT_CMD="timeout"
-          fi
-
-          $TIMEOUT_CMD 30s java -classpath "$JAR_FILE" \
+          java -classpath "$JAR_FILE" \
             -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
             -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
             -Daws.sessionToken=${AWS_SESSION_TOKEN} \
             -Djava.library.path=${JNI_FOLDER} \
             -Dkvs-stream=$STREAM_NAME \
             -Dlog4j.configurationFile=log4j2.xml \
-            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample }}
+            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample }} &
+          JAVA_PID=$!
 
+          python ./scripts/python/capture_rss_and_cpu.py $JAVA_PID &
+          MONITOR_PID=$!
+
+          # Wait for maximum 30 seconds
+          TIMEOUT=30
+          for ((i=1; i<=TIMEOUT; i++)); do
+            if ! kill -0 $JAVA_PID 2>/dev/null; then
+              break
+            fi
+            sleep 1
+            if [ $i -eq $TIMEOUT ]; then
+              # Time's up, kill the process
+              kill -9 $JAVA_PID
+            fi
+          done
+
+          wait $JAVA_PID
           EXIT_CODE=$?
+          wait $MONITOR_PID
 
           set -e
 
@@ -299,3 +318,22 @@ jobs:
 
           echo Process exited with code: %EXIT_CODE%
           exit /b %EXIT_CODE%
+
+      - name: Generate memory and CPU graph (Mac and Linux)
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        run: |
+          DATA_FILE=$(find . -name 'process_*.txt' | head -n 1)
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          python ./scripts/python/plot_rss_and_cpu.py "$DATA_FILE" \
+            --title "Memory and CPU Usage (${{ matrix.sample }} @ ${COMMIT_HASH})\n${{ matrix.platform.os }}, Java ${{ matrix.java }}" \
+            --output "${{ env.STREAM_NAME }}-mem-cpu.png"
+
+        shell: bash
+
+      - name: Upload memory and CPU graph (Mac and Linux)
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.STREAM_NAME }}-mem-cpu.png
+          path: ${{ env.STREAM_NAME }}-mem-cpu.png
+          retention-days: 7
