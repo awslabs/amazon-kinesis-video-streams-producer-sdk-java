@@ -553,5 +553,11 @@ jobs:
             --title "Memory and CPU Usage (Benchmarking ${COMMIT_HASH})\n Ubuntu, Java 11" \
             --output "benchmarking-mem-cpu.png" \
             "${KEY_POINTS_ARGS[@]}"
-
         shell: bash
+
+      - name: Upload memory and CPU graph (Mac and Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarking-mem-cpu.png
+          path: benchmarking-mem-cpu.png
+          retention-days: 7
