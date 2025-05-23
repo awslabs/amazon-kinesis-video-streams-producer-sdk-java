@@ -339,7 +339,6 @@ jobs:
           retention-days: 7
 
   run-benchmarks:
-    if: ${{ github.repository == 'awslabs/amazon-kinesis-video-streams-producer-sdk-java' }}
     env:
       STREAM_NAME_PREFIX: producer-java-benchmarking-java-11-ubuntu-22.04
       JNI_FOLDER: ${{ github.workspace }}/jni
