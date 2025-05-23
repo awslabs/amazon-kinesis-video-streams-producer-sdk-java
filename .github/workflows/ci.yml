@@ -339,6 +339,10 @@ jobs:
           retention-days: 7
 
   run-benchmarks:
+    needs:
+      - load-matrix
+      - build-jni
+
     env:
       STREAM_NAME_PREFIX: producer-java-benchmarking-java-11-ubuntu
       JNI_FOLDER: ${{ github.workspace }}/jni
@@ -359,9 +363,6 @@ jobs:
           java-version: 11
           distribution: 'adopt'
           cache: maven
-
-      - name: Run benchmarking script
-        run: ./benchmarking.sh'
 
       - name: Build with Maven
         run: mvn clean compile assembly:single
