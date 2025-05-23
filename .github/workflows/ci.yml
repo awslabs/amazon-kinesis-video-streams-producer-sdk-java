@@ -428,7 +428,7 @@ jobs:
 
   run-benchmarks:
     env:
-      STREAM_NAME_PREFIX: producer-java-benchmarking-java-11-ubuntu-22.04
+      STREAM_NAME_PREFIX: producer-java-benchmarking-java-11-ubuntu
       JNI_FOLDER: ${{ github.workspace }}/jni
       STREAM_COUNT: 3
       STREAM_INTERVAL_MS: 10000
