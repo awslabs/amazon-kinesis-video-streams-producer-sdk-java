@@ -437,11 +437,10 @@ jobs:
       STREAM_INTERVAL_MS: 10000
     
     runs-on: ubuntu-22.04
-    
     permissions:
       id-token: write
       contents: read
-      
+
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -452,6 +451,23 @@ jobs:
           java-version: 11
           distribution: 'adopt'
           cache: maven
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        working-directory: scripts/python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download JNI Library
+        uses: actions/download-artifact@v4
+        with:
+          name: jni-library-ubuntu-22.04
+          path: jni/
 
       - name: Build with Maven
         run: mvn clean compile assembly:single
