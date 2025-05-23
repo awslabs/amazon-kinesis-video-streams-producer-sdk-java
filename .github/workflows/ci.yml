@@ -425,3 +425,116 @@ jobs:
             Write-Output "Verifying $($file.FullName) with mkvinfo (verbose and hexdump):"
             mkvinfo.exe -v -X "$($file.FullName)"
           }
+
+  run-benchmarks:
+    if: ${{ github.repository == 'awslabs/amazon-kinesis-video-streams-producer-sdk-java' }}
+    env:
+      STREAM_NAME_PREFIX: producer-java-benchmarking-java-11-ubuntu-22.04
+      JNI_FOLDER: ${{ github.workspace }}/jni
+      STREAM_COUNT: 3
+      STREAM_INTERVAL_MS: 10000
+    
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: 11
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Run benchmarking script
+        run: ./benchmarking.sh'
+
+      - name: Build with Maven
+        run: mvn clean compile assembly:single
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Run the benchmarking application
+        run: |
+          set +e
+
+          JAR_FILE=$(find target -name '*jar-with-dependencies.jar' | head -n 1)
+
+          if [ -z "$JAR_FILE" ]; then
+            echo "Error: JAR file not found!"
+            exit 1
+          fi
+
+          echo "Using JAR file: $JAR_FILE"
+          java -classpath "$JAR_FILE" \
+            -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
+            -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
+            -Daws.sessionToken=${AWS_SESSION_TOKEN} \
+            -Djava.library.path=${JNI_FOLDER} \
+            -Dkvs-stream=${STREAM_NAME_PREFIX} \
+            -Dlog4j.configurationFile=log4j2.xml \
+            -Dstream-count=${STREAM_COUNT} \
+            -Dstream-interval-ms=${STREAM_INTERVAL_MS} \
+            com.amazonaws.kinesisvideo.demoapp.DemoAppBenchmarking &
+          JAVA_PID=$!
+
+          python ./scripts/python/capture_rss_and_cpu.py $JAVA_PID &
+          MONITOR_PID=$!
+
+          # Wait for maximum of STREAM_COUNT * STREAM_INTERVAL_MS + 30 seconds
+          TIMEOUT=$((STREAM_COUNT * STREAM_INTERVAL_MS / 1000 + 30))
+          for ((i=1; i<=TIMEOUT; i++)); do
+            if ! kill -0 $JAVA_PID 2>/dev/null; then
+              break
+            fi
+            sleep 1
+            if [ $i -eq $TIMEOUT ]; then
+              # Time's up, kill the process
+              kill -9 $JAVA_PID
+            fi
+          done
+
+          wait $JAVA_PID
+          EXIT_CODE=$?
+          wait $MONITOR_PID
+
+          set -e
+
+          # Check if the process was forcefully killed
+          if [ $EXIT_CODE -eq 124 ]; then
+            echo "Error: Benchmarking application exceeded time limit and was forcefully terminated."
+            exit 1
+          fi
+
+          # Preserve original exit code
+          echo "Process exited with code: $EXIT_CODE"
+          exit $EXIT_CODE
+
+        shell: bash
+
+      - name: Generate memory and CPU graph
+        run: |
+          DATA_FILE=$(find . -name 'process_*.txt' | head -n 1)
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+
+          KEY_POINTS_ARGS=()
+
+          for ((i = 0; i < STREAM_COUNT; i++)); do
+            TIME_SECONDS=$(awk "BEGIN { printf \"%.2f\", $i * $STREAM_INTERVAL_MS / 1000 }")
+            LABEL="Stream $((i + 1))"
+            KEY_POINTS_ARGS+=(--key-points "$TIME_SECONDS" "$LABEL")
+          done
+
+          python ./scripts/python/plot_rss_and_cpu.py "$DATA_FILE" \
+            --title "Memory and CPU Usage (Benchmarking ${COMMIT_HASH})\n Ubuntu, Java 11" \
+            --output "benchmarking-mem-cpu.png" \
+            "${KEY_POINTS_ARGS[@]}"
+
+        shell: bash
