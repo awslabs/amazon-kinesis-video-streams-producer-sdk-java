@@ -428,7 +428,6 @@ jobs:
 
   run-benchmarks:
     needs:
-      - load-matrix
       - build-jni
 
     env:
@@ -438,9 +437,11 @@ jobs:
       STREAM_INTERVAL_MS: 10000
     
     runs-on: ubuntu-22.04
+    
     permissions:
       id-token: write
       contents: read
+      
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
