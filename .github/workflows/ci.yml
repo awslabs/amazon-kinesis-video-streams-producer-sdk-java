@@ -59,11 +59,9 @@ jobs:
       - name: Build JNI (Mac and Linux)
         if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
         run: |
-          git clone https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp.git --single-branch -b ${{ env.BRANCH_NAME }}
-          cd amazon-kinesis-video-streams-producer-sdk-cpp
           mkdir build
           cd build
-          cmake .. -DBUILD_JNI_ONLY=ON
+          cmake ..
           make -j
 
       - name: Build JNI (Windows)
@@ -72,42 +70,27 @@ jobs:
         run: |
           @echo on
 
-          :: Create a shorter directory to avoid long path issues
-          mkdir D:\work || exit /b 1
-          git clone https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp.git D:\work\producer --single-branch -b ${{ env.BRANCH_NAME }} || exit /b 1
-
-          :: Ensure cloning succeeded
-          if not exist "D:\work\producer" (
-              echo "Error: Clone failed, directory does not exist."
-              exit /b 1
-          )
-
-          cd D:\work\producer || exit /b 1
-
           :: Create build directory
           mkdir build || exit /b 1
           cd build || exit /b 1
 
           :: Run CMake with the correct path
-          cmake .. -DBUILD_JNI_ONLY=ON -G "Visual Studio 17 2022" || exit /b 1
+          cmake .. -G "Visual Studio 17 2022" || exit /b 1
           cmake --build . --config Release --verbose || exit /b 1
 
           :: Move the compiled library to the expected location
           :: Note: Using Visual Studio generator, the output file gets put in Release\KinesisVideoProducerJNI.dll
           :: rather than in the build folder directly
-          cd "%GITHUB_WORKSPACE%" || exit /b 1
-          mkdir amazon-kinesis-video-streams-producer-sdk-cpp || exit /b 1
-          mkdir amazon-kinesis-video-streams-producer-sdk-cpp\build || exit /b 1
-          move D:\work\producer\build\Release\KinesisVideoProducerJNI.dll amazon-kinesis-video-streams-producer-sdk-cpp\build || exit /b 1
+          move Release\KinesisVideoProducerJNI.dll . || exit /b 1
 
       - name: Upload JNI Library
         uses: actions/upload-artifact@v4
         with:
           name: jni-library-${{ matrix.platform.name }}
           path: |
-            amazon-kinesis-video-streams-producer-sdk-cpp/build/libKinesisVideoProducerJNI.so
-            amazon-kinesis-video-streams-producer-sdk-cpp/build/libKinesisVideoProducerJNI.dylib
-            amazon-kinesis-video-streams-producer-sdk-cpp/build/KinesisVideoProducerJNI.dll
+            build/libKinesisVideoProducerJNI.so
+            build/libKinesisVideoProducerJNI.dylib
+            build/KinesisVideoProducerJNI.dll
           retention-days: 1
 
   run-unit-tests:
