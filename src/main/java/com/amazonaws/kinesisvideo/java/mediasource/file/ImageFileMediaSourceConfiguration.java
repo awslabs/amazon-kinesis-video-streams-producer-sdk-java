@@ -3,7 +3,6 @@ package com.amazonaws.kinesisvideo.java.mediasource.file;
 
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 
-import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.FRAME_DURATION_0_MS;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_CONTENT_TYPE;
 
 public class ImageFileMediaSourceConfiguration implements MediaSourceConfiguration {
