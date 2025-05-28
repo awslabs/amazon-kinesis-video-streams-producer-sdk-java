@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_KEY_FRAME;
 import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_NONE;
 import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
+import static com.amazonaws.kinesisvideo.producer.Time.NANOS_IN_A_MILLISECOND;
 
 /**
  * Frame source backed by local image files.
@@ -86,7 +87,9 @@ public class ImageFrameSource {
     }
 
     private void generateFrameAndNotifyListener() throws KinesisVideoException {
-        final long frameDuration = Duration.ofSeconds(1L).toMillis() / fps;
+        final double frameDurationMs = (double) Duration.ofSeconds(1L).toMillis() / fps;
+        long nextFrameTimeNs = System.nanoTime(); // to prevent time drift
+
         while (isRunning) {
             if (mkvDataAvailableCallback != null) {
                 mkvDataAvailableCallback.onFrameDataAvailable(createKinesisVideoFrameFromImage(frameCounter, currentFrameTimestampMs));
@@ -97,11 +100,15 @@ public class ImageFrameSource {
             }
 
             frameCounter++;
-            currentFrameTimestampMs += frameDuration;
-            try {
-                Thread.sleep(frameDuration);
-            } catch (final InterruptedException e) {
-                log.error("Frame interval wait interrupted by Exception ", e);
+            currentFrameTimestampMs = configuration.getStartTimeMs() + Math.round(frameCounter * frameDurationMs);
+            nextFrameTimeNs += (long)(frameDurationMs * NANOS_IN_A_MILLISECOND);
+
+            if (nextFrameTimeNs > 0) {
+                try {
+                    Thread.sleep((nextFrameTimeNs - System.nanoTime()) / NANOS_IN_A_MILLISECOND); // Convert to Ms
+                } catch (final InterruptedException e) {
+                    log.error("Frame interval wait interrupted by Exception ", e);
+                }
             }
         }
     }
