@@ -103,9 +103,10 @@ public class ImageFrameSource {
             currentFrameTimestampMs = configuration.getStartTimeMs() + Math.round(frameCounter * frameDurationMs);
             nextFrameTimeNs += (long)(frameDurationMs * NANOS_IN_A_MILLISECOND);
 
-            if (nextFrameTimeNs > 0) {
+            long sleepTimeMs = (nextFrameTimeNs - System.nanoTime()) / NANOS_IN_A_MILLISECOND; // Convert to Ms
+            if (sleepTimeMs > 0) {
                 try {
-                    Thread.sleep((nextFrameTimeNs - System.nanoTime()) / NANOS_IN_A_MILLISECOND); // Convert to Ms
+                    Thread.sleep(sleepTimeMs);
                 } catch (final InterruptedException e) {
                     log.error("Frame interval wait interrupted by Exception ", e);
                 }
