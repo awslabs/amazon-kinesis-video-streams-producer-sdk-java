@@ -14,6 +14,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
     private final int endFileIndex;
     private final String contentType;
     private final boolean allowStreamCreation;
+    private final long startTimeMs;
 
     public ImageFileMediaSourceConfiguration(final Builder builder) {
         this.fps = builder.fps;
@@ -23,6 +24,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         this.endFileIndex = builder.endFileIndex;
         this.contentType = builder.contentType;
         this.allowStreamCreation = builder.allowStreamCreation;
+        this.startTimeMs = builder.startTimeMs;
     }
 
     public int getFps() {
@@ -49,6 +51,8 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         return contentType;
     }
 
+    public long getStartTimeMs() { return startTimeMs; }
+
     @Override
     public String getMediaSourceType() {
         return null;
@@ -72,6 +76,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         private int endFileIndex;
         private String contentType = VIDEO_CONTENT_TYPE;
         private boolean allowStreamCreation;
+        private long startTimeMs = System.currentTimeMillis();
 
         public Builder fps(final int fps) {
             this.fps = fps;
@@ -108,6 +113,11 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
 
         public Builder allowStreamCreation(final Boolean allowStreamCreation) {
             this.allowStreamCreation = allowStreamCreation;
+            return this;
+        }
+
+        public Builder startTimeMs(final long startTimeMs) {
+            this.startTimeMs = startTimeMs;
             return this;
         }
 

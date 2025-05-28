@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_KEY_FRAME;
 import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_NONE;
 import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
+import static com.amazonaws.kinesisvideo.producer.Time.NANOS_IN_A_MILLISECOND;
 
 /**
  * Frame source backed by local image files.
@@ -40,11 +41,13 @@ public class ImageFrameSource {
     private final Log log = LogFactory.getLog(ImageFrameSource.class);
     private final String metadataName = "ImageLoop";
     private int metadataCount = 0;
+    private long currentFrameTimestampMs;
 
     public ImageFrameSource(final ImageFileMediaSourceConfiguration configuration) {
         this.configuration = configuration;
         this.totalFiles = getTotalFiles(configuration.getStartFileIndex(), configuration.getEndFileIndex());
         this.fps = configuration.getFps();
+        this.currentFrameTimestampMs = configuration.getStartTimeMs();
     }
 
     private int getTotalFiles(final int startIndex, final int endIndex) {
@@ -84,9 +87,12 @@ public class ImageFrameSource {
     }
 
     private void generateFrameAndNotifyListener() throws KinesisVideoException {
+        final double frameDurationMs = (double) Duration.ofSeconds(1L).toMillis() / fps;
+        long nextFrameTimeNs = System.nanoTime(); // to prevent time drift
+
         while (isRunning) {
             if (mkvDataAvailableCallback != null) {
-                mkvDataAvailableCallback.onFrameDataAvailable(createKinesisVideoFrameFromImage(frameCounter));
+                mkvDataAvailableCallback.onFrameDataAvailable(createKinesisVideoFrameFromImage(frameCounter, currentFrameTimestampMs));
                 if (isMetadataReady()) {
                     mkvDataAvailableCallback.onFragmentMetadataAvailable(metadataName + metadataCount,
                             Integer.toString(metadataCount++), false);
@@ -94,10 +100,16 @@ public class ImageFrameSource {
             }
 
             frameCounter++;
-            try {
-                Thread.sleep(Duration.ofSeconds(1L).toMillis() / fps);
-            } catch (final InterruptedException e) {
-                log.error("Frame interval wait interrupted by Exception ", e);
+            currentFrameTimestampMs = configuration.getStartTimeMs() + Math.round(frameCounter * frameDurationMs);
+            nextFrameTimeNs += (long)(frameDurationMs * NANOS_IN_A_MILLISECOND);
+
+            long sleepTimeMs = (nextFrameTimeNs - System.nanoTime()) / NANOS_IN_A_MILLISECOND; // Convert to Ms
+            if (sleepTimeMs > 0) {
+                try {
+                    Thread.sleep(sleepTimeMs);
+                } catch (final InterruptedException e) {
+                    log.error("Frame interval wait interrupted by Exception ", e);
+                }
             }
         }
     }
@@ -106,12 +118,11 @@ public class ImageFrameSource {
         return frameCounter % METADATA_INTERVAL == 0;
     }
 
-    private KinesisVideoFrame createKinesisVideoFrameFromImage(final long index) {
+    private KinesisVideoFrame createKinesisVideoFrameFromImage(final long index, final long timestampMs) {
         final String filename = String.format(
                 configuration.getFilenameFormat(),
                 index % totalFiles + configuration.getStartFileIndex());
         final Path path = Paths.get(configuration.getDir() + filename);
-        final long currentTimeMs = System.currentTimeMillis();
 
         final int flags = isKeyFrame() ? FRAME_FLAG_KEY_FRAME : FRAME_FLAG_NONE;
 
@@ -120,8 +131,8 @@ public class ImageFrameSource {
             return new KinesisVideoFrame(
                     frameCounter,
                     flags,
-                    currentTimeMs * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
-                    currentTimeMs * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
+                    timestampMs * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
+                    timestampMs * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
                     FRAME_DURATION_20_MS * HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
                     ByteBuffer.wrap(data));
         } catch (final IOException e) {
