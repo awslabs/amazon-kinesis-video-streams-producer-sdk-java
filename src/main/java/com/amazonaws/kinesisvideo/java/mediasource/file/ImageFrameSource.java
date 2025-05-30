@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_KEY_FRAME;
 import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_NONE;
@@ -42,6 +43,7 @@ public class ImageFrameSource {
     private final String metadataName = "ImageLoop";
     private int metadataCount = 0;
     private long currentFrameTimestampMs;
+    private long executorShutdownTimeoutSeconds = 5L;
 
     public ImageFrameSource(final ImageFileMediaSourceConfiguration configuration) {
         this.configuration = configuration;
@@ -149,5 +151,13 @@ public class ImageFrameSource {
 
     private void stopFrameGenerator() {
         executor.shutdown();
+        try {
+            if (!executor.awaitTermination(this.executorShutdownTimeoutSeconds, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 }
