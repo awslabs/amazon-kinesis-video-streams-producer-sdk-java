@@ -10,6 +10,10 @@ on:
       - develop
       - master
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   load-matrix:
     runs-on: ubuntu-latest
@@ -170,17 +174,17 @@ jobs:
           cache: maven
 
       - name: Set up Python 3.12
-        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install Python dependencies
-        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
-        working-directory: scripts/python
+        working-directory: scripts/python/benchmarking
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          cd ../getmediavalidation
+          pip install .
 
       - name: Download JNI Library
         uses: actions/download-artifact@v4
@@ -239,7 +243,7 @@ jobs:
             com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample }} &
           JAVA_PID=$!
 
-          python ./scripts/python/capture_rss_and_cpu.py $JAVA_PID &
+          python ./scripts/python/benchmarking/capture_rss_and_cpu.py $JAVA_PID &
           MONITOR_PID=$!
 
           # Wait for maximum 30 seconds
@@ -307,11 +311,35 @@ jobs:
         run: |
           DATA_FILE=$(find . -name 'process_*.txt' | head -n 1)
           COMMIT_HASH=$(git rev-parse --short HEAD)
-          python ./scripts/python/plot_rss_and_cpu.py "$DATA_FILE" \
+          python ./scripts/python/benchmarking/plot_rss_and_cpu.py "$DATA_FILE" \
             --title "Memory and CPU Usage (${{ matrix.sample }} @ ${COMMIT_HASH})\n${{ matrix.platform.os }}, Java ${{ matrix.java }}" \
             --output "${{ env.STREAM_NAME }}-mem-cpu.png"
 
         shell: bash
+
+      - name: Check uploaded media (Mac and Linux) (DemoAppMain)
+        if: ${{ (runner.os == 'macOS' || runner.os == 'linux') && matrix.sample == 'DemoAppMain' }}
+        working-directory: scripts/python/getmediavalidation/bin
+        run: |
+          python ./fetch_fragment_info.py --stream-name "$STREAM_NAME" --last 5m
+          python ./validate_media.py --stream-name "$STREAM_NAME" \
+            --keyframe-interval 25 \
+            -fps 25 \
+            --frames-path "${{ github.workspace }}/src/main/resources/data/h264/*.h264" \
+            --last 5m
+
+      - name: Check uploaded media (Windows) (DemoAppMain)
+        if: ${{ runner.os == 'Windows' && matrix.sample == 'DemoAppMain' }}
+        working-directory: scripts/python/getmediavalidation/bin
+        run: |
+          python ./fetch_fragment_info.py --stream-name "%STREAM_NAME%" --last 5m
+          python ./validate_media.py --stream-name "%STREAM_NAME%" ^
+            --keyframe-interval 25 ^
+            -fps 25 ^
+            --frames-path "${{ github.workspace }}/src/main/resources/data/h264/*.h264" ^
+            --last 5m
+
+        shell: cmd
 
       - name: Upload memory and CPU graph (Mac and Linux)
         if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
