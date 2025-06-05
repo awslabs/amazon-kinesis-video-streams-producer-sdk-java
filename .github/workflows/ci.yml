@@ -433,7 +433,7 @@ jobs:
     env:
       STREAM_NAME_PREFIX: producer-java-benchmarking-java-11-ubuntu
       JNI_FOLDER: ${{ github.workspace }}/jni
-      STREAM_COUNT: 10
+      STREAM_COUNT: 7
       STREAM_COUNT_START_STOP: 5
       STREAM_INTERVAL_MS: 10000
     
