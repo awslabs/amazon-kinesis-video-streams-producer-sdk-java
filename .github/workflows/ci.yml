@@ -433,7 +433,8 @@ jobs:
     env:
       STREAM_NAME_PREFIX: producer-java-benchmarking-java-11-ubuntu
       JNI_FOLDER: ${{ github.workspace }}/jni
-      STREAM_COUNT: 3
+      STREAM_COUNT: 10
+      STREAM_COUNT_START_STOP: 5
       STREAM_INTERVAL_MS: 10000
     
     runs-on: ubuntu-22.04
@@ -501,12 +502,51 @@ jobs:
             -Dstream-interval-ms=${STREAM_INTERVAL_MS} \
             com.amazonaws.kinesisvideo.demoapp.DemoAppBenchmarking &
           JAVA_PID=$!
+          BENCHMARKING_FILE="process_${JAVA_PID}.txt"
+          echo "BENCHMARKING_FILE=$BENCHMARKING_FILE" >> $GITHUB_ENV
 
           python ./scripts/python/capture_rss_and_cpu.py $JAVA_PID &
           MONITOR_PID=$!
 
           # Wait for maximum of STREAM_COUNT * STREAM_INTERVAL_MS + 30 seconds
           TIMEOUT=$((STREAM_COUNT * STREAM_INTERVAL_MS / 1000 + 30))
+          for ((i=1; i<=TIMEOUT; i++)); do
+            if ! kill -0 $JAVA_PID 2>/dev/null; then
+              break
+            fi
+            sleep 1
+            if [ $i -eq $TIMEOUT ]; then
+              # Time's up, kill the process
+              kill -9 $JAVA_PID
+            fi
+          done
+
+          wait $JAVA_PID
+          EXIT_CODE=$?
+          wait $MONITOR_PID
+
+          # Run the benchmarking app in start/stop mode.
+          java -classpath "$JAR_FILE" \
+            -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
+            -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
+            -Daws.sessionToken=${AWS_SESSION_TOKEN} \
+            -Djava.library.path=${JNI_FOLDER} \
+            -Dkvs-stream=${STREAM_NAME_PREFIX} \
+            -Dlog4j.configurationFile=log4j2.xml \
+            -Dstream-count=${STREAM_COUNT_START_STOP} \
+            -Dstream-interval-ms=${STREAM_INTERVAL_MS} \
+            -Ddo-start-stop=true \
+            com.amazonaws.kinesisvideo.demoapp.DemoAppBenchmarking &
+          JAVA_PID=$!
+          BENCHMARKING_FILE_START_STOP="process_${JAVA_PID}.txt"
+          echo "BENCHMARKING_FILE_START_STOP=$BENCHMARKING_FILE_START_STOP" >> $GITHUB_ENV
+
+          python ./scripts/python/capture_rss_and_cpu.py $JAVA_PID &
+          MONITOR_PID=$!
+
+          # Wait for maximum of expected duration + 30 seconds.
+          # Note: Start/stop mode runs each stream for 3 intervals, and has an extra 120 seconds of sleep to allow for the streams to stabilize.
+          TIMEOUT=$((STREAM_COUNT_START_STOP * STREAM_INTERVAL_MS * 3 / 1000 + 120 + 30))
           for ((i=1; i<=TIMEOUT; i++)); do
             if ! kill -0 $JAVA_PID 2>/dev/null; then
               break
@@ -538,9 +578,16 @@ jobs:
 
       - name: Generate memory and CPU graph
         run: |
-          DATA_FILE=$(find . -name 'process_*.txt' | head -n 1)
           COMMIT_HASH=$(git rev-parse --short HEAD)
 
+          DATA_FILE="${BENCHMARKING_FILE}"
+
+          if [ ! -f "$DATA_FILE" ]; then
+            echo "Error: Data file $DATA_FILE not found!"
+            exit 1
+          fi
+
+          # Key points for each stream
           KEY_POINTS_ARGS=()
 
           for ((i = 0; i < STREAM_COUNT; i++)); do
@@ -553,6 +600,22 @@ jobs:
             --title "Memory and CPU Usage (Benchmarking ${COMMIT_HASH})\n Ubuntu, Java 11" \
             --output "benchmarking-mem-cpu.png" \
             "${KEY_POINTS_ARGS[@]}"
+
+          
+          DATA_FILE="${BENCHMARKING_FILE_START_STOP}"
+
+          if [ ! -f "$DATA_FILE" ]; then
+            echo "Error: Data file $DATA_FILE not found!"
+            exit 1
+          fi
+
+          # Key points for each stream
+          KEY_POINTS_ARGS=()
+
+          python ./scripts/python/plot_rss_and_cpu.py "$DATA_FILE" \
+            --title "Start/Stop Memory and CPU Usage (Benchmarking ${COMMIT_HASH})\n Ubuntu, Java 11" \
+            --output "benchmarking-start-stop-mem-cpu.png" \
+
         shell: bash
 
       - name: Upload memory and CPU graph (Mac and Linux)
@@ -560,4 +623,11 @@ jobs:
         with:
           name: benchmarking-mem-cpu.png
           path: benchmarking-mem-cpu.png
+          retention-days: 7
+        
+      - name: Upload start-stop memory and CPU graph (Mac and Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarking-start-stop-mem-cpu.png
+          path: benchmarking-start-stop-mem-cpu.png
           retention-days: 7

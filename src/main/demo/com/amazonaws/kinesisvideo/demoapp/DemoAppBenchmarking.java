@@ -35,7 +35,7 @@ public final class DemoAppBenchmarking {
     private static final int STREAM_COUNT = Integer.parseInt(System.getProperty("stream-count"));
     // private static final int STREAM_INTERVALED_COUNT = Integer.parseInt(System.getProperty("stream-intervaled-count"));
     private static final int STREAM_INTERVAL_MS =  Integer.parseInt(System.getProperty("stream-interval-ms"));
-    private static final int ALL_STREAMS_DURATION_MS = 5000;
+    private static final boolean DO_START_STOP = Boolean.parseBoolean(System.getProperty("do-start-stop", "false"));
 
     private DemoAppBenchmarking() {
         throw new UnsupportedOperationException();
@@ -67,20 +67,41 @@ public final class DemoAppBenchmarking {
                 mediaSources[i].start();
 
                 // sleep for the interval
-                // if(i < STREAM_INTERVALED_COUNT) {
-                    log.warn("Sleeping for {} ms", STREAM_INTERVAL_MS);
-                    Thread.sleep(STREAM_INTERVAL_MS);
-                // } else {
-                //     Thread.sleep(100);
-                // }
+                log.warn("Sleeping for {} ms", STREAM_INTERVAL_MS);
+                Thread.sleep(STREAM_INTERVAL_MS);
                 
             }
-            
-            log.warn("Sleeping for {} ms", ALL_STREAMS_DURATION_MS);
-            // Sleep for the max stream count duration.
-            Thread.sleep(ALL_STREAMS_DURATION_MS);
 
-            // Now stop the streams
+            // Stop and start streams if doing start/stop
+            if (DO_START_STOP) {
+                log.warn("Starting to stop and start streams");
+                for (int i = 0; i < mediaSources.length; i++) {
+                    log.warn("Stopping stream {}", i);
+                    kinesisVideoClient.unregisterMediaSource(mediaSources[i]);
+                    log.warn("Sleeping for {} ms", STREAM_INTERVAL_MS);
+                    Thread.sleep(STREAM_INTERVAL_MS);  
+                }
+
+                log.warn("Sleeping for 60 seconds to allow streams to stabilize");
+                Thread.sleep(60000);
+
+                for (int i = 0; i < mediaSources.length; i++) {
+                    log.warn("Starting stream {}", i);
+
+                    mediaSources[i] = createImageFileMediaSource(String.valueOf(i));
+                    kinesisVideoClient.registerMediaSource(mediaSources[i]);
+                    mediaSources[i].start();
+                    
+                    log.warn("Sleeping for {} ms", STREAM_INTERVAL_MS);
+                    Thread.sleep(STREAM_INTERVAL_MS);
+                }
+
+                log.warn("Done stopping and starting streams");
+                log.warn("Sleeping for 60 seconds to allow streams to stabilize");
+                Thread.sleep(60000);
+            }
+
+            // Stop the streams
             for (int i = 0; i < mediaSources.length; i++) {
                 log.warn("unregistering stream {}", i);
                 kinesisVideoClient.unregisterMediaSource(mediaSources[i]);
@@ -111,7 +132,7 @@ public final class DemoAppBenchmarking {
                         //.contentType("video/hevc") // for h265
                         .allowStreamCreation(false)
                         .build();
-        final ImageFileMediaSource mediaSource = new ImageFileMediaSource(STREAM_NAME + "_" + streamNameSuffix);
+        final ImageFileMediaSource mediaSource = new ImageFileMediaSource(STREAM_NAME + "-" + streamNameSuffix);
         mediaSource.configure(configuration);
 
         return mediaSource;
