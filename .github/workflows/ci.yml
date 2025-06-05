@@ -459,7 +459,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install Python dependencies
-        working-directory: scripts/python
+        working-directory: scripts/python/benchmarking
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -505,7 +505,7 @@ jobs:
           BENCHMARKING_FILE="process_${JAVA_PID}.txt"
           echo "BENCHMARKING_FILE=$BENCHMARKING_FILE" >> $GITHUB_ENV
 
-          python ./scripts/python/capture_rss_and_cpu.py $JAVA_PID &
+          python ./scripts/python/benchmarking/capture_rss_and_cpu.py $JAVA_PID &
           MONITOR_PID=$!
 
           # Wait for maximum of STREAM_COUNT * STREAM_INTERVAL_MS + 30 seconds
@@ -541,7 +541,7 @@ jobs:
           BENCHMARKING_FILE_START_STOP="process_${JAVA_PID}.txt"
           echo "BENCHMARKING_FILE_START_STOP=$BENCHMARKING_FILE_START_STOP" >> $GITHUB_ENV
 
-          python ./scripts/python/capture_rss_and_cpu.py $JAVA_PID &
+          python ./scripts/python/benchmarking/capture_rss_and_cpu.py $JAVA_PID &
           MONITOR_PID=$!
 
           # Wait for maximum of expected duration + 30 seconds.
@@ -596,7 +596,7 @@ jobs:
             KEY_POINTS_ARGS+=(--key-points "$TIME_SECONDS" "$LABEL")
           done
 
-          python ./scripts/python/plot_rss_and_cpu.py "$DATA_FILE" \
+          python ./scripts/python/benchmarking/plot_rss_and_cpu.py "$DATA_FILE" \
             --title "Memory and CPU Usage (Benchmarking ${COMMIT_HASH})\n Ubuntu, Java 11" \
             --output "benchmarking-mem-cpu.png" \
             "${KEY_POINTS_ARGS[@]}"
@@ -612,7 +612,7 @@ jobs:
           # Key points for each stream
           KEY_POINTS_ARGS=()
 
-          python ./scripts/python/plot_rss_and_cpu.py "$DATA_FILE" \
+          python ./scripts/python/benchmarking/plot_rss_and_cpu.py "$DATA_FILE" \
             --title "Start/Stop Memory and CPU Usage (Benchmarking ${COMMIT_HASH})\n Ubuntu, Java 11" \
             --output "benchmarking-start-stop-mem-cpu.png" \
 
