@@ -1,4 +1,5 @@
 import argparse
+import re
 from datetime import timedelta
 import logging
 import os
@@ -7,7 +8,6 @@ from typing import List, Tuple, Optional
 import matplotlib.pyplot as plt
 from matplotlib.colors import TABLEAU_COLORS
 import numpy as np
-
 
 blue_color = TABLEAU_COLORS['tab:blue']
 orange_color = TABLEAU_COLORS['tab:orange']
@@ -18,7 +18,7 @@ SECONDS_PER_DAY = 86400
 logger = logging.getLogger(__name__)
 
 
-def parse_rss_file(file_path: str) -> Tuple[np.array, np.array, np.array]:
+def parse_rss_file(file_path: str) -> Tuple[np.array, np.array, np.array, int]:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -26,12 +26,14 @@ def parse_rss_file(file_path: str) -> Tuple[np.array, np.array, np.array]:
     rss_values = []
     cpu_values = []
     start_time = None
+    cpus = 0
 
     with open(file_path, 'r', encoding='utf-8') as file:
         for line in file:
             try:
-                # Skip the header line: 'Timestamp,RAM (KB),CPU (%)'
+                # Extract CPU count from the header line: 'Timestamp,RAM (KB),CPU (%) (N logical CPUs/vCPUs)'
                 if 'Timestamp' in line:
+                    cpus = int(re.search(r'\((\d+)\s+logical', line).group(1))
                     continue
 
                 timestamp_str, rss_str, cpu_str = line.split(',')
@@ -64,7 +66,7 @@ def parse_rss_file(file_path: str) -> Tuple[np.array, np.array, np.array]:
     if len(times) == 0 or len(rss_values) == 0:
         raise ValueError(f'The file {file_path} is bad or corrupted!')
 
-    return np.asarray(times), np.asarray(rss_values), np.asarray(cpu_values)
+    return np.asarray(times), np.asarray(rss_values), np.asarray(cpu_values), cpus
 
 
 def convert_memory_units(memory_values: np.ndarray) -> Tuple[np.ndarray, str]:
@@ -90,21 +92,21 @@ def convert_memory_units(memory_values: np.ndarray) -> Tuple[np.ndarray, str]:
 def plot_rss_and_cpu(data_set: Tuple[np.ndarray, np.ndarray, np.ndarray, str],
                      key_points: Optional[List[Tuple[float, str]]] = None,
                      save_path: Optional[str] = None,
+                     cpu_count: Optional[int] = 0,
                      title: Optional[str] = None,
-                     x_max: Optional[float] = None,
-                     y_min: Optional[float] = None,
-                     y_max: Optional[float] = None) -> None:
+                     cpu_bounds: Tuple[Optional[int], Optional[int]] = None,
+                     rss_bounds: Tuple[Optional[int], Optional[int]] = None) -> None:
     """
     Plot RSS and CPU usage over time.
 
     Args:
         data_set: Tuple containing (times, rss_values, cpu_values, label)
         key_points: List of tuples containing (time, label) for marking points
+        cpu_count: Number of logical CPUs the device the data was captured on
         save_path: Path to save the plot
         title: Title of the plot
-        x_max: Maximum value for x-axis
-        y_min: Minimum value for y-axis
-        y_max: Maximum value for y-axis
+        rss_bounds: y-axis overrides (lower, upper) for RSS
+        cpu_bounds: y-axis overrides (lower, upper) for CPU
     """
     fig, ax1 = plt.subplots(figsize=(12, 6))
     ax2 = ax1.twinx()
@@ -115,12 +117,6 @@ def plot_rss_and_cpu(data_set: Tuple[np.ndarray, np.ndarray, np.ndarray, str],
     times, rss_values, cpu_values, label = data_set
 
     converted_rss, rss_unit = convert_memory_units(rss_values)
-
-    if x_max is not None:
-        # Truncate data beyond the maximum x-value
-        within_x_max = times <= x_max
-        times = times[within_x_max]
-        rss_values = rss_values[within_x_max]
 
     # Plot RSS on left y-axis
     plot_label = f'{label} RSS'
@@ -135,58 +131,88 @@ def plot_rss_and_cpu(data_set: Tuple[np.ndarray, np.ndarray, np.ndarray, str],
     plt.title(title.replace('\\n', '\n'), fontsize='x-large')
     ax1.set_xlabel('Time (seconds since start)', fontsize='large')
     ax1.set_ylabel(f'RSS ({rss_unit})', fontsize='large', color=blue_color)
-    ax2.set_ylabel('CPU %', fontsize='large', color=orange_color)
+    ax2.set_ylabel(f'CPU %{f'\n({cpu_count} logical CPUs/vCPUs)' if cpu_count > 0 else ''}', fontsize='large', color=orange_color)
 
     # Set grid
     ax1.grid(True)
 
-    # Set x-axis limits
+    # Set x-axis bounds
     ax1.set_xlim(left=0)
-    if x_max is not None:
-        ax1.set_xlim(right=x_max)
+    ax2.set_xlim(left=0)
 
-    # Set y-axis limits if provided
-    if y_min is not None:
-        ax1.ylim(bottom=y_min)
-    if y_max is not None:
-        ax1.ylim(top=y_max)
+    max_x = np.max(times)
+    ax1.set_xlim(right=max_x)
+    ax2.set_xlim(right=max_x)
+
+    # RSS upper and lower bounds
+    if rss_bounds[0] is not None:
+        ax1.set_ylim(bottom=rss_bounds[0])
+    else:
+        ax1.set_ylim(bottom=0)
+
+    if rss_bounds[1] is not None:
+        ax1.ylim(top=rss_bounds[1])
+    # Otherwise, default top is used
+
+    # CPU upper and lower bounds
+    if cpu_bounds[0] is not None:
+        ax2.set_ylim(bottom=cpu_bounds[0])
+    else:
+        ax2.set_ylim(bottom=0)
+
+    if cpu_bounds[1] is not None:
+        ax2.set_ylim(top=cpu_bounds[1])
+    else:
+        # Since it's a percentage, we can max it at 100
+        ax2.set_ylim(top=100)
 
     if key_points:
-        min_rss = np.min(rss_values)
-        max_rss = np.max(rss_values)
-        y_range = max_rss - min_rss
+        # Get the current y-axis limits
+        y_min, y_max = ax1.get_ylim()
+        usable_range = y_max - y_min
+
         for time, label in key_points:
             ax1.axvline(x=time, color=green_color, linestyle=':')
 
-            # Find the nearest data point in the first dataset for positioning
-            nearest_index = np.argmin(np.abs(data_set[0] - time))
-            nearest_value = data_set[1][nearest_index]
+            # Find all values within a small window around the vertical line
+            window = 2  # seconds
+            window_indices = np.where(np.abs(times - time) <= window)[0]
+            window_values = converted_rss[window_indices]
 
-            # Determine best label position
-            label_positions = [
-                (max_rss - 0.1 * y_range, 'center_baseline'),  # Near top
-                (min_rss + 0.1 * y_range, 'baseline'),  # Near bottom
-                (nearest_value + 0.1 * y_range, 'baseline'),  # Above nearest point
-                (nearest_value - 0.1 * y_range, 'baseline')  # Below nearest point
+            # Define possible positions within the visible graph area
+            positions = [
+                (y_min + 0.15 * usable_range, 'bottom'),  # Near bottom
+                (y_min + 0.3 * usable_range, 'bottom'),  # Lower third
+                (y_min + 0.5 * usable_range, 'center'),  # Middle
+                (y_max - 0.3 * usable_range, 'top'),  # Upper third
+                (y_max - 0.15 * usable_range, 'top')  # Near top
             ]
 
-            if y_min is not None:
-                # Just above y-min
-                label_positions.append((y_min + 0.1 * y_range, 'baseline'))
+            # For each position, calculate the distance to the closest data point
+            best_position = None
+            max_min_distance = -float('inf')
 
-            if y_max is not None:
-                # Just below y-max
-                label_positions.append((y_max - 0.1 * y_range, 'center_baseline'))
+            for pos, alignment in positions:
+                # Calculate distances to all points in the window
+                distances = np.abs(window_values - pos)
+                min_distance = np.min(distances) if len(distances) > 0 else float('inf')
 
-            # Choose the position furthest from the nearest data point
-            label_y, vertical_alignment = max(label_positions,
-                                              key=lambda y: abs(y[0] - nearest_value))
+                # Update if this position is further from any data point
+                if min_distance > max_min_distance:
+                    max_min_distance = min_distance
+                    best_position = (pos, alignment)
 
+            label_y, vertical_alignment = best_position
+
+            # Add the text with a white background
             ax1.text(time, label_y, label,
                      rotation=90,
                      verticalalignment=vertical_alignment,
                      horizontalalignment='center',
-                     bbox={"facecolor": 'white', "alpha": 0.7, "edgecolor": 'none'})
+                     bbox={"facecolor": 'white',
+                           "alpha": 0.8,
+                           "edgecolor": 'none',
+                           "pad": 2})
 
     plt.gca().xaxis.set_major_formatter(
         plt.FuncFormatter(
@@ -225,16 +251,10 @@ def main():
                         metavar=('TIME', 'LABEL'),
                         help='Key points (in seconds) to mark with vertical labels. '
                              'Can be used multiple times.')
-    parser.add_argument('--y-min',
-                        type=int, help='Minimum value for y-axis')
-    parser.add_argument('--y-max',
-                        type=int, help='Maximum value for y-axis')
-    parser.add_argument('--x-max',
-                        type=int, help='Maximum value for x-axis (seconds).')
-
-    parser.add_argument('--same-color', action='store_true',
-                        help='Plot all files with the same color and lower '
-                             'opacity with a single legend label')
+    parser.add_argument('--rss-min', type=int, help='Minimum value for y-axis RSS, default=0', default=0)
+    parser.add_argument('--rss-max', type=int, help='Maximum value for y-axis RSS')
+    parser.add_argument('--cpu-min', type=int, help='Minimum value for y-axis CPU, default=0', default=0)
+    parser.add_argument('--cpu-max', type=int, help='Maximum value for y-axis CPU, default=100', default=100)
 
     args = parser.parse_args()
 
@@ -243,16 +263,16 @@ def main():
         for time, label in args.key_points:
             key_points.append((float(time), label))
 
-    times, rss_values, cpu_values = parse_rss_file(args.data_file)
+    times, rss_values, cpu_values, cpu_count = parse_rss_file(args.data_file)
     data_set = (times, rss_values, cpu_values, args.data_file)
 
     plot_rss_and_cpu(data_set=data_set,
                      key_points=key_points,
                      save_path=args.output,
+                     cpu_count=cpu_count,
                      title=args.title,
-                     x_max=args.x_max,
-                     y_min=args.y_min,
-                     y_max=args.y_max)
+                     cpu_bounds=(args.cpu_min, args.cpu_max),
+                     rss_bounds=(args.rss_min, args.rss_max))
 
 
 if __name__ == "__main__":
