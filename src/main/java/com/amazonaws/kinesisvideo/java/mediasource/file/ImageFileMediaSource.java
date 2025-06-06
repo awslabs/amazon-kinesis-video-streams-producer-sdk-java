@@ -60,7 +60,7 @@ public class ImageFileMediaSource implements MediaSource {
     private ImageFileMediaSourceConfiguration imageFileMediaSourceConfiguration;
     private MediaSourceState mediaSourceState;
     private MediaSourceSink mediaSourceSink;
-    private ImageFrameSource imageFrameSource;
+    private PreloadedSampleImageFrameSource preloadedSampleImageFrameSource;
 
     public ImageFileMediaSource(@Nonnull final String streamName) {
         this(streamName, new CompletableFuture<>());
@@ -133,15 +133,15 @@ public class ImageFileMediaSource implements MediaSource {
     @Override
     public void start() throws KinesisVideoException {
         mediaSourceState = MediaSourceState.RUNNING;
-        imageFrameSource = new ImageFrameSource(imageFileMediaSourceConfiguration);
-        imageFrameSource.onStreamDataAvailable(new DefaultOnStreamDataAvailable(mediaSourceSink));
-        imageFrameSource.start();
+        preloadedSampleImageFrameSource = new PreloadedSampleImageFrameSource(imageFileMediaSourceConfiguration);
+        preloadedSampleImageFrameSource.onStreamDataAvailable(new DefaultOnStreamDataAvailable(mediaSourceSink));
+        preloadedSampleImageFrameSource.start();
     }
 
     @Override
     public void stop() throws KinesisVideoException {
-        if (imageFrameSource != null) {
-            imageFrameSource.stop();
+        if (preloadedSampleImageFrameSource != null) {
+            preloadedSampleImageFrameSource.stop();
         }
 
         try {
