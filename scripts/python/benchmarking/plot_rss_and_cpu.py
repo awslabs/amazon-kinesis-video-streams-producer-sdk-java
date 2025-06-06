@@ -151,7 +151,7 @@ def plot_rss_and_cpu(data_set: Tuple[np.ndarray, np.ndarray, np.ndarray, str],
         ax1.set_ylim(bottom=0)
 
     if rss_bounds[1] is not None:
-        ax1.ylim(top=rss_bounds[1])
+        ax1.set_ylim(top=rss_bounds[1])
     # Otherwise, default top is used
 
     # CPU upper and lower bounds

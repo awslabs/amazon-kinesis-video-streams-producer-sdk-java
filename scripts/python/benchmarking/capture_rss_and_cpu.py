@@ -32,8 +32,9 @@ class ProcessMonitor:
         self.interval = interval
         self.output_file = f'process_{pid}_metrics.txt'
 
-        self.cpu_count_logical = cpu_count()  # logical cores (including hyperthreading)
+        # logical cores (including hyperthreading)
         # in cloud, this is known as vCPUs
+        self.cpu_count_logical = cpu_count()
 
         cpu_count_physical = cpu_count(logical=False)  # physical cores only
         self.cpu_percentage_max = self.cpu_count_logical * 100
