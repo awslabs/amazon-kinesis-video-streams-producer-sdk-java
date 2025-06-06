@@ -14,7 +14,7 @@ import sys
 import time
 
 from datetime import datetime
-from psutil import Process, NoSuchProcess, pid_exists
+from psutil import Process, NoSuchProcess, pid_exists, cpu_count
 
 
 class ProcessMonitor:
@@ -32,6 +32,19 @@ class ProcessMonitor:
         self.interval = interval
         self.output_file = f'process_{pid}_metrics.txt'
 
+        # logical cores (including hyperthreading)
+        # in cloud, this is known as vCPUs
+        self.cpu_count_logical = cpu_count()
+
+        cpu_count_physical = cpu_count(logical=False)  # physical cores only
+        self.cpu_percentage_max = self.cpu_count_logical * 100
+
+        print(f"Number of CPU cores: {cpu_count_physical} physical, {self.cpu_count_logical} logical")
+        print(f"Maximum possible CPU%: {self.cpu_percentage_max}%")
+
+        if self.cpu_percentage_max > 100:
+            print(f"It will be normalized to 100%")
+
     def get_process_metrics(self) -> tuple[str, float, float] | None:
         """
         Collect current process metrics.
@@ -42,10 +55,10 @@ class ProcessMonitor:
         try:
             process = Process(self.pid)
             cpu_percent = process.cpu_percent(interval=0.1)
+            normalized_cpu_percent = cpu_percent / self.cpu_percentage_max
             memory_kb = process.memory_info().rss / 1024
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-
-            return timestamp, memory_kb, cpu_percent
+            return timestamp, memory_kb, normalized_cpu_percent
 
         except NoSuchProcess:
             print(f"Process with PID {self.pid} no longer exists")
@@ -67,7 +80,7 @@ class ProcessMonitor:
             writer = csv.writer(csvfile)
 
             if not file_exists:
-                writer.writerow(['Timestamp', 'RAM (KB)', 'CPU (%)'])
+                writer.writerow(['Timestamp', 'RAM (KB)', f'CPU (%) ({self.cpu_count_logical} logical CPUs/vCPUs)'])
 
             writer.writerow(data)
 
