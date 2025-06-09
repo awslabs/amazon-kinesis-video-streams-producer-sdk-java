@@ -78,12 +78,12 @@ public final class DemoAppBenchmarking {
                 for (int i = 0; i < mediaSources.length; i++) {
                     log.warn("Stopping stream {}", i);
                     kinesisVideoClient.unregisterMediaSource(mediaSources[i]);
-                    log.warn("Sleeping for {} ms", STREAM_INTERVAL_MS);
-                    Thread.sleep(STREAM_INTERVAL_MS);  
+                    log.warn("Sleeping for {} ms", 10);
+                    Thread.sleep(10);  
                 }
 
-                log.warn("Sleeping for 60 seconds to allow streams to stabilize");
-                Thread.sleep(60000);
+                log.warn("Sleeping for 300 seconds to allow streams to stabilize");
+                Thread.sleep(300000);
 
                 for (int i = 0; i < mediaSources.length; i++) {
                     log.warn("Starting stream {}", i);
@@ -92,13 +92,13 @@ public final class DemoAppBenchmarking {
                     kinesisVideoClient.registerMediaSource(mediaSources[i]);
                     mediaSources[i].start();
                     
-                    log.warn("Sleeping for {} ms", STREAM_INTERVAL_MS);
-                    Thread.sleep(STREAM_INTERVAL_MS);
+                    log.warn("Sleeping for {} ms", 10);
+                    Thread.sleep(10);
                 }
 
                 log.warn("Done stopping and starting streams");
-                log.warn("Sleeping for 60 seconds to allow streams to stabilize");
-                Thread.sleep(60000);
+                log.warn("Sleeping for 300 seconds to allow streams to stabilize");
+                Thread.sleep(300000);
             }
 
             // Stop the streams
@@ -132,7 +132,7 @@ public final class DemoAppBenchmarking {
                         //.contentType("video/hevc") // for h265
                         .allowStreamCreation(false)
                         .build();
-        final ImageFileMediaSource mediaSource = new ImageFileMediaSource(STREAM_NAME + "_" + streamNameSuffix);
+        final ImageFileMediaSource mediaSource = new ImageFileMediaSource(STREAM_NAME + "-" + streamNameSuffix);
         mediaSource.configure(configuration);
 
         return mediaSource;
