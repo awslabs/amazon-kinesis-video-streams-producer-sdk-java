@@ -453,6 +453,17 @@ CleanUp:
         LEAVE();
     }
 
+    PUBLIC_API void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_setupInstrumentedAllocators(JNIEnv* env, jobject thiz)
+    {
+        ::setInstrumentedAllocators();
+    }
+
+    PUBLIC_API jlong JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_getCurrentAllocationBytes(JNIEnv* env, jobject thiz)
+    {
+        SIZE_T allocationSize = ::getInstrumentedTotalAllocationSize();
+        return allocationSize;
+    }
+
 #ifdef __cplusplus
 } // End extern "C"
 #endif

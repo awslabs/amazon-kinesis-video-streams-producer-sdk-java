@@ -7,7 +7,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 
@@ -16,6 +19,9 @@ import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoMetrics;
+import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoStreamMetrics;
+import com.amazonaws.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
@@ -66,6 +72,11 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
     private final ServiceCallbacks mServiceCallbacks;
 
     /**
+     * Whether to use PIC instrumented allocators.
+     */
+    private final boolean mUseInstrumentedAllocators;
+
+    /**
      * Underlying Kinesis Video producer object.
      */
     private KinesisVideoProducer kinesisVideoProducer;
@@ -100,6 +111,16 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
             @Nonnull final StorageCallbacks storageCallbacks,
             @Nonnull final ServiceCallbacks serviceCallbacks,
             @Nonnull final StreamCallbacks streamCallbacks) {
+        this(log, authCallbacks, storageCallbacks, serviceCallbacks, streamCallbacks, false);
+    }
+
+    public NativeKinesisVideoClient(
+            @Nonnull final Logger log,
+            @Nonnull final AuthCallbacks authCallbacks,
+            @Nonnull final StorageCallbacks storageCallbacks,
+            @Nonnull final ServiceCallbacks serviceCallbacks,
+            @Nonnull final StreamCallbacks streamCallbacks,
+            final boolean useInstrumentedAllocators) {
 
         super(log);
 
@@ -109,6 +130,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
         mStreamCallbacks = checkNotNull(streamCallbacks);
 
         mMediaSourceToStreamMap = new HashMap<MediaSource, KinesisVideoProducerStream>();
+        mUseInstrumentedAllocators = useInstrumentedAllocators;
     }
 
     /**
@@ -235,8 +257,86 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
                 mAuthCallbacks,
                 mStorageCallbacks,
                 mServiceCallbacks,
-                mLog);
+                mLog,
+                new CountDownLatch(1),
+                mUseInstrumentedAllocators);
         kinesisVideoProducer.createSync(deviceInfo);
         return kinesisVideoProducer;
+    }
+
+    /**
+     * Query the PIC malloc tracker for the current allocated bytes.
+     * Note this is shared for all streams.
+     *
+     * @return The current malloc'd memory for the KVS native codebase (global), in bytes.
+     */
+    public long getCurrentAllocationSizeBytes() {
+        if (!mUseInstrumentedAllocators) {
+            throw new IllegalStateException("Instrumented allocators from PIC are not enabled");
+        }
+        return ((NativeKinesisVideoProducerJni) kinesisVideoProducer).getCurrentAllocationBytes();
+    }
+
+    /**
+     * Get metrics for the producer client.
+     *
+     * @return Client metrics
+     */
+    public Optional<KinesisVideoMetrics> getClientMetrics() {
+        try {
+            return Optional.of(kinesisVideoProducer.getMetrics());
+        } catch (final KinesisVideoException ex) {
+            mLog.error("getClientMetrics failed with exception", ex);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Get metrics for a particular stream.
+     *
+     * @param streamName name of the stream to fetch metrics of
+     * @return The metrics
+     * @throws IllegalArgumentException if the media source is not registered
+     */
+    public Optional<KinesisVideoStreamMetrics> getStreamMetrics(@Nonnull final String streamName) {
+
+        final MediaSource mediaSource = mMediaSources.stream()
+                .filter(ms -> {
+                    try {
+                        return streamName.equals(ms.getStreamInfo().getName());
+                    } catch (final KinesisVideoException e) {
+                        return false;
+                    }
+                })
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No stream found for media source " + streamName));
+
+        final long streamHandle = mMediaSourceToStreamMap.get(mediaSource).getStreamHandle();
+        final KinesisVideoStreamMetrics metrics = new KinesisVideoStreamMetrics();
+        try {
+            ((NativeKinesisVideoProducerJni) kinesisVideoProducer).getStreamMetrics(streamHandle, metrics);
+            return Optional.of(metrics);
+        } catch (final KinesisVideoException e) {
+            mLog.error("Failed to get stream metrics for media source {}", mediaSource);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Returns a copy of the current registered streams.
+     *
+     * @return A list of the stream names currently registered.
+     */
+    public List<String> getStreamNames() {
+        return mMediaSources.stream()
+                .map(mediaSource -> {
+                    try {
+                        return mediaSource.getStreamInfo().getName();
+                    } catch (final KinesisVideoException e) {
+                        return null;
+                    }
+                })
+                .filter(s -> !StringUtils.isNullOrEmpty(s))
+                .collect(Collectors.toList());
     }
 }

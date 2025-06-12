@@ -201,9 +201,9 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Create the stream (DemoAppMain)
+      - name: Create the stream (DemoAppMain and DemoAppMainWithHeapTracking)
         # This sample needs a pre-created stream: `${NAME}`
-        if: ${{ matrix.sample == 'DemoAppMain' }}
+        if: ${{ matrix.sample == 'DemoAppMain' || matrix.sample == 'DemoAppMainWithHeapTracking' }}
         working-directory: scripts
         run: |
           ./prepareStream.sh "$STREAM_NAME"
@@ -311,9 +311,42 @@ jobs:
         run: |
           DATA_FILE=$(find . -name 'process_*.txt' | head -n 1)
           COMMIT_HASH=$(git rev-parse --short HEAD)
+          mkdir output
           python ./scripts/python/benchmarking/plot_rss_and_cpu.py "$DATA_FILE" \
             --title "Memory and CPU Usage (${{ matrix.sample }} @ ${COMMIT_HASH})\n${{ matrix.platform.os }}, Java ${{ matrix.java }}" \
-            --output "${{ env.STREAM_NAME }}-mem-cpu.png"
+            --output "output/${{ env.STREAM_NAME }}-mem-cpu.png"
+          
+          mv "$DATA_FILE" output
+        shell: bash
+
+      - name: Generate heap usage graphs (Mac and Linux) (DemoAppMainWithHeapTracking)
+        if: ${{ (runner.os == 'macOS' || runner.os == 'linux') && matrix.sample == 'DemoAppMainWithHeapTracking' }}
+        env:
+          DATA_FILE: memory-data.csv
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          python ./scripts/python/benchmarking/csv_plotter.py "$DATA_FILE" \
+            --x-column "Timestamp" \
+            --y-column "Malloc Usage (Bytes)" \
+            --x-label "Elapsed duration" \
+            --y-label "Malloc Usage" \
+            --convert-memory \
+            --title "Malloc usage over time (${{ matrix.sample }} @ ${COMMIT_HASH})" \
+            --zero-start \
+            --zero-end \
+            -o "output/malloc-usage.png"
+
+          python ./scripts/python/benchmarking/csv_plotter.py "$DATA_FILE" \
+            --x-column "Timestamp" \
+            --y-column "Content Store Used (Bytes out of 256000000)" \
+            --x-label "Elapsed duration" \
+            --y-label "Content store used" \
+            --convert-memory \
+            --title "Content store usage over time (${{ matrix.sample }} @ ${COMMIT_HASH})\n(Out of 244.14 MiB)" \
+            --zero-end \
+            -o "output/content-store-usage.png"
+
+          mv "$DATA_FILE" output
 
         shell: bash
 
@@ -345,6 +378,6 @@ jobs:
         if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.STREAM_NAME }}-mem-cpu.png
-          path: ${{ env.STREAM_NAME }}-mem-cpu.png
+          name: ${{ env.STREAM_NAME }}-data
+          path: output/
           retention-days: 7
