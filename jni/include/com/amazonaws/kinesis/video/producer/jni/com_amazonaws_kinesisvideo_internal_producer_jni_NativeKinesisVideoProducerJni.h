@@ -206,9 +206,9 @@ JNIEXPORT void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_Nat
  * Class:     com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni
  * Method:    kinesisVideoStreamTerminated
  * Signature: (JJJI)V
-  */
- JNIEXPORT void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_kinesisVideoStreamTerminated
-   (JNIEnv *, jobject, jlong, jlong, jlong, jint);
+ */
+JNIEXPORT void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_kinesisVideoStreamTerminated
+  (JNIEnv *, jobject, jlong, jlong, jlong, jint);
 
 /*
  * Class:     com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni
