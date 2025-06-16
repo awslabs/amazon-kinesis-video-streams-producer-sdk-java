@@ -9,6 +9,7 @@ import javax.annotation.Nonnull;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -63,7 +64,11 @@ public class StatsWriter implements AutoCloseable {
         if (Files.isDirectory(path)) {
             throw new IllegalArgumentException("Path should be a file name: " + path);
         }
-        Files.createDirectories(path);
+        try {
+            Files.createDirectories(path);
+        } catch (final FileAlreadyExistsException ex) {
+            // Ignore
+        }
         Files.deleteIfExists(path);
         this.writer = new BufferedWriter(new FileWriter(filePath, false));
 
