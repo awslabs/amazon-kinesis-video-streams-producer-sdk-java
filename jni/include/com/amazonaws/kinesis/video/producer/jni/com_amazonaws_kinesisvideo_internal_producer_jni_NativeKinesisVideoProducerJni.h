@@ -208,7 +208,23 @@ JNIEXPORT void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_Nat
  * Signature: (JJJI)V
  */
 JNIEXPORT void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_kinesisVideoStreamTerminated
-(JNIEnv *, jobject, jlong, jlong, jlong, jint);
+  (JNIEnv *, jobject, jlong, jlong, jlong, jint);
+
+/*
+ * Class:     com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni
+ * Method:    setupInstrumentedAllocators
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_setupInstrumentedAllocators
+  (JNIEnv* env, jobject);
+
+/*
+ * Class:     com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni
+ * Method:    getCurrentAllocationBytes
+ * Signature: ()J
+ */
+JNIEXPORT jlong JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_getCurrentAllocationBytes
+  (JNIEnv *, jobject);
 
 #ifdef __cplusplus
 }

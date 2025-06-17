@@ -5,8 +5,11 @@ kiwisolver==1.4.8
 matplotlib==3.10.3
 numpy==2.2.6
 packaging==25.0
+pandas==2.3.0
 pillow==11.2.1
 psutil==7.0.0
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
+pytz==2025.2
 six==1.17.0
+tzdata==2025.2

@@ -20,6 +20,7 @@ public final class KinesisVideoClientConfiguration {
     private final StorageCallbacks storageCallbacks;
     private final String endpoint;
     private final IPVersionFilter ipVersionFilter;
+    private final boolean isInstrumentedAllocatorsEnabled;
 
     private KinesisVideoClientConfiguration(final Builder builder) {
         this.region = builder.region;
@@ -27,6 +28,7 @@ public final class KinesisVideoClientConfiguration {
         this.storageCallbacks = builder.storageCallbacks;
         this.endpoint = builder.endpoint;
         this.ipVersionFilter = builder.ipVersionFilter;
+        this.isInstrumentedAllocatorsEnabled = builder.useInstrumentedAllocators;
     }
 
     public static Builder builder() {
@@ -97,6 +99,8 @@ public final class KinesisVideoClientConfiguration {
         return this.ipVersionFilter;
     }
 
+    public boolean isInstrumentedAllocatorsEnabled() { return this.isInstrumentedAllocatorsEnabled;}
+
     @Override
     public String toString() {
         return "KinesisVideoClientConfiguration{" +
@@ -105,6 +109,7 @@ public final class KinesisVideoClientConfiguration {
                 ", storageCallbacks=" + (storageCallbacks != null ? storageCallbacks.getClass().getSimpleName() : "null") +
                 ", endpoint='" + endpoint + '\'' +
                 ", ipVersionFilter=" + ipVersionFilter +
+                ", isInstrumentedAllocatorsEnabled=" + isInstrumentedAllocatorsEnabled +
                 '}';
     }
 
@@ -116,6 +121,7 @@ public final class KinesisVideoClientConfiguration {
         private String endpoint;
         private Optional<Boolean> isLegacyEndpoint = Optional.empty();
         private IPVersionFilter ipVersionFilter;
+        private boolean useInstrumentedAllocators = false;
 
         public Builder withRegion(final String region) {
             this.region = region;
@@ -144,6 +150,11 @@ public final class KinesisVideoClientConfiguration {
 
         public Builder withIPVersionFilter(final IPVersionFilter ipVersionFilter) {
             this.ipVersionFilter = ipVersionFilter;
+            return this;
+        }
+
+        public Builder useInstrumentedAllocators() {
+            this.useInstrumentedAllocators = true;
             return this;
         }
 
