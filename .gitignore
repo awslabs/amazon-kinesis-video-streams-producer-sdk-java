@@ -13,3 +13,6 @@ logs
 hs_err_pid*.log
 out/
 src/main/resources/META-INF/*
+dependency/
+build/
+memory-data.csv

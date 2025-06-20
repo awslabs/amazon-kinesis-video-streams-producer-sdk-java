@@ -13,3 +13,4 @@ matrix:
   sample:
     - DemoAppMain
     - DemoAppCachedInfo
+    - DemoAppMainWithHeapTracking

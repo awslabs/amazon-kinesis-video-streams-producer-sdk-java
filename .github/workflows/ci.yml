@@ -10,6 +10,10 @@ on:
       - develop
       - master
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   load-matrix:
     runs-on: ubuntu-latest
@@ -59,11 +63,9 @@ jobs:
       - name: Build JNI (Mac and Linux)
         if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
         run: |
-          git clone https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp.git --single-branch -b ${{ env.BRANCH_NAME }}
-          cd amazon-kinesis-video-streams-producer-sdk-cpp
           mkdir build
           cd build
-          cmake .. -DBUILD_JNI_ONLY=ON
+          cmake ..
           make -j
 
       - name: Build JNI (Windows)
@@ -72,42 +74,27 @@ jobs:
         run: |
           @echo on
 
-          :: Create a shorter directory to avoid long path issues
-          mkdir D:\work || exit /b 1
-          git clone https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp.git D:\work\producer --single-branch -b ${{ env.BRANCH_NAME }} || exit /b 1
-
-          :: Ensure cloning succeeded
-          if not exist "D:\work\producer" (
-              echo "Error: Clone failed, directory does not exist."
-              exit /b 1
-          )
-
-          cd D:\work\producer || exit /b 1
-
           :: Create build directory
           mkdir build || exit /b 1
           cd build || exit /b 1
 
           :: Run CMake with the correct path
-          cmake .. -DBUILD_JNI_ONLY=ON -G "Visual Studio 17 2022" || exit /b 1
+          cmake .. -G "Visual Studio 17 2022" || exit /b 1
           cmake --build . --config Release --verbose || exit /b 1
 
           :: Move the compiled library to the expected location
           :: Note: Using Visual Studio generator, the output file gets put in Release\KinesisVideoProducerJNI.dll
           :: rather than in the build folder directly
-          cd "%GITHUB_WORKSPACE%" || exit /b 1
-          mkdir amazon-kinesis-video-streams-producer-sdk-cpp || exit /b 1
-          mkdir amazon-kinesis-video-streams-producer-sdk-cpp\build || exit /b 1
-          move D:\work\producer\build\Release\KinesisVideoProducerJNI.dll amazon-kinesis-video-streams-producer-sdk-cpp\build || exit /b 1
+          move Release\KinesisVideoProducerJNI.dll . || exit /b 1
 
       - name: Upload JNI Library
         uses: actions/upload-artifact@v4
         with:
           name: jni-library-${{ matrix.platform.name }}
           path: |
-            amazon-kinesis-video-streams-producer-sdk-cpp/build/libKinesisVideoProducerJNI.so
-            amazon-kinesis-video-streams-producer-sdk-cpp/build/libKinesisVideoProducerJNI.dylib
-            amazon-kinesis-video-streams-producer-sdk-cpp/build/KinesisVideoProducerJNI.dll
+            build/libKinesisVideoProducerJNI.so
+            build/libKinesisVideoProducerJNI.dylib
+            build/KinesisVideoProducerJNI.dll
           retention-days: 1
 
   run-unit-tests:
@@ -186,16 +173,24 @@ jobs:
           distribution: 'adopt'
           cache: maven
 
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        working-directory: scripts/python/benchmarking
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          cd ../getmediavalidation
+          pip install .
+
       - name: Download JNI Library
         uses: actions/download-artifact@v4
         with:
           name: jni-library-${{ matrix.platform.name }}
           path: jni/
-
-      - name: Install dependencies (MacOS)
-        if: ${{ runner.os == 'macOS' }}
-        run: |
-          brew install coreutils # For `gtimeout`
 
       - name: Build with Maven
         run: mvn clean compile assembly:single
@@ -206,9 +201,9 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Create the stream (DemoAppCachedInfo)
+      - name: Create the stream (DemoAppMain and DemoAppMainWithHeapTracking)
         # This sample needs a pre-created stream: `${NAME}`
-        if: ${{ matrix.sample == 'DemoAppMain' }}
+        if: ${{ matrix.sample == 'DemoAppMain' || matrix.sample == 'DemoAppMainWithHeapTracking' }}
         working-directory: scripts
         run: |
           ./prepareStream.sh "$STREAM_NAME"
@@ -238,24 +233,35 @@ jobs:
           fi
 
           echo "Using JAR file: $JAR_FILE"
-
-          # Use gtimeout on macOS and timeout on Linux
-          if [ "${{ runner.os }}" == "macOS" ]; then
-            TIMEOUT_CMD="gtimeout"
-          else
-            TIMEOUT_CMD="timeout"
-          fi
-
-          $TIMEOUT_CMD 30s java -classpath "$JAR_FILE" \
+          java -classpath "$JAR_FILE" \
             -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
             -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
             -Daws.sessionToken=${AWS_SESSION_TOKEN} \
             -Djava.library.path=${JNI_FOLDER} \
             -Dkvs-stream=$STREAM_NAME \
             -Dlog4j.configurationFile=log4j2.xml \
-            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample }}
+            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample }} &
+          JAVA_PID=$!
 
+          python ./scripts/python/benchmarking/capture_rss_and_cpu.py $JAVA_PID &
+          MONITOR_PID=$!
+
+          # Wait for maximum 30 seconds
+          TIMEOUT=30
+          for ((i=1; i<=TIMEOUT; i++)); do
+            if ! kill -0 $JAVA_PID 2>/dev/null; then
+              break
+            fi
+            sleep 1
+            if [ $i -eq $TIMEOUT ]; then
+              # Time's up, kill the process
+              kill -9 $JAVA_PID
+            fi
+          done
+
+          wait $JAVA_PID
           EXIT_CODE=$?
+          wait $MONITOR_PID
 
           set -e
 
@@ -299,3 +305,79 @@ jobs:
 
           echo Process exited with code: %EXIT_CODE%
           exit /b %EXIT_CODE%
+
+      - name: Generate memory and CPU graph (Mac and Linux)
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        run: |
+          DATA_FILE=$(find . -name 'process_*.txt' | head -n 1)
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          mkdir output
+          python ./scripts/python/benchmarking/plot_rss_and_cpu.py "$DATA_FILE" \
+            --title "Memory and CPU Usage (${{ matrix.sample }} @ ${COMMIT_HASH})\n${{ matrix.platform.os }}, Java ${{ matrix.java }}" \
+            --output "output/${{ env.STREAM_NAME }}-mem-cpu.png"
+          
+          mv "$DATA_FILE" output
+        shell: bash
+
+      - name: Generate heap usage graphs (Mac and Linux) (DemoAppMainWithHeapTracking)
+        if: ${{ (runner.os == 'macOS' || runner.os == 'linux') && matrix.sample == 'DemoAppMainWithHeapTracking' }}
+        env:
+          DATA_FILE: memory-data.csv
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          python ./scripts/python/benchmarking/csv_plotter.py "$DATA_FILE" \
+            --x-column "Timestamp" \
+            --y-column "Malloc Usage (Bytes)" \
+            --x-label "Elapsed duration" \
+            --y-label "Malloc Usage" \
+            --convert-memory \
+            --title "Malloc usage over time (${{ matrix.sample }} @ ${COMMIT_HASH})" \
+            --zero-start \
+            --zero-end \
+            -o "output/malloc-usage.png"
+
+          python ./scripts/python/benchmarking/csv_plotter.py "$DATA_FILE" \
+            --x-column "Timestamp" \
+            --y-column "Content Store Used (Bytes out of 256000000)" \
+            --x-label "Elapsed duration" \
+            --y-label "Content store used" \
+            --convert-memory \
+            --title "Content store usage over time (${{ matrix.sample }} @ ${COMMIT_HASH})\n(Out of 244.14 MiB)" \
+            --zero-end \
+            -o "output/content-store-usage.png"
+
+          mv "$DATA_FILE" output
+
+        shell: bash
+
+      - name: Check uploaded media (Mac and Linux) (DemoAppMain)
+        if: ${{ (runner.os == 'macOS' || runner.os == 'linux') && matrix.sample == 'DemoAppMain' }}
+        working-directory: scripts/python/getmediavalidation/bin
+        run: |
+          python ./fetch_fragment_info.py --stream-name "$STREAM_NAME" --last 5m
+          python ./validate_media.py --stream-name "$STREAM_NAME" \
+            --keyframe-interval 25 \
+            -fps 25 \
+            --frames-path "${{ github.workspace }}/src/main/resources/data/h264/*.h264" \
+            --last 5m
+
+      - name: Check uploaded media (Windows) (DemoAppMain)
+        if: ${{ runner.os == 'Windows' && matrix.sample == 'DemoAppMain' }}
+        working-directory: scripts/python/getmediavalidation/bin
+        run: |
+          python ./fetch_fragment_info.py --stream-name "%STREAM_NAME%" --last 5m
+          python ./validate_media.py --stream-name "%STREAM_NAME%" ^
+            --keyframe-interval 25 ^
+            -fps 25 ^
+            --frames-path "${{ github.workspace }}/src/main/resources/data/h264/*.h264" ^
+            --last 5m
+
+        shell: cmd
+
+      - name: Upload memory and CPU graph (Mac and Linux)
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.STREAM_NAME }}-data
+          path: output/
+          retention-days: 7

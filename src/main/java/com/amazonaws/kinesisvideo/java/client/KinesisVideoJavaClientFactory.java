@@ -61,7 +61,7 @@ public final class KinesisVideoJavaClientFactory {
     /**
      * Create Kinesis Video client.
      *
-     * @param regions Regions object
+     * @param regions                Regions object
      * @param awsCredentialsProvider Credentials provider
      * @return
      * @throws KinesisVideoException
@@ -98,6 +98,22 @@ public final class KinesisVideoJavaClientFactory {
             @Nullable final Boolean isLegacyEndpoint,
             @Nullable final IPVersionFilter ipVersionFilter)
             throws KinesisVideoException {
+        return createKinesisVideoClient(regions, awsCredentialsProvider, endpointOverride, isLegacyEndpoint,
+                ipVersionFilter, false);
+    }
+
+    /**
+     * Create Kinesis Video client.
+     */
+    @Nonnull
+    public static KinesisVideoClient createKinesisVideoClient(
+            @Nonnull final Regions regions,
+            @Nonnull final AWSCredentialsProvider awsCredentialsProvider,
+            @Nullable final String endpointOverride,
+            @Nullable final Boolean isLegacyEndpoint,
+            @Nullable final IPVersionFilter ipVersionFilter,
+            final boolean useInstrumentedAllocators)
+            throws KinesisVideoException {
         Preconditions.checkNotNull(regions);
         Preconditions.checkNotNull(awsCredentialsProvider);
 
@@ -117,6 +133,10 @@ public final class KinesisVideoJavaClientFactory {
             builder.withEndpoint(endpointOverride);
         } else {
             builder.withIsLegacyEndpoint(isLegacyEndpoint);
+        }
+
+        if (useInstrumentedAllocators) {
+            builder.useInstrumentedAllocators();
         }
 
         final KinesisVideoClientConfiguration configuration = builder.build();
@@ -171,7 +191,7 @@ public final class KinesisVideoJavaClientFactory {
         Preconditions.checkNotNull(deviceInfo);
         Preconditions.checkNotNull(executor);
 
-        final Logger log =  LogManager.getLogger(KinesisVideoJavaClientFactory.class);
+        final Logger log = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
         final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient();
 

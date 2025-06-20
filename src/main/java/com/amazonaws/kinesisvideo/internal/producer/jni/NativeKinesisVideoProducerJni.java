@@ -130,6 +130,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     private DeviceInfo mDeviceInfo;
 
     /**
+     * If using the custom allocators from PIC.
+     */
+    private boolean mIsTrackingMallocs;
+
+    /**
      * Public constructor.
      * @param authCallbacks Authentication callbacks
      * @param storageCallbacks Storage callbacks
@@ -179,6 +184,25 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
                                          final @Nonnull ServiceCallbacks serviceCallbacks,
                                          final @Nonnull Logger log,
                                          final @Nonnull CountDownLatch readyLatch) throws ProducerException {
+        this(authCallbacks, storageCallbacks, serviceCallbacks, log, readyLatch, false);
+    }
+
+    /**
+     * Public constructor
+     * @param authCallbacks Authentication callbacks
+     * @param storageCallbacks Storage callbacks
+     * @param serviceCallbacks Service call callbacks
+     * @param log log object to use for logging
+     * @param readyLatch Ready latch for synch creation
+     * @param isTrackingMallocs Whether to set up PIC's instrumented allocators
+     * @throws ProducerException
+     */
+    public NativeKinesisVideoProducerJni(final @Nonnull AuthCallbacks authCallbacks,
+                                         final @Nonnull StorageCallbacks storageCallbacks,
+                                         final @Nonnull ServiceCallbacks serviceCallbacks,
+                                         final @Nonnull Logger log,
+                                         final @Nonnull CountDownLatch readyLatch,
+                                         final boolean isTrackingMallocs) throws ProducerException {
         mLog = Preconditions.checkNotNull(log);
         mAuthCallbacks = Preconditions.checkNotNull(authCallbacks);
         mStorageCallbacks = Preconditions.checkNotNull(storageCallbacks);
@@ -187,6 +211,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         mLibraryLoader = new NativeLibraryLoader(mLog);
         mServiceCallbacks.initialize(this);
         mKinesisVideoMetrics = new KinesisVideoMetrics();
+        mIsTrackingMallocs = isTrackingMallocs;
     }
 
     /**
@@ -229,6 +254,10 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
 
                 // We are initialized
                 mLibraryInitialized = true;
+            }
+
+            if (mIsTrackingMallocs) {
+                setupInstrumentedAllocators();
             }
 
             mClientHandle = createKinesisVideoClient(deviceInfo);
@@ -1511,4 +1540,17 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     private native void kinesisVideoStreamTerminated(long clientHandle, long streamHandle, long uploadHandle,
                                                      int statusCode)
             throws ProducerException;
+
+    /**
+     * Overrides malloc and free with a custom one for tracking purposes.
+     */
+    public static native void setupInstrumentedAllocators();
+
+    /**
+     * Return the current value of the allocated memory.
+     * Note: Due to lazy memory allocation, this may not accurately reflect the current RSS usage.
+     *
+     * @return the current memory currently malloc'd by the native codebase in bytes.
+     */
+    public native long getCurrentAllocationBytes();
 }
