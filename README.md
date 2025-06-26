@@ -84,6 +84,9 @@ This script will create a stream with the given name if the stream doesn't exist
 Demo app will start running and putting sample video frames in a loop into Kinesis Video Streams.
 You can change your stream settings in [`DemoAppMain.java`](./src/main/demo/com/amazonaws/kinesisvideo/demoapp/DemoAppMain.java) before you run the app.
 
+> [!NOTE]
+> Make sure the stream name that you specify exists in the region the app runs in. This demo app is set to run in us-west-2 by default.
+
 To run [`DemoAppMain.java`](./src/main/demo/com/amazonaws/kinesisvideo/demoapp/DemoAppMain.java) in `./src/main/demo` with JVM arguments:
 
 1. Credentials: `aws.accessKeyId`, `aws.secretKey`, `aws.sessionToken` (optional)
@@ -111,7 +114,7 @@ java -classpath target/*jar-with-dependencies.jar \
 > * `KinesisVideoProducerJNI.dll` for Windows
 
 > [!TIP]
-> Pre-built JNI libraries for some systems can be found in `src/resources/lib`.
+> Pre-built JNI libraries for some systems can be found in `src/main/resources/lib`.
 
 > [!NOTE]
 > If your system isn't part of the pre-built JNI libraries, you will need to build the JNI yourself. You can find instructions [here](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/wiki/Building-and-Using-JNI).

@@ -11,7 +11,7 @@ import java.io.Serializable;
 import java.util.Date;
 
 @SuppressFBWarnings("EI_EXPOSE_REP")
-public class KinesisVideoCredentials implements Serializable{
+public class KinesisVideoCredentials implements Serializable {
     /**
      * Sentinel value indicating the credentials never expire
      */

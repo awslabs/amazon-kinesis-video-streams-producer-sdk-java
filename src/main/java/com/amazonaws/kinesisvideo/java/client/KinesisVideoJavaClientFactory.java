@@ -165,7 +165,7 @@ public final class KinesisVideoJavaClientFactory {
 
         final Logger log = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
-        final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(log);
+        final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient();
 
         final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(log,
                 configuration,
@@ -193,7 +193,7 @@ public final class KinesisVideoJavaClientFactory {
 
         final Logger log = LogManager.getLogger(KinesisVideoJavaClientFactory.class);
 
-        final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient(log);
+        final JavaKinesisVideoServiceClient serviceClient = new JavaKinesisVideoServiceClient();
 
         final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(log,
                 configuration,
@@ -220,7 +220,7 @@ public final class KinesisVideoJavaClientFactory {
         final KinesisVideoClient kinesisVideoClient = new JavaKinesisVideoClient(log,
                 configuration,
                 serviceCallbacks == null ? new DefaultServiceCallbacksImpl(log, executor, configuration,
-                        new JavaKinesisVideoServiceClient(log)) : serviceCallbacks,
+                        new JavaKinesisVideoServiceClient()) : serviceCallbacks,
                 executor,
                 streamCallbacks == null ? new DefaultStreamCallbacks() : streamCallbacks);
 

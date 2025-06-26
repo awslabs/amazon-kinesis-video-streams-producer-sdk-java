@@ -126,7 +126,9 @@ public class KinesisVideoClientConfigurationTest {
 
     @Test
     public void testToStringDoesntThrowNullPointerException() {
-        final KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder().build();
+        final KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
+                .withStorageCallbacks(null)
+                .build();
         final String toStringOutput = config.toString();
 
         // Ensure it's not the default Object.toString() output

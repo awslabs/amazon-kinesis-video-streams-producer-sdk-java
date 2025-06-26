@@ -3,7 +3,10 @@ package com.amazonaws.kinesisvideo.producer;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 
+import com.amazonaws.kinesisvideo.demoapp.DemoAppCachedInfo;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -25,11 +28,13 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.DEFAULT_TRACK_
  */
 @SuppressFBWarnings("EI_EXPOSE_REP")
 public class StreamInfo {
+
+    private static final Logger log = LogManager.getLogger(StreamInfo.class);
+
     /**
      * StreamInfo structure current version.
      * IMPORTANT: Must be kept in sync with the native counterpart.
      */
-    //TODO:  Update version along with native library builds
     public static final int STREAM_INFO_CURRENT_VERSION = 2;
 
     /**
@@ -94,9 +99,9 @@ public class StreamInfo {
             NAL_ADAPTATION_ANNEXB_NALS.getIntValue()
                 | NAL_ADAPTATION_ANNEXB_CPD_NALS.getIntValue());
 
-        private int value;
+        private final int value;
 
-        private NalAdaptationFlags(final int i) {
+        NalAdaptationFlags(final int i) {
             value = i;
         }
 
@@ -130,9 +135,9 @@ public class StreamInfo {
          */
         CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM(1);
 
-        private int value;
+        private final int value;
 
-        private StorePressurePolicy(final int i) {
+        StorePressurePolicy(final int i) {
             value = i;
         }
 
@@ -339,7 +344,14 @@ public class StreamInfo {
         mSegmentUuid = segmentUuid;
         mTrackInfoList = trackInfoList;
         mFrameOrderMode = frameOrderMode;
-        mStorePressurePolicy = storePressurePolicy;
+        if (mRetentionPeriod > 0) {
+            mStorePressurePolicy = storePressurePolicy;
+        } else {
+            // Persisted ACKs are used to clear the content store. In retention = 0 case,
+            // there are no persisted ACKS, so OOM policy should not be used.
+            mStorePressurePolicy = StorePressurePolicy.CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM;
+            log.info("{}: Overriding {} with {} since retention = 0", name, storePressurePolicy, mStorePressurePolicy);
+        }
         mAllowStreamCreation = allowStreamCreation;
     }
 
