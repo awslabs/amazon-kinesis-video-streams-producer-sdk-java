@@ -48,18 +48,17 @@ class ProcessMonitor:
         self.cpu_count_logical = cpu_count()
 
         cpu_count_physical = cpu_count(logical=False)  # physical cores only
-        self.cpu_percentage_max = self.cpu_count_logical * 100
 
         print(f"Number of CPU cores: {cpu_count_physical} physical, {self.cpu_count_logical} logical")
-        print(f"Maximum possible CPU%: {self.cpu_percentage_max}%")
+        print(f"Maximum possible CPU%: {self.cpu_count_logical * 100}%")
 
-        if self.cpu_percentage_max > 100:
+        if self.cpu_count_logical > 1:
             print(f"It will be normalized to 100%")
 
     def get_process_metrics(self) -> tuple[str, float, float] | None:
         """
         Collect current process metrics.
-        The CPU percent is on 0-1 range.
+        The CPU percent is on 0-100 range.
 
         Returns:
             tuple: (timestamp, memory_mb, cpu_percent) or None if process not found
@@ -70,7 +69,7 @@ class ProcessMonitor:
 
             if self.pid is None:
                 # System-wide monitoring
-                # cpu_percent() returns value between 0-100. We need 0-1 value
+                # cpu_percent() returns value between 0-100.
                 cpu_percent = psutil.cpu_percent(interval=self.interval)
 
                 total_rss = 0
@@ -90,7 +89,7 @@ class ProcessMonitor:
                 process = Process(self.pid)
                 cpu_percent = process.cpu_percent(interval=self.interval)
 
-                normalized_cpu_percent = cpu_percent / self.cpu_percentage_max
+                normalized_cpu_percent = cpu_percent / self.cpu_count_logical
                 memory_kb = process.memory_info().rss / 1024
                 return timestamp, memory_kb, normalized_cpu_percent
 
