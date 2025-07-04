@@ -4,6 +4,7 @@ import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 public final class VersionUtil {
@@ -13,11 +14,16 @@ public final class VersionUtil {
     public static final String AWS_SDK_KVS_PRODUCER_VERSION_STRING;
 
     static {
-        try {
-            final Properties properties = new Properties();
-            properties.load(VersionUtil.class.getClassLoader().getResourceAsStream(POM_PROPERTIES_FILE));
+        final Properties properties = new Properties();
+
+        try (final InputStream pomPropertiesResource = VersionUtil.class.getClassLoader().getResourceAsStream(POM_PROPERTIES_FILE)) {
+            if (pomPropertiesResource == null) {
+                throw new ExceptionInInitializerError("The required resource file: '" + POM_PROPERTIES_FILE + "' was not found!");
+            }
+
+            properties.load(pomPropertiesResource);
             AWS_SDK_KVS_PRODUCER_VERSION_STRING = properties.getProperty(POM_PROPERTIES_VERSION_KEY);
-        } catch (IOException e) {
+        } catch (final IOException e) {
             throw new ExceptionInInitializerError("Unable to get project version from pom.xml: " + e);
         }
     }
