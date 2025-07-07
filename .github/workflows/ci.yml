@@ -151,8 +151,9 @@ jobs:
       fail-fast: false
 
     env:
-      STREAM_NAME: producer-java-${{ matrix.platform.os }}-java-${{ matrix.java }}_${{ matrix.sample }}
+      STREAM_NAME: producer-java-${{ matrix.platform.os }}-java-${{ matrix.java }}_${{ matrix.sample.name }}
       JNI_FOLDER: ${{ github.workspace }}/jni
+      KVS_DEBUG_DUMP_DATA_FILE_DIR: debug
 
     runs-on: ${{ matrix.platform.os }}
     permissions:
@@ -200,7 +201,7 @@ jobs:
 
       - name: Create the stream (DemoAppMain and DemoAppMainWithHeapTracking)
         # This sample needs a pre-created stream: `${NAME}`
-        if: ${{ matrix.sample == 'DemoAppMain' || matrix.sample == 'DemoAppMainWithHeapTracking' }}
+        if: ${{ matrix.sample.name == 'DemoAppMain' || matrix.sample.name == 'DemoAppMainWithHeapTracking' }}
         working-directory: scripts
         run: |
           ./prepareStream.sh "$STREAM_NAME"
@@ -209,7 +210,7 @@ jobs:
 
       - name: Create the stream (DemoAppCachedInfo)
         # This sample needs 2 pre-created streams: `${NAME}-account-1` and `${NAME}-account-2`
-        if: ${{ matrix.sample == 'DemoAppCachedInfo' }}
+        if: ${{ matrix.sample.name == 'DemoAppCachedInfo' }}
         working-directory: scripts
         run: |
           ./prepareStream.sh "$STREAM_NAME-account-1"
@@ -237,7 +238,7 @@ jobs:
             -Djava.library.path=${JNI_FOLDER} \
             -Dkvs-stream=$STREAM_NAME \
             -Dlog4j.configurationFile=log4j2.xml \
-            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample }} &
+            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample.name }} &
           JAVA_PID=$!
 
           python ./scripts/python/benchmarking/capture_rss_and_cpu.py $JAVA_PID &
@@ -296,7 +297,7 @@ jobs:
             -Djava.library.path=%JNI_FOLDER% ^
             -Dkvs-stream=%STREAM_NAME% ^
             -Dlog4j.configurationFile=log4j2.xml ^
-            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample }}
+            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample.name }}
 
           set EXIT_CODE=%ERRORLEVEL%
 
@@ -310,14 +311,14 @@ jobs:
           COMMIT_HASH=$(git rev-parse --short HEAD)
           mkdir output
           python ./scripts/python/benchmarking/plot_rss_and_cpu.py "$DATA_FILE" \
-            --title "Memory and CPU Usage (${{ matrix.sample }} @ ${COMMIT_HASH})\n${{ matrix.platform.os }}, Java ${{ matrix.java }}" \
+            --title "Memory and CPU Usage (${{ matrix.sample.name }} @ ${COMMIT_HASH})\n${{ matrix.platform.os }}, Java ${{ matrix.java }}" \
             --output "output/${{ env.STREAM_NAME }}-mem-cpu.png"
           
           mv "$DATA_FILE" output
         shell: bash
 
       - name: Generate heap usage graphs (Mac and Linux) (DemoAppMainWithHeapTracking)
-        if: ${{ (runner.os == 'macOS' || runner.os == 'linux') && matrix.sample == 'DemoAppMainWithHeapTracking' }}
+        if: ${{ (runner.os == 'macOS' || runner.os == 'linux') && matrix.sample.name == 'DemoAppMainWithHeapTracking' }}
         env:
           DATA_FILE: memory-data.csv
         run: |
@@ -328,7 +329,7 @@ jobs:
             --x-label "Elapsed duration" \
             --y-label "Malloc Usage" \
             --convert-memory \
-            --title "Malloc usage over time (${{ matrix.sample }} @ ${COMMIT_HASH})" \
+            --title "Malloc usage over time (${{ matrix.sample.name }} @ ${COMMIT_HASH})" \
             --zero-start \
             --zero-end \
             -o "output/malloc-usage.png"
@@ -339,7 +340,7 @@ jobs:
             --x-label "Elapsed duration" \
             --y-label "Content store used" \
             --convert-memory \
-            --title "Content store usage over time (${{ matrix.sample }} @ ${COMMIT_HASH})\n(Out of 244.14 MiB)" \
+            --title "Content store usage over time (${{ matrix.sample.name }} @ ${COMMIT_HASH})\n(Out of 244.14 MiB)" \
             --zero-end \
             -o "output/content-store-usage.png"
 
@@ -348,7 +349,7 @@ jobs:
         shell: bash
 
       - name: Check uploaded media (Mac and Linux) (DemoAppMain)
-        if: ${{ (runner.os == 'macOS' || runner.os == 'linux') && matrix.sample == 'DemoAppMain' }}
+        if: ${{ (runner.os == 'macOS' || runner.os == 'linux') && matrix.sample.name == 'DemoAppMain' }}
         working-directory: scripts/python/getmediavalidation/bin
         run: |
           python ./fetch_fragment_info.py --stream-name "$STREAM_NAME" --last 5m
@@ -359,7 +360,7 @@ jobs:
             --last 5m
 
       - name: Check uploaded media (Windows) (DemoAppMain)
-        if: ${{ runner.os == 'Windows' && matrix.sample == 'DemoAppMain' }}
+        if: ${{ runner.os == 'Windows' && matrix.sample.name == 'DemoAppMain' }}
         working-directory: scripts/python/getmediavalidation/bin
         run: |
           python ./fetch_fragment_info.py --stream-name "%STREAM_NAME%" --last 5m
@@ -378,3 +379,49 @@ jobs:
           name: ${{ env.STREAM_NAME }}-data
           path: output/
           retention-days: 7
+
+      - name: Verify MKV dump (Mac & Linux)
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        working-directory: ${{ env.KVS_DEBUG_DUMP_DATA_FILE_DIR }}
+        run: |
+          if [ "${{ runner.os }}" == "macOS" ]; then
+            brew install mkvtoolnix
+          else
+            sudo apt-get update
+            sudo apt-get install -y mkvtoolnix
+          fi
+
+          shopt -s nullglob  # Ensure globbing works correctly and avoids errors when no files are found
+
+          ls -tlrh
+          mkvfiles=(*.mkv)
+          if [ "${#mkvfiles[@]}" -ne "${{ matrix.sample.expected_mkv_files }}" ]; then
+            echo "Wrong number of MKV files in $KVS_DEBUG_DUMP_DATA_FILE_DIR! Expected: ${{ matrix.sample.expected_mkv_files }}, actual: ${#mkvfiles[@]}"
+            exit 1
+          fi
+
+          for file in "${mkvfiles[@]}"; do
+            echo "Verifying $file with mkvinfo (verbose and hexdump):"
+            mkvinfo -v -X "$file"
+          done
+
+          echo "All MKV files verified successfully!"
+
+      - name: Verify MKV dump exists (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        working-directory: ${{ env.KVS_DEBUG_DUMP_DATA_FILE_DIR }}
+        run: |
+          choco install mkvtoolnix
+          $env:Path += ";C:\Program Files\MKVToolNix"
+
+          dir
+          $mkvFiles = Get-ChildItem -Filter *.mkv
+          if ($mkvFiles.Count -ne ${{ matrix.sample.expected_mkv_files }}) {
+            Write-Error "Wrong number of MKV files in ${{ env.KVS_DEBUG_DUMP_DATA_FILE_DIR }}! Expected: ${{ matrix.sample.expected_mkv_files }}, actual: $mkvFiles.Count"
+            exit 1
+          }
+
+          foreach ($file in $mkvFiles) {
+            Write-Output "Verifying $($file.FullName) with mkvinfo (verbose and hexdump):"
+            mkvinfo.exe -v -X "$($file.FullName)"
+          }
