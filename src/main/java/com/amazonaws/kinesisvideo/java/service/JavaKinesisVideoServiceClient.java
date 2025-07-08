@@ -276,15 +276,15 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
         this.handleIndexes = new HashMap<>();
 
         this.maxMkvDumpMaxFileCountPerStream = Optional.ofNullable(System.getenv(MKV_DUMP_FILE_COUNT_PER_STREAM_ENV_VAR))
-                .map(str -> {
+                .flatMap(str -> {
                     try {
-                        return Integer.parseInt(str);
-                    } catch (final Exception e) {
+                        int count = Integer.parseInt(str);
+                        return count >= MIN_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM ? Optional.of(count) : Optional.empty();
+                    } catch (final NumberFormatException e) {
                         log.error("Failed to parse the value set for " + MKV_DUMP_FILE_COUNT_PER_STREAM_ENV_VAR + ": " + str, e);
-                        return null;
+                        return Optional.empty();
                     }
                 })
-                .filter(count -> count >= MIN_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM)
                 .orElse(DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM);
 
         log.debug("Created {}", this);
@@ -514,10 +514,19 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .ipVersionFilter(clientConfiguration.getIpVersionFilter());
 
         if (mkvDumpDir != null) {
+            // A rolling window deletion mechanism for MKV dump files
+            // Each stream maintains its most recent MKV dumps up to DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM
+            // Files are named as streamName_index.mkv where index increments with each new PutMedia call
             final int index = handleIndexes.getOrDefault(streamName, 0);
             putMediaClientBuilder.fileOutputPath(mkvDumpDir.resolve(streamName + "_" + index + ".mkv").toString());
             handleIndexes.put(streamName, index + 1);
 
+            // When the number of files exceeds the limit, the oldest file is automatically deleted
+            // For example, with DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM = 2:
+            // - First call creates: stream_0.mkv
+            // - Second call creates: stream_1.mkv
+            // - Third call creates stream_2.mkv and deletes stream_0.mkv
+            // - Fourth call creates stream_3.mkv and deletes stream_1.mkv
             if (index + 1 > DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM) {
                 final Path oldestFilePath = mkvDumpDir.resolve(streamName + "_" +
                         (index - DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM) + ".mkv");
