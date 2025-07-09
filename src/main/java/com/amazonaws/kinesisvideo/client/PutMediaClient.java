@@ -41,7 +41,7 @@ public final class PutMediaClient {
     private static final String USER_AGENT = "user-agent";
     private static final int BUFFER_SIZE = 4096; // 4KB
     private static final double MILLI_TO_SEC = 1000;
-    private static final int LOGGING_INTERVAL = 250; // Rougly every 10 seconds in 25 fps
+    private static final int LOGGING_INTERVAL = 250; // Roughly every 10 seconds in 25 fps
     private final Builder mBuilder;
     private final Logger log;
     private ParallelSimpleHttpClient httpClient;

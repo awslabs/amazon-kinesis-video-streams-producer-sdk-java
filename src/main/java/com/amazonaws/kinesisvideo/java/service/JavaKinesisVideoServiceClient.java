@@ -39,10 +39,16 @@ import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.amazonaws.ClientConfiguration.DEFAULT_MAX_CONNECTIONS;
 import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_AN_HOUR;
@@ -52,6 +58,26 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
     private static final int RECEIVE_TIMEOUT_1HR = 60 * 60 * 1000;
     private static final String ABSOLUTE_TIMECODE = "ABSOLUTE";
     private static final String RELATIVE_TIMECODE = "RELATIVE";
+
+    /**
+     * Environment variables for debugging the generated MKVs. This is not enabled by default.
+     * <ul>
+     *   <li>Set {@code KVS_DEBUG_DUMP_DATA_FILE_DIR} for the directory where the MKVs will be outputted. Each PutMedia
+     *   connection will have its own file. The files will be named: {@code StreamName_Index.mkv}, where
+     *   {@code index} is the number of times {@code PutMedia} has been called for this stream, by this client.</li>
+     *   <li>Set {@code KVS_DEBUG_DUMP_MAX_FILE_COUNT_PER_STREAM} to set the maximum number of most recent MKV files
+     *   to be kept per stream. Default: {@value #DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM}, Minimum:
+     *   {@value #MIN_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM}.</li>
+     * </ul>
+     */
+    private static final String MKV_DUMP_DIR_ENV_VAR = "KVS_DEBUG_DUMP_DATA_FILE_DIR";
+    private static final String MKV_DUMP_FILE_COUNT_PER_STREAM_ENV_VAR = "KVS_DEBUG_DUMP_MAX_FILE_COUNT_PER_STREAM";
+    private static final int DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM = 2;
+    private static final int MIN_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM = 1;
+
+    private final Path mkvDumpDir;
+    private final Map<String, Integer> handleIndexes; // StreamName -> PutMedia connection # for this Stream
+    private final int maxMkvDumpMaxFileCountPerStream;
 
     private final Logger log;
     private KinesisVideoClientConfiguration configuration;
@@ -232,6 +258,36 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
 
     public JavaKinesisVideoServiceClient(@Nonnull final Logger log) {
         this.log = Preconditions.checkNotNull(log);
+
+        this.mkvDumpDir = Optional.ofNullable(System.getenv(MKV_DUMP_DIR_ENV_VAR))
+                .map(path -> {
+                    final Path dirPath = Paths.get(path);
+                    try {
+                        // Create directories if they don't exist
+                        Files.createDirectories(dirPath);
+                        return dirPath;
+                    } catch (final IOException e) {
+                        log.error("Failed to create directory: " + dirPath, e);
+                        return null;
+                    }
+                })
+                .orElse(null);
+
+        this.handleIndexes = new HashMap<>();
+
+        this.maxMkvDumpMaxFileCountPerStream = Optional.ofNullable(System.getenv(MKV_DUMP_FILE_COUNT_PER_STREAM_ENV_VAR))
+                .flatMap(str -> {
+                    try {
+                        int count = Integer.parseInt(str);
+                        return count >= MIN_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM ? Optional.of(count) : Optional.empty();
+                    } catch (final NumberFormatException e) {
+                        log.error("Failed to parse the value set for " + MKV_DUMP_FILE_COUNT_PER_STREAM_ENV_VAR + ": " + str, e);
+                        return Optional.empty();
+                    }
+                })
+                .orElse(DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM);
+
+        log.debug("Created {}", this);
     }
 
     @Nonnull
@@ -457,6 +513,31 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .putMediaDestinationUri(putMediaUri)
                 .ipVersionFilter(clientConfiguration.getIpVersionFilter());
 
+        if (mkvDumpDir != null) {
+            // A rolling window deletion mechanism for MKV dump files
+            // Each stream maintains its most recent MKV dumps up to DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM
+            // Files are named as streamName_index.mkv where index increments with each new PutMedia call
+            final int index = handleIndexes.getOrDefault(streamName, 0);
+            putMediaClientBuilder.fileOutputPath(mkvDumpDir.resolve(streamName + "_" + index + ".mkv").toString());
+            handleIndexes.put(streamName, index + 1);
+
+            // When the number of files exceeds the limit, the oldest file is automatically deleted
+            // For example, with DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM = 2:
+            // - First call creates: stream_0.mkv
+            // - Second call creates: stream_1.mkv
+            // - Third call creates stream_2.mkv and deletes stream_0.mkv
+            // - Fourth call creates stream_3.mkv and deletes stream_1.mkv
+            if (index + 1 > DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM) {
+                final Path oldestFilePath = mkvDumpDir.resolve(streamName + "_" +
+                        (index - DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM) + ".mkv");
+                try {
+                    Files.deleteIfExists(oldestFilePath);
+                } catch (final IOException e) {
+                    log.error("Failed to delete mkv dump file: " + oldestFilePath, e);
+                }
+            }
+        }
+
         final PutMediaClient putMediaClient = putMediaClientBuilder.build();
 
         // Kick off execution
@@ -476,5 +557,16 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 result.getStreamInfo().getCreationTime().getTime(),
                 result.getStreamInfo().getDataRetentionInHours() * HUNDREDS_OF_NANOS_IN_AN_HOUR,
                 result.getStreamInfo().getKmsKeyId());
+    }
+
+    @Override
+    public String toString() {
+        return "JavaKinesisVideoServiceClient{" +
+                "mkvDumpDir=" + mkvDumpDir +
+                ", handleIndexes=" + handleIndexes +
+                ", maxMkvDumpMaxFileCountPerStream=" + maxMkvDumpMaxFileCountPerStream +
+                ", log=" + log +
+                ", configuration=" + configuration +
+                '}';
     }
 }

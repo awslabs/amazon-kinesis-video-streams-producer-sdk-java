@@ -11,6 +11,10 @@ matrix:
   java:
     - 11
   sample:
-    - DemoAppMain
-    - DemoAppCachedInfo
-    - DemoAppMainWithHeapTracking
+    - name: DemoAppMain
+      expected_mkv_files: 1
+    - name: DemoAppCachedInfo
+      expected_mkv_files: 2
+    - name: DemoAppMainWithHeapTracking
+      expected_mkv_files: 1
+
