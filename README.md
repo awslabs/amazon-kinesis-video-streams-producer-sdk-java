@@ -200,6 +200,20 @@ For additional examples on using Kinesis Video Streams Java SDK and  Kinesis Vid
 
 ##### [Kinesis Video Streams Android](https://github.com/awslabs/aws-sdk-android-samples/tree/master/AmazonKinesisVideoDemoApp)
 
+## JavaDoc
+
+Use the following command to build the JavaDoc locally:
+
+```shell
+mvn clean compile javadoc:javadoc
+```
+
+You can then open `target/site/apidocs/index.html` in a browser of your choice.
+
+The latest documentation is hosted on **GitHub pages**:
+- [Master Branch](https://awslabs.github.io/amazon-kinesis-video-streams-producer-sdk-java/master/index.html)
+- [Develop Branch](https://awslabs.github.io/amazon-kinesis-video-streams-producer-sdk-java/develop/index.html)
+
 ### Troubleshooting
 
 #### Class not found

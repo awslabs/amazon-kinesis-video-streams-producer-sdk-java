@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <title>Amazon Kinesis Video Streams Producer SDK Java</title>
+</head>
+<body>
+
+<div style="background-color: #f0f8ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h2>What is this SDK?</h2>
+    <p>
+        <a href="https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java">This SDK</a> makes it <strong>easy to stream video from your Java application to AWS</strong>.
+        It is a bridge that takes your video frames and safely delivers them to Amazon Kinesis Video Streams
+        in the cloud, where you can then analyze, store, or stream them to viewers.
+    </p>
+
+    <h3>What it does for you:</h3>
+    <ul>
+        <li><strong>Handles the complexity</strong> - You just provide video frames, it handles packaging, streaming,
+            and error recovery
+        </li>
+        <li><strong>Secure by default</strong> - Automatic authentication and encrypted transmission</li>
+        <li><strong>Reliable streaming</strong> - Built-in retry logic and connection management</li>
+        <li><strong>Cross-platform</strong> - Works on Windows, macOS, and Linux</li>
+    </ul>
+</div>
+
+<h3>SDK Quick Start (3 steps)</h3>
+<pre style="background-color: #f4f4f4; padding: 15px; border-left: 4px solid #2196f3; margin: 10px 0; font-family: 'Courier New', monospace;">// 1. Create a client
+KinesisVideoClient client = KinesisVideoJavaClientFactory.createKinesisVideoClient(...);
+
+// 2. Create a media source (sending video frames in a loop)
+//    A media source represents a Kinesis Video Stream
+MediaSource mediaSource = new YourMediaSource();
+
+// 3. Start streaming (start the putFrame loop)
+client.registerMediaSource(mediaSource);
+mediaSource.start();</pre>
+<p><strong>That's it!</strong> Your video is now streaming to AWS. See the demo apps for complete examples.</p>
+
+<h3>Demo Applications</h3>
+<ul>
+    <li><strong>DemoAppMain</strong> - Streams sample H.264 video files using
+        <strong>com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSource</strong></li>
+</ul>
+
+<div>
+    <h3>Prerequisites</h3>
+    <ul>
+        <li><strong>Java:</strong> Version 11, 17, or 21</li>
+        <li><strong>Maven:</strong> For building the project</li>
+        <li><strong>AWS Credentials:</strong> Access key and secret key</li>
+        <li><strong>Native Library:</strong> Platform-specific JNI library (provided)</li>
+    </ul>
+
+    <h3>Pre-built Libraries Available</h3>
+    <p>We provide pre-built native libraries for:</p>
+    <ul>
+        <li>macOS (Intel &amp; Apple Silicon)</li>
+        <li>Ubuntu Linux (x64)</li>
+        <li>Windows 10+</li>
+        <li>Raspberry Pi</li>
+    </ul>
+    <p>Set the <code>java.library.path</code> JVM property to the <i>directory</i> containing the JNI library.</p>
+
+    <pre style="background-color: #f4f4f4; padding: 15px; border-left: 4px solid #2196f3; margin: 10px 0; font-family: 'Courier New', monospace;">// Pre-built libraries are located in:
+src/main/resources/lib/
+├── mac/
+├── ubuntu/
+├── windows/
+└── raspberry-pi/</pre>
+
+    <div style="background-color: #ffebee; padding: 15px; border-left: 4px solid #f44336; margin: 15px 0;">
+        <strong>Important:</strong> If your platform isn't listed, you'll need to build the JNI library yourself.
+        See the <a
+            href="https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/wiki/Building-and-Using-JNI">building
+        guide</a>.
+    </div>
+</div>
+
+<h3>Running the Demo</h3>
+<pre style="background-color: #f4f4f4; padding: 15px; border-left: 4px solid #2196f3; margin: 10px 0; font-family: 'Courier New', monospace;"># Build the project
+mvn clean compile assembly:single
+
+# Run the demo (replace with your values)
+java -classpath target/*jar-with-dependencies.jar \
+  -Daws.accessKeyId=YOUR_ACCESS_KEY \
+  -Daws.secretKey=YOUR_SECRET_KEY \
+  -Dkvs-stream=YOUR_STREAM_NAME \
+  -Djava.library.path=src/main/resources/lib/mac \
+  -Dlog4j.configurationFile=log4j2.xml \
+  com.amazonaws.kinesisvideo.demoapp.DemoAppMain</pre>
+
+<h2>Learn More</h2>
+<p>Click on any section below to dive deeper into the topics that interest you:</p>
+
+<details>
+    <summary>Result Handling &amp; State Transitions (How PIC Decides Next Steps)</summary>
+    <div>
+        <h3>The Critical Pattern: Results Drive State Transitions</h3>
+        <p>
+            <strong>Summary:</strong> Every KVS API call result (HTTP status codes, success/failure)
+            determines what PIC does next.
+        </p>
+
+        <div style="background-color: #e8f5e8; padding: 15px; border-left: 4px solid #4caf50; margin: 15px 0;">
+            <strong>How it Works:</strong>
+            <ol>
+                <li>PIC calls JNI, which calls Java for API calls (e.g., describeStream)</li>
+                <li>Java makes HTTP call to AWS and gets result</li>
+                <li>Java passes result back to PIC via <code>xxxResult()</code> methods</li>
+                <li>PIC examines the result and decides the next state</li>
+                <li>State machine steps to next state based on result</li>
+            </ol>
+        </div>
+
+        <h3>Example: DescribeStream Result Handling</h3>
+        <pre style="background-color: #f4f4f4; padding: 15px; border-left: 4px solid #2196f3; margin: 10px 0; font-family: 'Courier New', monospace;">// In PIC's fromDescribeStreamState() function:
+switch (pKinesisVideoStream-&gt;base.result) {
+    case SERVICE_CALL_RESULT_OK:
+        if (streamStatus == ACTIVE) {
+            // Stream exists and is active
+            nextState = STREAM_STATE_GET_ENDPOINT;
+        }
+        break;
+        
+    case SERVICE_CALL_RESOURCE_NOT_FOUND:
+        if (allowStreamCreation) {
+            // Stream doesn't exist, create it
+            nextState = STREAM_STATE_CREATE;
+        } else {
+            // Not allowed to create, stop
+            nextState = STREAM_STATE_STOPPED;
+        }
+        break;
+        
+    default:
+        // Error occurred, retry current state
+        nextState = STREAM_STATE_DESCRIBE;
+}</pre>
+
+        <h3>Finding the State Transition Logic</h3>
+        <p>Want to understand exactly how PIC handles specific scenarios? Look at these files in the PIC source:</p>
+        <pre style="background-color: #f4f4f4; padding: 15px; border-left: 4px solid #2196f3; margin: 10px 0; font-family: 'Courier New', monospace;"># Main state transition logic:
+dependency/libkvspic/kvspic-src/src/client/src/StreamState.c
+
+# Key functions to examine:
+- fromDescribeStreamState()    // Handles describeStream results
+- fromCreateStreamState()      // Handles createStream results
+- fromGetEndpointStreamState() // Handles getStreamingEndpoint results
+- fromGetTokenStreamState()    // Handles getStreamingToken results
+
+# State machine execution:
+dependency/libkvspic/kvspic-src/src/state/src/State.c
+- stepStateMachine()           // Main state machine step function</pre>
+    </div>
+
+    <h3>PIC State Machine Execution Flow</h3>
+    <div style="background-color: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
+        <div style="text-align: center; margin: 20px 0;">
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">Event Triggered</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">stepStateMachine()</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">executeCurrentState()</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">Callback (JNI)</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; text-align: center; min-width: 120px;">Java Callback</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fce4ec; border: 2px solid #e91e63; border-radius: 5px; text-align: center; min-width: 120px;">API Call</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; text-align: center; min-width: 120px;">xxxResult() callback</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">fromCurrentState()</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">Determine Next State</span>
+        </div>
+    </div>
+</details>
+
+<details>
+    <summary>Advanced: State Machine Diagram</summary>
+
+    <h3>PIC Internal Stream States</h3>
+    <p>The native PIC library manages these internal states. This is the expected &quot;normal&quot; state transition path for the Stream.</p>
+    <div style="background-color: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
+        <div style="text-align: center; margin: 20px 0;">
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; text-align: center; min-width: 100px;">NEW</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">DESCRIBE</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">CREATE</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">GET_ENDPOINT</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">GET_TOKEN</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; text-align: center; min-width: 100px;">READY</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">PUT_STREAM</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">STREAMING</span>
+        </div>
+    </div>
+
+</details>
+
+<details>
+    <summary>Advanced: JNI flow &amp; Deep Dive</summary>
+    <div>
+        <h3>Key JNI Components</h3>
+        <ul>
+            <li><strong>NativeKinesisVideoProducerJni:</strong> Main JNI interface class</li>
+            <li><strong>NativeLibraryLoader:</strong> Handles loading platform-specific libraries</li>
+            <li><strong>Callback Implementations:</strong> Java implementations for PIC callbacks</li>
+            <li><strong>ProducerStreamSink:</strong> Bridges MediaSource to native producer stream</li>
+        </ul>
+
+        <h3>registerMediaSource() Complete Flow (Stream Setup)</h3>
+        <div style="background-color: #fff9c4; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0;">
+            <strong>Important Blocking Behavior:</strong>
+            <ul>
+                <li><code>registerMediaSource()</code> <strong>blocks</strong> until the stream reaches READY state</li>
+                <li>This means all AWS API calls (<code>describeStream</code>, <code>createStream</code> (if applicable), <code>getStreamingEndpoint</code>, <code>getStreamingToken</code>) complete</li>
+                <li>Only after <code>streamReady()</code> callback is fired does <code>registerMediaSource()</code> return</li>
+                <li>If any step fails, <code>registerMediaSource()</code> will throw an exception</li>
+            </ul>
+        </div>
+        <div style="background-color: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <div style="text-align: center; margin: 20px 0;">
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e3f2fd; border: 2px solid #2196f3; border-radius: 5px; text-align: center; min-width: 120px;">client.registerMediaSource()</span>
+                <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; text-align: center; min-width: 120px;">JNI: createKinesisVideoStream()</span>
+                <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">PIC: Stream Created (NEW state)</span>
+                <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">State Machine Runs (NEW→READY)</span>
+                <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; text-align: center; min-width: 120px;">streamReady() callback</span>
+                <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e3f2fd; border: 2px solid #2196f3; border-radius: 5px; text-align: center; min-width: 120px;">registerMediaSource() returns</span>
+            </div>
+        </div>
+    
+    <h4>What Happens During State Machine Execution (NEW → READY)</h4>
+    <div style="background-color: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
+        <div style="text-align: center; margin: 20px 0;">
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; text-align: center; min-width: 100px;">NEW</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">DESCRIBE</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">CREATE</span>
+            <span style="margin: 0 8px; font-size: 14px; color: #666;">(if needed)</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">GET_ENDPOINT</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">GET_TOKEN</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">READY</span>
+        </div>
+    </div>
+
+    <h3>putFrame() Complete Flow (Frame Ingestion)</h3>
+    <p><strong>After READY:</strong> Once <code>registerMediaSource()</code> returns, you can start calling <code>putFrame()</code> to send video data.</p>
+        <div style="background-color: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <div style="text-align: center; margin: 20px 0;">
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e3f2fd; border: 2px solid #2196f3; border-radius: 5px; text-align: center; min-width: 120px;">Your Application</span>
+                <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e3f2fd; border: 2px solid #2196f3; border-radius: 5px; text-align: center; min-width: 120px;">MediaSource.onFrame()</span>
+                <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e3f2fd; border: 2px solid #2196f3; border-radius: 5px; text-align: center; min-width: 120px;">ProducerStreamSink.onFrame()</span>
+                <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; text-align: center; min-width: 120px;">JNI: putKinesisVideoFrame()</span>
+                <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">PIC: putFrame()</span>
+                <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+                <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">MKV Assembly &amp; Content Store</span>
+            </div>
+        </div>
+    
+    <h4>First putFrame() Triggers READY → STREAMING Transition</h4>
+    <div style="background-color: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
+        <div style="text-align: center; margin: 20px 0;">
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">READY</span>
+            <span style="margin: 0 8px; font-size: 14px; color: #666;">(waiting for frames)</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">PUT_STREAM</span>
+            <span style="margin: 0 8px; font-size: 14px; color: #666;">(first frame triggers)</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 100px;">STREAMING</span>
+            <span style="margin: 0 8px; font-size: 14px; color: #666;">(data flowing to KVS)</span>
+        </div>
+    </div>
+
+    <h3>Content Store → getStreamData() → putMedia Threading Model</h3>
+
+    <div style="background-color: #fff9c4; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0;">
+        <strong>Summary:</strong>
+        <ul>
+            <li>Your <code>MediaSource.start()</code> calls <code>putFrame()</code> in a loop - <code>putFrame()</code> stores frames in PIC's content store (non-blocking)</li>
+            <li>Content store acts as a buffer between frame production and network transmission</li>
+            <li><code>getStreamData()</code> runs on a <strong>separate thread</strong> created by <code>ParallelSimpleHttpClient.sendPayloadInBackground()</code> - it retrieves MKV-packaged data from the content store and sends it to KVS using HTTP chunked-transfer encoding.</li>
+        </ul>
+    </div>
+
+    <h4>getStreamData() Function Flow (PIC's Stream.c):</h4>
+    <div style="background-color: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
+        <div style="text-align: center; margin: 20px 0;">
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e3f2fd; border: 2px solid #2196f3; border-radius: 5px; text-align: center; min-width: 120px;">NativeDataInputStream.read()</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; text-align: center; min-width: 120px;">JNI: getStreamData()</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">Check Upload Handle State</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">Read Content View</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #e8f5e8; border: 2px solid #4caf50; border-radius: 5px; text-align: center; min-width: 120px;">Fill Buffer with MKV Data</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; text-align: center; min-width: 120px;">Return to Java</span>
+            <span style="margin: 0 8px; font-size: 16px; color: #2196f3;">&rarr;</span>
+            <span style="display: inline-block; padding: 8px 12px; margin: 3px; background-color: #fce4ec; border: 2px solid #e91e63; border-radius: 5px; text-align: center; min-width: 120px;">HTTP Chunked Upload</span>
+        </div>
+    </div>
+
+    <h4>Java Classes Involved:</h4>
+    <ul>
+        <li><strong>NativeDataInputStream:</strong> Java InputStream that calls getStreamData() to read data from PIC</li>
+        <li><strong>NativeKinesisVideoProducerJni:</strong> JNI interface that bridges Java to native PIC functions</li>
+        <li><strong>ParallelSimpleHttpClient:</strong> Creates background thread and manages HTTP connection to putMedia</li>
+        <li><strong>PutMediaClient:</strong> High-level client that orchestrates the streaming process</li>
+    </ul>
+
+    <div style="background-color: #e8f5e8; padding: 15px; border-left: 4px solid #4caf50; margin: 15px 0;">
+        <strong>Note</strong>
+        <p><a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_dataplane_PutMedia.html">putMedia</a> is a <strong>long-running HTTP connection</strong> that uploads many fragments continuously in a single connection. It is <strong>NOT</strong> a traditional RESTful API where you would upload one fragment at a time with separate HTTP requests.</p>
+    </div>
+
+    <h4>What happens in PIC's getStreamData():</h4>
+    <pre style="background-color: #f4f4f4; padding: 15px; border-left: 4px solid #2196f3; margin: 10px 0; font-family: 'Courier New', monospace;">// Inside PIC's getStreamData() function:
+1. Validate upload handle state (READY/STREAMING/TERMINATED)
+2. Handle connection state (rollback on reconnect if needed)
+3. Read from content view using <strong>contentViewGetNext()</strong>
+4. Copy MKV fragments to caller buffer
+5. Update view current position
+6. Handle end-of-stream conditions
+7. Return bytes filled in buffer</pre>
+    </div>
+</details>
+
+<h3>See also:</h3>
+<ul>
+    <li><a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-sdk-javaapi.html">Developer
+        Guide</a></li>
+    <li><a href="https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues">GitHub
+        Issues</a></li>
+    <li><a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-sdk-errors.html">Error Code
+        Reference</a></li>
+</ul>
+
+</body>
+</html>
