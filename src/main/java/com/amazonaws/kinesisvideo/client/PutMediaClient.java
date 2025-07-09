@@ -76,6 +76,7 @@ public final class PutMediaClient {
         clientBuilder.header(FRAGMENT_TIME_CODE_TYPE_HEADER, mBuilder.mFragmentTimecodeType);
         clientBuilder.completionCallback(mBuilder.mCompletion);
         clientBuilder.setSenderCallback(sender);
+        clientBuilder.setStreamName(mBuilder.mStreamName);
         clientBuilder.setIPVersionFilter(mBuilder.mIPVersionFilter);
         // Timeout if no response is received from the server for put(i.e., acks)
         // Socket will/should be closed by the consumer by throwing the SocketTimeoutException

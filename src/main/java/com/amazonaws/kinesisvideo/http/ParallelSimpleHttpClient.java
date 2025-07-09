@@ -4,6 +4,7 @@ import com.amazonaws.kinesisvideo.client.IPVersionFilter;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfigurationDefaults;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
 import com.amazonaws.kinesisvideo.socket.SocketFactory;
+import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -140,17 +141,17 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private void sendPayloadInBackground() {
         if (mBuilder.mSender != null) {
             payloadSender = Executors.newFixedThreadPool(1);
-            payloadSender.execute(new Runnable() {
+            payloadSender.execute(new LoggedExitRunnable("PutMedia-Sending-" + mBuilder.mStreamName) {
                 @Override
-                public void run() {
+                public void execute() {
                     Exception storedException = null;
                     try {
                         // This is needed to get the thread Id.
-                        log.debug("Start sending data.");
+                        log.debug("[{}] Start sending data.", mBuilder.mStreamName);
                         mBuilder.mSender.accept(mOutputStream);
-                        log.debug("End sending data. Sent all data, close.");
+                        log.debug("[{}] End sending data. Sent all data, close.", mBuilder.mStreamName);
                     } catch (final Exception e) {
-                        log.error("Exception thrown on sending thread", e);
+                        log.error("[{}] Exception thrown on sending thread", mBuilder.mStreamName, e);
                         storedException = e;
                     } finally {
                         //Only call completion if there is an exception, otherwise sender will call completion
@@ -167,16 +168,16 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private void receiveResponseInBackground() {
         if (mBuilder.mReceiver != null) {
             responseReceiver = Executors.newFixedThreadPool(1);
-            responseReceiver.execute(new Runnable() {
+            responseReceiver.execute(new LoggedExitRunnable("PutMedia-Receiving-" + mBuilder.mStreamName) {
                 @Override
-                public void run() {
+                public void execute() {
                     Exception storedException = null;
                     try {
-                        log.debug("Starting receiving data");
+                        log.debug("[{}] Starting receiving data", mBuilder.mStreamName);
                         mBuilder.mReceiver.accept(mInputStream);
-                        log.debug("Received all data, close");
+                        log.debug("[{}] Received all data, close", mBuilder.mStreamName);
                     } catch (final Exception e) {
-                        log.error("Exception thrown on receiving thread", e);
+                        log.error("[{}] Exception thrown on receiving thread", mBuilder.mStreamName, e);
                         storedException = e;
                     } finally {
                         mBuilder.mCompletion.accept(storedException);
@@ -219,6 +220,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         private Integer mTimeout;
         private IPVersionFilter mIPVersionFilter;
         private Consumer<Exception> mCompletion;
+        private String mStreamName = "";
         // TODO: Set to correct output channel
 
         private Builder() {
@@ -269,6 +271,11 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
         public Builder setIPVersionFilter(final IPVersionFilter ipVersionFilter) {
             mIPVersionFilter = ipVersionFilter;
+            return this;
+        }
+
+        public Builder setStreamName(final String streamName) {
+            mStreamName = streamName;
             return this;
         }
 
