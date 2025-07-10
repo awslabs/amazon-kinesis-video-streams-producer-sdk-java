@@ -132,7 +132,7 @@ public final class DemoAppBenchmarking {
                         //.contentType("video/hevc") // for h265
                         .allowStreamCreation(false)
                         .build();
-        final ImageFileMediaSource mediaSource = new ImageFileMediaSource(STREAM_NAME + "-" + streamNameSuffix);
+        final ImageFileMediaSource mediaSource = new ImageFileMediaSource(STREAM_NAME + "_" + streamNameSuffix);
         mediaSource.configure(configuration);
 
         return mediaSource;

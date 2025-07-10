@@ -580,7 +580,7 @@ jobs:
         working-directory: scripts/python/getmediavalidation/bin
         run: |
           for ((i = 0; i < STREAM_COUNT; i++)); do
-            stream="${STREAM_NAME}-${i}"
+            stream="${STREAM_NAME_PREFIX}_${i}"
             echo "Validating stream: $stream"
             
             python ./fetch_fragment_info.py --stream-name "$stream" --last 5m
