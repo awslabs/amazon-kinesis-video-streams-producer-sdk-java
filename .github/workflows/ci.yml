@@ -576,6 +576,22 @@ jobs:
 
         shell: bash
 
+      - name: Check uploaded media (benchmarking)
+        working-directory: scripts/python/getmediavalidation/bin
+        run: |
+          for ((i = 0; i < STREAM_COUNT; i++)); do
+            stream="${STREAM_NAME}-${i}"
+            echo "Validating stream: $stream"
+            
+            python ./fetch_fragment_info.py --stream-name "$stream" --last 5m
+            
+            python ./validate_media.py --stream-name "$stream" \
+              --keyframe-interval 25 \
+              -fps 25 \
+              --frames-path "${{ github.workspace }}/src/main/resources/data/h264/*.h264" \
+              --last 5m
+          done
+
       - name: Generate memory and CPU graph
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
