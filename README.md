@@ -23,8 +23,9 @@ The Amazon Kinesis Video Streams Producer SDK Java makes it easy to build an on-
 
 * [Developer Guide](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-sdk-javaapi.html) - For in-depth getting started and usage information.
 * [Release Notes](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/releases) - To see the latest features, bug fixes, and changes in the SDK
-* [Issues](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues) - Report issues and submit pull requests 
-
+* [Issues](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues) - Report issues and submit pull requests
+* [SDK Documentation JavaDoc](https://awslabs.github.io/amazon-kinesis-video-streams-producer-sdk-java/master/index.html) (master branch)
+* [SDK Documentation JavaDoc](https://awslabs.github.io/amazon-kinesis-video-streams-producer-sdk-java/develop/index.html) (develop branch)
 
 ### Prerequisites
 
@@ -199,6 +200,16 @@ For additional examples on using Kinesis Video Streams Java SDK and  Kinesis Vid
 ##### [Kinesis Video Streams Parser Library](https://github.com/aws/amazon-kinesis-video-streams-parser-library/blob/master/README.md)
 
 ##### [Kinesis Video Streams Android](https://github.com/awslabs/aws-sdk-android-samples/tree/master/AmazonKinesisVideoDemoApp)
+
+## JavaDoc
+
+Use the following command to build the JavaDoc locally:
+
+```shell
+mvn clean compile javadoc:javadoc
+```
+
+You can then open `target/site/apidocs/index.html` in a browser of your choice.
 
 ### Troubleshooting
 

@@ -253,6 +253,60 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.3</version>
+                <configuration>
+                    <source>8</source>
+                    <encoding>UTF-8</encoding>
+                    <docencoding>UTF-8</docencoding>
+                    <charset>UTF-8</charset>
+                    <show>protected</show>
+                    <nohelp>true</nohelp>
+                    <failOnError>false</failOnError>
+                    <failOnWarnings>false</failOnWarnings>
+                    <quiet>true</quiet>
+                    <overview>src/main/javadoc/overview.html</overview>
+                    <additionalJOptions>
+                        <additionalJOption>-Xdoclint:none</additionalJOption>
+                        <additionalJOption>--allow-script-in-comments</additionalJOption>
+                    </additionalJOptions>
+                    <windowtitle>Amazon Kinesis Video Streams Producer SDK Java ${project.version} API</windowtitle>
+                    <doctitle>Amazon Kinesis Video Streams Producer SDK Java ${project.version} API</doctitle>
+                    <header>&lt;b&gt;Amazon Kinesis Video Streams Producer SDK Java ${project.version}&lt;/b&gt;</header>
+                    <footer>&lt;b&gt;Amazon Kinesis Video Streams Producer SDK Java ${project.version}&lt;/b&gt;</footer>
+                    <bottom>
+                        Copyright &#169; {currentYear} Amazon Web Services, Inc. All Rights Reserved.
+                    </bottom>
+                    <groups>
+                        <group>
+                            <title>Client API</title>
+                            <packages>com.amazonaws.kinesisvideo.client*</packages>
+                        </group>
+                        <group>
+                            <title>Producer API</title>
+                            <packages>com.amazonaws.kinesisvideo.producer*</packages>
+                        </group>
+                        <group>
+                            <title>Media Source API</title>
+                            <packages>com.amazonaws.kinesisvideo.mediasource*</packages>
+                        </group>
+                        <group>
+                            <title>Common API</title>
+                            <packages>com.amazonaws.kinesisvideo.common*</packages>
+                        </group>
+                    </groups>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <resources>
             <resource>

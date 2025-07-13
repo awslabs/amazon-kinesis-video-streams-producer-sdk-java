@@ -1,0 +1,47 @@
+name: Generate and Deploy Javadoc
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    branches:
+      - master
+      - develop
+
+permissions:
+  contents: write
+
+jobs:
+  javadoc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'corretto'
+
+      - name: Deploy Javadoc for Master
+        if: ${{ github.ref == 'refs/heads/master' || github.base_ref == 'master' }}
+        uses: MathieuSoysal/Javadoc-publisher.yml@v3.0.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          javadoc-branch: gh-pages
+          java-version: 11
+          target-folder: master
+          project: maven
+
+      - name: Deploy Javadoc for Develop
+        if: ${{ github.ref == 'refs/heads/develop' || github.base_ref == 'develop' }}
+        uses: MathieuSoysal/Javadoc-publisher.yml@v3.0.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          javadoc-branch: gh-pages
+          java-version: 11
+          target-folder: develop
+          project: maven
