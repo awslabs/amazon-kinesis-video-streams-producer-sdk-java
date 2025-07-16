@@ -49,4 +49,22 @@ public class FragmentAckType {
     public int getIntType() {
         return mType;
     }
+
+    @Override
+    public String toString() {
+        switch (mType) {
+            case FRAGMENT_ACK_TYPE_BUFFERING:
+                return "BUFFERING";
+            case FRAGMENT_ACK_TYPE_RECEIVED:
+                return "RECEIVED";
+            case FRAGMENT_ACK_TYPE_PERSISTED:
+                return "PERSISTED";
+            case FRAGMENT_ACK_TYPE_ERROR:
+                return "ERROR";
+            case FRAGMENT_ACK_TYPE_IDLE:
+                return "IDLE";
+            default:
+                return "UNDEFINED";
+        }
+    }
 }

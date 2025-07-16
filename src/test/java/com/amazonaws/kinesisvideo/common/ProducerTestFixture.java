@@ -32,7 +32,7 @@ class TestStreamCallBacks extends DefaultStreamCallbacks {
     private final ProducerTestBase producerTestBase;
     private final Logger log = LogManager.getLogger(TestStreamCallBacks.class);
 
-    protected TestStreamCallBacks(ProducerTestBase producerTestBase) {
+    protected TestStreamCallBacks(final ProducerTestBase producerTestBase) {
         this.producerTestBase = producerTestBase;
     }
 
@@ -50,6 +50,8 @@ class TestStreamCallBacks extends DefaultStreamCallbacks {
     @Override
     public void fragmentAckReceived(final long uploadHandle, @Nonnull final KinesisVideoFragmentAck fragmentAck)
             throws ProducerException {
+        producerTestBase.receivedFragmentAcks_.add(fragmentAck);
+
         FragmentAckType bufferingAck = new FragmentAckType(FragmentAckType.FRAGMENT_ACK_TYPE_BUFFERING);
 
         log.trace("Reporting fragment ack");
@@ -76,7 +78,7 @@ class TestStreamCallBacks extends DefaultStreamCallbacks {
     @Override
     public void streamErrorReport(final long uploadHandle, final long frameTimecode, final long statusCode)
             throws ProducerException {
-        log.error("Reporting stream error. Errored time code {} with status code {}", frameTimecode, statusCode);
+        log.error("Reporting stream error. Errored time code {} with status code 0x{}", frameTimecode, Long.toHexString(statusCode));
         producerTestBase.errorStatus_ = statusCode;
     }
 

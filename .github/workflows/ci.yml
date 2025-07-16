@@ -139,7 +139,7 @@ jobs:
 
       - name: Run tests
         run: |
-          mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=${JNI_FOLDER} -Dlog4j.configurationFile=log4j2.xml"
+          mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=${JNI_FOLDER} -Dlog4j.configurationFile=.github/log4j2.xml"
         shell: bash
 
   run-samples:
@@ -237,7 +237,7 @@ jobs:
             -Daws.sessionToken=${AWS_SESSION_TOKEN} \
             -Djava.library.path=${JNI_FOLDER} \
             -Dkvs-stream=$STREAM_NAME \
-            -Dlog4j.configurationFile=log4j2.xml \
+            -Dlog4j.configurationFile=.github/log4j2.xml \
             com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample.name }} &
           JAVA_PID=$!
 
@@ -296,7 +296,7 @@ jobs:
             -Daws.sessionToken=%AWS_SESSION_TOKEN% ^
             -Djava.library.path=%JNI_FOLDER% ^
             -Dkvs-stream=%STREAM_NAME% ^
-            -Dlog4j.configurationFile=log4j2.xml ^
+            -Dlog4j.configurationFile=.github\log4j2.xml ^
             com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample.name }}
 
           set EXIT_CODE=%ERRORLEVEL%

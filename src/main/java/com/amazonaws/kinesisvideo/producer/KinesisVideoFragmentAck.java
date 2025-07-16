@@ -75,4 +75,14 @@ public class KinesisVideoFragmentAck {
     public int getResult() {
         return mResult;
     }
+
+    @Override
+    public String toString() {
+        return "KinesisVideoFragmentAck{" +
+                "mAckType=" + mAckType +
+                ", mTimestamp=" + mTimestamp +
+                ", mSequenceNumber='" + mSequenceNumber + '\'' +
+                ", mResult=" + mResult +
+                '}';
+    }
 }
