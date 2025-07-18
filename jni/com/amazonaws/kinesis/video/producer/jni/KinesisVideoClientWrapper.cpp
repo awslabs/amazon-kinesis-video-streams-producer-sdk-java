@@ -382,6 +382,7 @@ void KinesisVideoClientWrapper::putKinesisVideoFrame(jlong streamHandle, jobject
         throwNativeException(env, EXCEPTION_NAME, "Failed converting frame object.", STATUS_INVALID_OPERATION);
         return;
     }
+    // setFrame ensures that frame.frameData != NULL
 
     PStreamInfo pStreamInfo;
     UINT32 zeroCount = 0;
@@ -587,7 +588,7 @@ void KinesisVideoClientWrapper::kinesisVideoStreamFragmentAck(jlong streamHandle
     // Convert the KinesisVideoFrame object
     if (!setFragmentAck(env, fragmentAck, &ack))
     {
-        DLOGE("Failed converting frame object.");
+        DLOGE("Failed converting fragment ack object.");
         throwNativeException(env, EXCEPTION_NAME, "Failed converting fragment ack object.", STATUS_INVALID_OPERATION);
         return;
     }

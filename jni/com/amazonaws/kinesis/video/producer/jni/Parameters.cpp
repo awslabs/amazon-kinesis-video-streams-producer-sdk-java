@@ -842,7 +842,9 @@ BOOL setFrame(JNIEnv* env, jobject kinesisVideoFrame, PFrame pFrame)
     } else {
         jobject byteBuffer = (jstring) env->CallObjectMethod(kinesisVideoFrame, methodId);
         CHK_JVM_EXCEPTION(env);
-        pFrame->frameData = (PBYTE) env->GetDirectBufferAddress(byteBuffer);
+        PBYTE frameData = (PBYTE) env->GetDirectBufferAddress(byteBuffer);
+        CHK_ERR(frameData != NULL, STATUS_INVALID_ARG, "ByteBuffer has NULL data!");
+        pFrame->frameData = frameData;
     }
 
 CleanUp:

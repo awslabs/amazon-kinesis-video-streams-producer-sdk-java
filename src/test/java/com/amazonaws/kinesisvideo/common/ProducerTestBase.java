@@ -181,21 +181,20 @@ public class ProducerTestBase {
      */
     protected KinesisVideoProducerStream createTestStream(String streamName, StreamInfo.StreamingType streamingType,
                                                           long maxLatency, long bufferDuration) {
+        return createTestStream(streamName, streamingType, maxLatency, bufferDuration, NAL_ADAPTATION_FLAG_NONE);
+    }
+
+    protected KinesisVideoProducerStream createTestStream(String streamName, StreamInfo.StreamingType streamingType,
+                                                          long maxLatency, long bufferDuration, StreamInfo.NalAdaptationFlags nalAdaptationFlags) {
         KinesisVideoProducerStream kinesisVideoProducerStream = null;
-        final byte[] AVCC_EXTRA_DATA = {
-                (byte) 0x01, (byte) 0x42, (byte) 0x00, (byte) 0x1E, (byte) 0xFF, (byte) 0xE1, (byte) 0x00, (byte) 0x22,
-                (byte) 0x27, (byte) 0x42, (byte) 0x00, (byte) 0x1E, (byte) 0x89, (byte) 0x8B, (byte) 0x60, (byte) 0x50,
-                (byte) 0x1E, (byte) 0xD8, (byte) 0x08, (byte) 0x80, (byte) 0x00, (byte) 0x13, (byte) 0x88,
-                (byte) 0x00, (byte) 0x03, (byte) 0xD0, (byte) 0x90, (byte) 0x70, (byte) 0x30, (byte) 0x00, (byte) 0x5D,
-                (byte) 0xC0, (byte) 0x00, (byte) 0x17, (byte) 0x70, (byte) 0x5E, (byte) 0xF7, (byte) 0xC1, (byte) 0xF0,
-                (byte) 0x88, (byte) 0x46, (byte) 0xE0, (byte) 0x01, (byte) 0x00, (byte) 0x04, (byte) 0x28, (byte) 0xCE,
-                (byte) 0x1F, (byte) 0x20};
+        
+        final byte[] codecPrivateData = ProducerTestCPDs.getTestCPD(nalAdaptationFlags);
 
         final String prefix = Optional.ofNullable(System.getenv("TEST_STREAMS_PREFIX")).orElse("");
         final String finalStreamName = prefix + streamName;
         prepareStream(finalStreamName);
 
-        StreamInfo streamInfo = new StreamInfo(
+        final StreamInfo streamInfo = new StreamInfo(
                 StreamInfo.STREAM_INFO_CURRENT_VERSION,
                 finalStreamName,
                 streamingType,
@@ -219,19 +218,19 @@ public class ProducerTestBase {
                 DEFAULT_STALENESS_DURATION,
                 DEFAULT_TIMESCALE,
                 RECALCULATE_METRICS,
-                AVCC_EXTRA_DATA,
+                codecPrivateData,
                 new Tag[]{
                         new Tag("device", "Test Device"),
                         new Tag("stream", "Test Stream")},
-                NAL_ADAPTATION_FLAG_NONE,
+                nalAdaptationFlags,
                 allowStreamCreation
         );
 
         try {
             kinesisVideoProducerStream = kinesisVideoProducer.createStreamSync(streamInfo, streamCallbacks);
 
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (final Exception e) {
+            log.error("Failed to create the stream: {}", finalStreamName, e);
             fail();
         }
         return kinesisVideoProducerStream;
