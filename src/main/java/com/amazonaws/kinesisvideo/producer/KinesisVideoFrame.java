@@ -80,8 +80,8 @@ public class KinesisVideoFrame {
      * @param index          ID for this frame.
      * @param flags          Flags associated with this frame. They should be bitwise OR'ed together
      *                       when specifying more than 1. See {@link FrameFlags}.
-     * @param decodingTs     DTS of this frame in hundreds of nanosecond units.
-     * @param presentationTs PTS of this frame in hundreds of nanosecond units.
+     * @param decodingTs     DTS of this frame in hundreds of nanosecond units. Should be monotonically increasing.
+     * @param presentationTs PTS of this frame in hundreds of nanosecond units. Should be monotonically increasing.
      * @param duration       Duration of this frame in hundreds of nanosecond units. Can be 0.
      * @param data           The frame contents.
      * @param trackId        The track number this frame belongs to.
@@ -90,7 +90,7 @@ public class KinesisVideoFrame {
     public KinesisVideoFrame(final int index, final int flags, final long decodingTs, final long presentationTs,
                              final long duration, @Nonnull final ByteBuffer data, final long trackId) {
 
-        Preconditions.checkNotNull(data, "Null data was passed in!");
+        Preconditions.checkNotNull(data, "Frame data can't be null");
 
         this.version = FRAME_VERSION_ZERO;
         this.index = index;
@@ -153,7 +153,7 @@ public class KinesisVideoFrame {
      */
     @Nonnull
     public ByteBuffer getData() {
-        // Don't return mData directly to make sure each caller gets its own set of position/limit pointers.
+        // Don't return data directly to make sure each caller gets its own set of position/limit pointers.
         return this.data.duplicate();
     }
 

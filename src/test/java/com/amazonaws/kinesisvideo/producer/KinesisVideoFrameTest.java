@@ -201,10 +201,10 @@ public class KinesisVideoFrameTest {
     }
 
     @Test
-    public void whenEmptyDataProvided_thenNoExceptionIsThrown() {
+    public void whenEmptyBufferProvided_thenNoExceptionIsThrown() {
         final ByteBuffer emptyBuffer = ByteBuffer.allocate(0);
 
-        // Attempt to create a frame with empty data
+        // Attempt to create a frame with 0 size data
         // Main use case is for submitting end of fragment
         createTestFrameFromBuffer(emptyBuffer);
     }
