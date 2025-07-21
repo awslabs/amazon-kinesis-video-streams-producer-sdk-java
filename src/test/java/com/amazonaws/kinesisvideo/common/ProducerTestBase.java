@@ -12,6 +12,7 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
+import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
@@ -141,7 +142,7 @@ public class ProducerTestBase {
         awsCredentialsProvider = AuthHelper.getSystemPropertiesCredentialsProvider();
         configuration = KinesisVideoClientConfiguration.builder()
                 .withRegion(Regions.US_WEST_2.getName())
-                .withCredentialsProvider(new JavaCredentialsProviderImpl(awsCredentialsProvider))
+                .withCredentialsProvider(JavaCredentialsFactory.getKinesisVideoCredentialsProvider(awsCredentialsProvider))
                 .build();
 
         serviceClient = new JavaKinesisVideoServiceClient(log);

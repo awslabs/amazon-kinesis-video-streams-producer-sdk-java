@@ -21,7 +21,7 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
     private final long rotationPeriodInMillis;
 
     /**
-     * Constructor for non-temporary credential provider
+     * Constructor for non-temporary credential provider. Access Key ID + Secret Key (no session token)
      *
      * @param awsCredentialsProvider credential provider
      */
@@ -32,7 +32,7 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
     }
 
     /**
-     * Constructor for temporary credential provider with token rotation period
+     * Constructor for temporary credential provider with token rotation period (has a session token)
      * (i.e. token expires for every 5 minutes)
      *
      * @param awsCredentialsProvider credential provider
@@ -46,7 +46,8 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
     }
 
     @Override
-    protected KinesisVideoCredentials updateCredentials() throws KinesisVideoException {
+    @Nonnull
+    protected KinesisVideoCredentials updateCredentials() {
         // Refresh the token first
         credentialsProvider.refresh();
 

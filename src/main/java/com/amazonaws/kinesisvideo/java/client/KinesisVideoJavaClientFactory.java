@@ -1,11 +1,13 @@
 package com.amazonaws.kinesisvideo.java.client;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.IPVersionFilter;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsFactory;
 import com.amazonaws.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,6 +28,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.invoke.MethodHandles;
+import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -118,7 +121,7 @@ public final class KinesisVideoJavaClientFactory {
         Preconditions.checkNotNull(awsCredentialsProvider);
 
         final KinesisVideoCredentialsProvider kinesisVideoCredentialsProvider =
-                new JavaCredentialsProviderImpl(awsCredentialsProvider);
+                JavaCredentialsFactory.getKinesisVideoCredentialsProvider(awsCredentialsProvider);
 
         final KinesisVideoClientConfiguration.Builder builder = KinesisVideoClientConfiguration.builder()
                 .withRegion(regions.getName())

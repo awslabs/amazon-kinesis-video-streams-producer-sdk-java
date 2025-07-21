@@ -4,6 +4,7 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.IPVersionFilter;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
+import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
@@ -75,7 +76,7 @@ public final class DemoAppCachedInfo {
             final AWSCredentialsProvider awsCredentialsProvider = AuthHelper.getSystemPropertiesCredentialsProvider();
             final KinesisVideoClientConfiguration configuration = KinesisVideoClientConfiguration.builder()
                     .withRegion(Regions.US_WEST_2.getName())
-                    .withCredentialsProvider(new JavaCredentialsProviderImpl(awsCredentialsProvider))
+                    .withCredentialsProvider(JavaCredentialsFactory.getKinesisVideoCredentialsProvider(awsCredentialsProvider))
                     .withStorageCallbacks(new DefaultStorageCallbacks())
                     .withIPVersionFilter(IPVersionFilter.IPV4_AND_IPV6)
                     .build();

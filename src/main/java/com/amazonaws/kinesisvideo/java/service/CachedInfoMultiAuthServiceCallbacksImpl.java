@@ -5,6 +5,7 @@ import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsFactory;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
@@ -288,7 +289,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
     public void addCredentialsProviderToCache(String streamName, AWSCredentialsProvider credentialsProvider) {
         Preconditions.checkArgument(!credentialsProviderMap.containsKey(streamName));
         final KinesisVideoCredentialsProvider kvsCredentialsProvider =
-                new JavaCredentialsProviderImpl(credentialsProvider);
+                JavaCredentialsFactory.getKinesisVideoCredentialsProvider(credentialsProvider);
         credentialsProviderMap.put(streamName, kvsCredentialsProvider);
     }
 
