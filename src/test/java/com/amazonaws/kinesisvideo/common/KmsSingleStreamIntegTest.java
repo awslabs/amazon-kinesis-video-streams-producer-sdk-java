@@ -229,7 +229,7 @@ public class KmsSingleStreamIntegTest extends ProducerTestBase {
 
             stream.putFrame(frame);
 
-            // Check if we've received the expected KMS error via streamErrorReport callback
+            // Make sure no errors via streamErrorReport callback
             if (this.errorStatus_ != 0) {
                 fail("Received an unexpected stream error: " + Long.toHexString(this.errorStatus_));
             }

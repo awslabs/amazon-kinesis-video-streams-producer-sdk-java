@@ -54,7 +54,7 @@ class TestStreamCallBacks extends DefaultStreamCallbacks {
 
         FragmentAckType bufferingAck = new FragmentAckType(FragmentAckType.FRAGMENT_ACK_TYPE_BUFFERING);
 
-        log.trace("Reporting fragment ack");
+        log.trace("Reporting fragment ack {}", fragmentAck);
         if(fragmentAck.getAckType().equals(bufferingAck)) {
             if(producerTestBase.previousBufferingAckTimestamp_.containsKey(uploadHandle)) { //uploadHandle exists in the Map
                 if(fragmentAck.getTimestamp() != producerTestBase.previousBufferingAckTimestamp_.get(uploadHandle) && // can be the same in case of retransmits
