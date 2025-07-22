@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -14,6 +15,8 @@ import com.amazonaws.kinesisvideo.producer.Time;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.amazonaws.kinesisvideo.producer.ProducerException;
+
+import javax.annotation.Nonnull;
 
 public class ProducerApiTest extends ProducerTestBase{
 

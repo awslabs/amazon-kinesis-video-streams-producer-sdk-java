@@ -18,6 +18,9 @@ jobs:
       id-token: write
       contents: read
 
+    env:
+      JAVA_LIBRARY_PATH: src/main/resources/lib/ubuntu/
+
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -28,6 +31,15 @@ jobs:
           java-version: 11
           distribution: 'adopt'
 
+      - name: Build JNI (develop branch) # When merging to master, we use the JNI that is committed
+        if: ${{ github.ref == 'refs/heads/develop' || github.base_ref == 'develop' }}
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make -j
+          echo "JAVA_LIBRARY_PATH=build" >> $GITHUB_ENV
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -36,11 +48,12 @@ jobs:
 
       - name: Run tests
         run: |
+          echo "Using -Djava.library.path=${JAVA_LIBRARY_PATH}"
           mvn clean verify -DargLine="\
             -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
             -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
             -Daws.sessionToken=${AWS_SESSION_TOKEN} \
-            -Djava.library.path=src/main/resources/lib/ubuntu/ \
+            -Djava.library.path=${JAVA_LIBRARY_PATH} \
             -Dlog4j.configurationFile=log4j2.xml"
         shell: bash
 
