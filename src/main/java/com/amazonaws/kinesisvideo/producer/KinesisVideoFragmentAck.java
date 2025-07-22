@@ -20,7 +20,8 @@ import javax.annotation.concurrent.ThreadSafe;
  *   <li><strong>BUFFERING</strong> - Fragment started buffering on the ingestion host</li>
  *   <li><strong>RECEIVED</strong> - Fragment has been received and parsed</li>
  *   <li><strong>PERSISTED</strong> - Fragment has been persisted to storage</li>
- *   <li><strong>ERROR</strong> - Fragment processing encountered an error</li>
+ *   <li><strong>ERROR</strong> - Fragment sent for ingestion encountered an error, check the error code reference
+ *     in the PutMedia API documentation</li>
  *   <li><strong>IDLE</strong> - Keep-alive acknowledgement to maintain connection</li>
  * </ul>
  * </p>
@@ -60,8 +61,9 @@ public class KinesisVideoFragmentAck {
      * <p>
      * This timestamp corresponds to the presentation timestamp (PTS) of the fragment
      * and is used to correlate acknowledgements with specific fragments in the stream.
-     * The timestamp is expressed in 100-nanosecond units since the Unix epoch.
      * </p>
+     *
+     * @see <a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_dataplane_PutMedia.html">PutMedia API Documentation</a>
      */
     private final long timestamp;
 
@@ -71,6 +73,8 @@ public class KinesisVideoFragmentAck {
      * This sequence number is assigned by the Kinesis Video Streams service
      * and uniquely identifies each fragment within a stream.
      * </p>
+     *
+     * @see <a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_dataplane_PutMedia.html">PutMedia API Documentation</a>
      */
     private final String sequenceNumber;
 
@@ -78,11 +82,11 @@ public class KinesisVideoFragmentAck {
      * The service call result code for the acknowledgement.
      * <p>
      * For successful operations, this will typically be HTTP 200 (OK).
-     * For error conditions, this will contain the appropriate HTTP status code
-     * or service-specific error code indicating the nature of the failure.
+     * For error conditions, this will contain the appropriate service-specific error code indicating the nature of the failure.
      * </p>
      *
      * @see com.amazonaws.kinesisvideo.util.StreamInfoConstants#HTTP_OK
+     * @see <a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_dataplane_PutMedia.html">PutMedia API Documentation</a>
      */
     private final int result;
 
@@ -93,13 +97,7 @@ public class KinesisVideoFragmentAck {
      * wraps it in a {@link FragmentAckType} object.
      * </p>
      *
-     * @param ackType        the acknowledgement type as an integer constant
-     *                       (see {@link FragmentAckType} for valid values)
-     * @param timestamp      the fragment timestamp in 100-nanosecond precision
-     * @param sequenceNumber the unique sequence number for the fragment (must not be null)
-     * @param result         the service call result code (HTTP status or error code)
-     * @throws IllegalArgumentException if sequenceNumber is null
-     * @see FragmentAckType
+     * @see KinesisVideoFragmentAck#KinesisVideoFragmentAck(FragmentAckType, long, String, int)
      */
     public KinesisVideoFragmentAck(final int ackType,
                                    final long timestamp,
@@ -117,7 +115,8 @@ public class KinesisVideoFragmentAck {
      * </p>
      *
      * @param ackType        the acknowledgement type
-     * @param timestamp      the fragment timestamp in 100-nanosecond precision
+     * @param timestamp      the fragment timecode with milliseconds precision, which may be relative or absolute
+     *                       depending on the configuration of the stream
      * @param sequenceNumber the unique sequence number for the fragment
      * @param result         the service call result code (HTTP status or error code)
      * @throws IllegalArgumentException if ackType or sequenceNumber is null
