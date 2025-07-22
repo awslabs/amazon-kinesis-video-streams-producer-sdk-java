@@ -1680,6 +1680,7 @@ STATUS KinesisVideoClientWrapper::streamErrorReportFunc(UINT64 customData, STREA
     JNIEnv *env;
     BOOL detached = FALSE;
     STATUS retStatus = STATUS_SUCCESS;
+    jlong status = (UINT64) statusCode;
 
     INT32 envState = pWrapper->mJvm->GetEnv((PVOID*) &env, JNI_VERSION_1_6);
     if (envState == JNI_EDETACHED) {
@@ -1691,7 +1692,7 @@ STATUS KinesisVideoClientWrapper::streamErrorReportFunc(UINT64 customData, STREA
 
     // Call the Java func
     env->CallVoidMethod(pWrapper->mGlobalJniObjRef, pWrapper->mStreamErrorReportMethodId, streamHandle, upload_handle,
-                        fragmentTimecode, statusCode);
+                        fragmentTimecode, status);
     CHK_JVM_EXCEPTION(env);
 
 CleanUp:

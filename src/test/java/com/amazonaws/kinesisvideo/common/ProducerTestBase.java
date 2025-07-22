@@ -1,6 +1,8 @@
 package com.amazonaws.kinesisvideo.common;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -9,18 +11,18 @@ import static com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVide
 import static org.junit.Assert.fail;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
 import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsFactory;
+import com.amazonaws.kinesisvideo.producer.Tag;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.amazonaws.kinesisvideo.demoapp.auth.AuthHelper;
 import com.amazonaws.kinesisvideo.internal.client.NativeKinesisVideoClient;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.internal.service.DefaultServiceCallbacksImpl;
-import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsProviderImpl;
 import com.amazonaws.kinesisvideo.java.service.CachedInfoMultiAuthServiceCallbacksImpl;
 import com.amazonaws.kinesisvideo.java.service.JavaKinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.producer.*;
@@ -29,6 +31,9 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
 import com.amazonaws.services.kinesisvideo.model.*;
+import com.amazonaws.services.kms.AWSKMS;
+import com.amazonaws.services.kms.AWSKMSClientBuilder;
+import com.amazonaws.services.kms.model.*;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import static com.amazonaws.kinesisvideo.producer.StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE;
@@ -40,6 +45,8 @@ public class ProducerTestBase {
     protected static final long TEST_LATENCY = 6000L * Time.HUNDREDS_OF_NANOS_IN_A_SECOND; // 60 seconds
     protected static final int FRAME_FLAG_KEY_FRAME = 1;
     protected static final int FRAME_FLAG_NONE = 0;
+    protected static final long STATUS_KMS_KEY_INVALID_STATE = 0x5200006AL;
+    protected static final long RESULT_KMS_KEY_INVALID_STATE = 4505;
     protected static final int TEST_FRAME_SIZE_BYTES = 1000;
     protected static final int TEST_FPS = 20;
     protected static final int TEST_KEY_FRAME_INTERVAL = 20;
@@ -78,6 +85,7 @@ public class ProducerTestBase {
     protected long errorStatus_;
     protected int latencyPressureCount_;
     protected HashMap<Long, Long> previousBufferingAckTimestamp_ = new HashMap<>();
+    protected List<KinesisVideoFragmentAck> receivedFragmentAcks_ = new ArrayList<>();
 
     // set by the createProducer method to be used throughout
     private StreamCallbacks streamCallbacks;
@@ -99,6 +107,7 @@ public class ProducerTestBase {
         errorStatus_ = 0x00000000;
         latencyPressureCount_ = 0;
         previousBufferingAckTimestamp_.clear();
+        receivedFragmentAcks_.clear();
 
         fps_ = 20;
         keyFrameInterval_ = 20;
@@ -139,7 +148,7 @@ public class ProducerTestBase {
         executor = Executors.newScheduledThreadPool(NUMBER_OF_THREADS_IN_POOL,
                 new ThreadFactoryBuilder().setNameFormat("KVS-JavaClientExecutor-%d").build());
 
-        awsCredentialsProvider = AuthHelper.getSystemPropertiesCredentialsProvider();
+        awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
         configuration = KinesisVideoClientConfiguration.builder()
                 .withRegion(Regions.US_WEST_2.getName())
                 .withCredentialsProvider(JavaCredentialsFactory.getKinesisVideoCredentialsProvider(awsCredentialsProvider))
@@ -360,5 +369,377 @@ public class ProducerTestBase {
                 kvsClient.getDataEndpoint(new GetDataEndpointRequest().withAPIName(APIName.PUT_MEDIA)
                         .withStreamName(testStreamName));
         cacheServiceCallbacks.addStreamingEndpointToCache(testStreamName, dataEndpoint.getDataEndpoint());
+    }
+
+    /**
+     * Creates a symmetric KMS key that can be used for encryption/decryption
+     * operations with Kinesis Video Streams. The key is created in the same region as
+     * configured for the test client.
+     *
+     * @param keyDescription A human-readable description for the KMS key
+     * @return The KMS key ID that can be used for stream encryption
+     */
+    protected String createKmsKey(final String keyDescription) {
+        final AWSKMS kmsClient = AWSKMSClientBuilder.standard()
+                .withRegion(configuration.getRegion())
+                .withCredentials(awsCredentialsProvider)
+                .build();
+
+        final CreateKeyRequest createKeyRequest = new CreateKeyRequest()
+                .withDescription(keyDescription)
+                .withKeyUsage(KeyUsageType.ENCRYPT_DECRYPT);
+
+        final CreateKeyResult createKeyResult = kmsClient.createKey(createKeyRequest);
+        final String keyId = createKeyResult.getKeyMetadata().getKeyId();
+
+        log.info("Created KMS key with ID: {}", keyId);
+
+        // Wait for the key to be fully activated to prevent KMSInvalidStateException
+        // when using the key immediately after creation
+        try {
+            log.debug("Waiting 3 seconds for KMS key {} to be fully activated...", keyId);
+            Thread.sleep(3000);
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while waiting for KMS key activation: {}", keyId);
+        }
+
+        return keyId;
+    }
+
+    /**
+     * Schedules a KMS key for deletion with retry logic.
+     *
+     * <p>This method schedules the specified KMS key for deletion with the minimum
+     * waiting period of 7 days as required by AWS KMS. The key becomes immediately
+     * inaccessible for cryptographic operations but is not permanently deleted until
+     * the waiting period expires.</p>
+     *
+     * <p><strong>Retry Logic:</strong></p>
+     * <ul>
+     *   <li>Retries up to 5 times with exponential backoff for KMSInvalidStateException</li>
+     *   <li>Handles cases where key is not ready for deletion (still activating or in use)</li>
+     *   <li>Initial delay: 2 seconds, doubles each retry (2s, 4s, 8s, 16s, 32s)</li>
+     *   <li>Total maximum wait time: ~126 seconds across all retries</li>
+     * </ul>
+     *
+     * <p><strong>Important Notes:</strong></p>
+     * <ul>
+     *   <li>Keys cannot be immediately deleted - minimum 7-day waiting period applies</li>
+     *   <li>Once scheduled, the key becomes inaccessible for encryption/decryption</li>
+     *   <li>The deletion can be canceled during the waiting period if needed</li>
+     *   <li>This method logs warnings but does not throw exceptions on failure</li>
+     * </ul>
+     *
+     * <p><strong>Required Permissions:</strong></p>
+     * <ul>
+     *   <li>kms:ScheduleKeyDeletion</li>
+     * </ul>
+     *
+     * @param keyId The KMS key ID to schedule for deletion
+     */
+    protected void deleteKmsKey(final String keyId) {
+        final AWSKMS kmsClient = AWSKMSClientBuilder.standard()
+                .withRegion(configuration.getRegion())
+                .withCredentials(awsCredentialsProvider)
+                .build();
+
+        final int maxRetries = 5;
+        int retryCount = 0;
+        long delayMs = 2000; // Start with 2 seconds
+
+        while (retryCount < maxRetries) {
+            try {
+                final ScheduleKeyDeletionRequest deleteRequest = new ScheduleKeyDeletionRequest()
+                        .withKeyId(keyId)
+                        .withPendingWindowInDays(7); // Minimum allowed value
+
+                kmsClient.scheduleKeyDeletion(deleteRequest);
+                log.info("Successfully scheduled KMS key {} for deletion", keyId);
+                return; // Success, exit the retry loop
+
+            } catch (com.amazonaws.services.kms.model.KMSInvalidStateException e) {
+                retryCount++;
+                if (retryCount >= maxRetries) {
+                    log.warn("Failed to schedule KMS key {} for deletion after {} attempts. " +
+                            "Key may still be in use or not fully activated. Error: {}",
+                            keyId, maxRetries, e.getMessage());
+                    return;
+                }
+
+                log.info("KMS key {} is not ready for deletion (attempt {}/{}). " +
+                        "Waiting {}ms before retry. Error: {}",
+                        keyId, retryCount, maxRetries, delayMs, e.getErrorMessage());
+
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Interrupted while waiting to retry KMS key deletion for {}", keyId);
+                    return;
+                }
+
+                delayMs *= 2; // Exponential backoff
+
+            } catch (Exception e) {
+                log.warn("Failed to schedule KMS key {} for deletion: {}", keyId, e.getMessage());
+                return; // For other exceptions, don't retry
+            }
+        }
+    }
+
+    /**
+     * Creates a Kinesis Video Stream with KMS encryption.
+     *
+     * <p>This method creates a new Kinesis Video Stream configured to use the specified
+     * KMS key for server-side encryption. The stream is created with a 2-hour data
+     * retention period and waits for the stream to become active before returning.</p>
+     *
+     * @param streamName The name of the stream to create
+     * @param kmsKeyId The KMS key ID to use for encryption
+     * @throws RuntimeException if stream creation fails or stream doesn't become active within timeout
+     */
+    protected void createKmsEncryptedStream(final String streamName, final String kmsKeyId) {
+        final AmazonKinesisVideo kvs = AmazonKinesisVideoClientBuilder.standard()
+                .withRegion(configuration.getRegion())
+                .withCredentials(awsCredentialsProvider)
+                .build();
+
+        try {
+            final CreateStreamRequest createStreamRequest = new CreateStreamRequest()
+                    .withStreamName(streamName)
+                    .withDataRetentionInHours(2)
+                    .withKmsKeyId(kmsKeyId);
+
+            final CreateStreamResult createStreamResult = kvs.createStream(createStreamRequest);
+            log.info("Created KMS-encrypted stream: {} with ARN: {}", streamName, createStreamResult.getStreamARN());
+
+            // Wait for stream to be active
+            waitForStreamToBeActive(streamName, kvs);
+        } catch (Exception e) {
+            log.error("Failed to create KMS-encrypted stream: {}", streamName, e);
+            throw new RuntimeException("Failed to create KMS-encrypted stream", e);
+        }
+    }
+
+    /**
+     * Waits for a Kinesis Video Stream to become active.
+     *
+     * <p>This method polls the stream status up to 10 times with exponential backoff
+     * until the stream reaches the ACTIVE state. This is necessary because stream
+     * creation is asynchronous and the stream must be active before it can accept
+     * video data.</p>
+     *
+     * <p><strong>Polling Strategy:</strong></p>
+     * <ul>
+     *   <li>Maximum attempts: 10</li>
+     *   <li>Backoff: 2 seconds * (attempt + 1)</li>
+     *   <li>Total maximum wait time: ~110 seconds</li>
+     * </ul>
+     *
+     * @param streamName The stream name to wait for
+     * @param kvs The Kinesis Video client to use for status checks
+     * @throws RuntimeException if the stream doesn't become active within the timeout period
+     * @throws RuntimeException if interrupted while waiting
+     */
+    private void waitForStreamToBeActive(String streamName, AmazonKinesisVideo kvs) {
+        for (int i = 0; i < 10; i++) {
+            try {
+                final DescribeStreamRequest describeStreamRequest = new DescribeStreamRequest()
+                        .withStreamName(streamName);
+                final DescribeStreamResult describeStreamResult = kvs.describeStream(describeStreamRequest);
+
+                if ("ACTIVE".equals(describeStreamResult.getStreamInfo().getStatus())) {
+                    log.info("Stream {} is now active", streamName);
+                    return;
+                }
+
+                log.info("Stream {} status: {}, waiting...", streamName,
+                        describeStreamResult.getStreamInfo().getStatus());
+                Thread.sleep(2000L * (i + 1));
+            } catch (Exception e) {
+                log.info("Waiting for stream {} to be active... attempt {}/10", streamName, i + 1);
+                try {
+                    Thread.sleep(2000L * (i + 1));
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interrupted while waiting for stream", ex);
+                }
+            }
+        }
+        throw new RuntimeException("Stream " + streamName + " did not become active within timeout");
+    }
+
+    /**
+     * Creates a test stream with KMS encryption using the specified KMS key.
+     *
+     * <p>This method creates both the AWS Kinesis Video Stream (via AWS API) and the
+     * corresponding producer stream object for sending data. The stream is configured
+     * with the specified KMS key for server-side encryption.</p>
+     *
+     * <p><strong>Stream Configuration:</strong></p>
+     * <ul>
+     *   <li>Content Type: video/h264</li>
+     *   <li>Codec: V_MPEG4/ISO/AVC</li>
+     *   <li>Encryption: Server-side with specified KMS key</li>
+     *   <li>Fragmentation: Key frame based</li>
+     *   <li>Timecodes: Frame-based, relative</li>
+     *   <li>ACKs: Fragment acknowledgments enabled</li>
+     * </ul>
+     *
+     * <p><strong>Usage Pattern:</strong></p>
+     * <ol>
+     *   <li>Creates the AWS stream with KMS encryption</li>
+     *   <li>Waits for stream to become active</li>
+     *   <li>Creates the producer stream object</li>
+     *   <li>Returns the producer stream for data ingestion</li>
+     * </ol>
+     *
+     * @param streamName The name of the stream to be created
+     * @param streamingType The type of the stream (STREAMING_TYPE_REALTIME or STREAMING_TYPE_OFFLINE)
+     * @param maxLatency The maximum latency for the stream in 100ns units
+     * @param bufferDuration The buffer duration for the stream in 100ns units
+     * @param kmsKeyId The KMS key ID to use for encryption
+     * @return KinesisVideoProducerStream the created producer stream object
+     * @throws RuntimeException if stream creation fails
+     */
+    protected KinesisVideoProducerStream createTestStreamWithKms(String streamName,
+                                                                 StreamInfo.StreamingType streamingType,
+                                                                 long maxLatency,
+                                                                 long bufferDuration,
+                                                                 String kmsKeyId) {
+        KinesisVideoProducerStream kinesisVideoProducerStream = null;
+        final byte[] AVCC_EXTRA_DATA = {
+                (byte) 0x01, (byte) 0x42, (byte) 0x00, (byte) 0x1E, (byte) 0xFF, (byte) 0xE1, (byte) 0x00, (byte) 0x22,
+                (byte) 0x27, (byte) 0x42, (byte) 0x00, (byte) 0x1E, (byte) 0x89, (byte) 0x8B, (byte) 0x60, (byte) 0x50,
+                (byte) 0x1E, (byte) 0xD8, (byte) 0x08, (byte) 0x80, (byte) 0x00, (byte) 0x13, (byte) 0x88,
+                (byte) 0x00, (byte) 0x03, (byte) 0xD0, (byte) 0x90, (byte) 0x70, (byte) 0x30, (byte) 0x00, (byte) 0x5D,
+                (byte) 0xC0, (byte) 0x00, (byte) 0x17, (byte) 0x70, (byte) 0x5E, (byte) 0xF7, (byte) 0xC1, (byte) 0xF0,
+                (byte) 0x88, (byte) 0x46, (byte) 0xE0, (byte) 0x01, (byte) 0x00, (byte) 0x04, (byte) 0x28, (byte) 0xCE,
+                (byte) 0x1F, (byte) 0x20};
+
+        final String prefix = Optional.ofNullable(System.getenv("TEST_STREAMS_PREFIX")).orElse("");
+        final String finalStreamName = prefix + streamName;
+
+        // Create the KMS-encrypted stream first
+        createKmsEncryptedStream(finalStreamName, kmsKeyId);
+
+        StreamInfo streamInfo = new StreamInfo(
+                StreamInfo.STREAM_INFO_CURRENT_VERSION,
+                finalStreamName,
+                streamingType,
+                "video/h264",
+                kmsKeyId, // Use the provided KMS key ID instead of NO_KMS_KEY_ID
+                RETENTION_ONE_HOUR,
+                NOT_ADAPTIVE,
+                maxLatency,
+                DEFAULT_GOP_DURATION,
+                KEYFRAME_FRAGMENTATION,
+                USE_FRAME_TIMECODES,
+                RELATIVE_TIMECODES,
+                REQUEST_FRAGMENT_ACKS,
+                RECOVER_ON_FAILURE,
+                "V_MPEG4/ISO/AVC",
+                "test-track",
+                DEFAULT_BITRATE,
+                fps_,
+                bufferDuration,
+                DEFAULT_REPLAY_DURATION,
+                DEFAULT_STALENESS_DURATION,
+                DEFAULT_TIMESCALE,
+                RECALCULATE_METRICS,
+                AVCC_EXTRA_DATA,
+                new com.amazonaws.kinesisvideo.producer.Tag[]{
+                        new com.amazonaws.kinesisvideo.producer.Tag("device", "Test Device"),
+                        new com.amazonaws.kinesisvideo.producer.Tag("stream", "Test Stream")},
+                NAL_ADAPTATION_FLAG_NONE,
+                allowStreamCreation
+        );
+
+        try {
+            kinesisVideoProducerStream = kinesisVideoProducer.createStreamSync(streamInfo, streamCallbacks);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
+        return kinesisVideoProducerStream;
+    }
+
+    /**
+     * Creates a test stream with KMS encryption using the specified KMS key and custom stream callbacks.
+     *
+     * <p>This method is similar to {@link #createTestStreamWithKms} but allows specifying custom
+     * stream callbacks for advanced testing scenarios, such as per-stream error tracking.</p>
+     *
+     * @param streamName The name of the stream to be created
+     * @param streamingType The type of the stream (STREAMING_TYPE_REALTIME or STREAMING_TYPE_OFFLINE)
+     * @param maxLatency The maximum latency for the stream in 100ns units
+     * @param bufferDuration The buffer duration for the stream in 100ns units
+     * @param kmsKeyId The KMS key ID to use for encryption
+     * @param customStreamCallbacks Custom stream callbacks for this specific stream
+     * @return KinesisVideoProducerStream the created producer stream object
+     * @throws RuntimeException if stream creation fails
+     */
+    protected KinesisVideoProducerStream createTestStreamWithKmsAndCallbacks(String streamName,
+                                                                             StreamInfo.StreamingType streamingType,
+                                                                             long maxLatency,
+                                                                             long bufferDuration,
+                                                                             String kmsKeyId,
+                                                                             StreamCallbacks customStreamCallbacks) {
+        KinesisVideoProducerStream kinesisVideoProducerStream = null;
+        final byte[] AVCC_EXTRA_DATA = {
+                (byte) 0x01, (byte) 0x42, (byte) 0x00, (byte) 0x1E, (byte) 0xFF, (byte) 0xE1, (byte) 0x00, (byte) 0x22,
+                (byte) 0x27, (byte) 0x42, (byte) 0x00, (byte) 0x1E, (byte) 0x89, (byte) 0x8B, (byte) 0x60, (byte) 0x50,
+                (byte) 0x1E, (byte) 0xD8, (byte) 0x08, (byte) 0x80, (byte) 0x00, (byte) 0x13, (byte) 0x88,
+                (byte) 0x00, (byte) 0x03, (byte) 0xD0, (byte) 0x90, (byte) 0x70, (byte) 0x30, (byte) 0x00, (byte) 0x5D,
+                (byte) 0xC0, (byte) 0x00, (byte) 0x17, (byte) 0x70, (byte) 0x5E, (byte) 0xF7, (byte) 0xC1, (byte) 0xF0,
+                (byte) 0x88, (byte) 0x46, (byte) 0xE0, (byte) 0x01, (byte) 0x00, (byte) 0x04, (byte) 0x28, (byte) 0xCE,
+                (byte) 0x1F, (byte) 0x20};
+
+        final String prefix = Optional.ofNullable(System.getenv("TEST_STREAMS_PREFIX")).orElse("");
+        final String finalStreamName = prefix + streamName;
+
+        // Create the KMS-encrypted stream first
+        createKmsEncryptedStream(finalStreamName, kmsKeyId);
+
+        StreamInfo streamInfo = new StreamInfo(
+                StreamInfo.STREAM_INFO_CURRENT_VERSION,
+                finalStreamName,
+                streamingType,
+                "video/h264",
+                kmsKeyId, // Use the provided KMS key ID instead of NO_KMS_KEY_ID
+                RETENTION_ONE_HOUR,
+                NOT_ADAPTIVE,
+                maxLatency,
+                DEFAULT_GOP_DURATION,
+                KEYFRAME_FRAGMENTATION,
+                USE_FRAME_TIMECODES,
+                RELATIVE_TIMECODES,
+                REQUEST_FRAGMENT_ACKS,
+                RECOVER_ON_FAILURE,
+                "V_MPEG4/ISO/AVC",
+                "test-track",
+                DEFAULT_BITRATE,
+                fps_,
+                bufferDuration,
+                DEFAULT_REPLAY_DURATION,
+                DEFAULT_STALENESS_DURATION,
+                DEFAULT_TIMESCALE,
+                RECALCULATE_METRICS,
+                AVCC_EXTRA_DATA,
+                new com.amazonaws.kinesisvideo.producer.Tag[]{
+                        new com.amazonaws.kinesisvideo.producer.Tag("device", "Test Device"),
+                        new com.amazonaws.kinesisvideo.producer.Tag("stream", "Test Stream")},
+                NAL_ADAPTATION_FLAG_NONE,
+                allowStreamCreation
+        );
+
+        try {
+            kinesisVideoProducerStream = kinesisVideoProducer.createStreamSync(streamInfo, customStreamCallbacks);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
+        return kinesisVideoProducerStream;
     }
 }
