@@ -151,7 +151,7 @@ public class ProducerTestBase {
         awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
         configuration = KinesisVideoClientConfiguration.builder()
                 .withRegion(Regions.US_WEST_2.getName())
-                .withCredentialsProvider(JavaCredentialsFactory.getKinesisVideoCredentialsProvider(awsCredentialsProvider))
+                .withCredentialsProvider(JavaCredentialsFactory.createKinesisVideoCredentialsProvider(awsCredentialsProvider))
                 .build();
 
         serviceClient = new JavaKinesisVideoServiceClient(log);

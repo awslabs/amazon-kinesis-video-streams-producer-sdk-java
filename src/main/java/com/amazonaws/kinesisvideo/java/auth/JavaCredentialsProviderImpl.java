@@ -27,7 +27,7 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
      */
     public JavaCredentialsProviderImpl(@Nonnull final AWSCredentialsProvider awsCredentialsProvider) {
         this.credentialsProvider = Preconditions.checkNotNull(awsCredentialsProvider);
-        tokenExpiration = KinesisVideoCredentials.CREDENTIALS_NEVER_EXPIRE;
+        tokenExpiration = KinesisVideoCredentials.getCredentialsNeverExpire();
         rotationPeriodInMillis = 0;
     }
 
@@ -60,7 +60,7 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
             sessionToken = sessionCredentials.getSessionToken();
         }
 
-        if (tokenExpiration != KinesisVideoCredentials.CREDENTIALS_NEVER_EXPIRE) {
+        if (!tokenExpiration.equals(KinesisVideoCredentials.getCredentialsNeverExpire())) {
             tokenExpiration = new Date(System.currentTimeMillis() + rotationPeriodInMillis);
         }
 
