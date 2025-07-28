@@ -63,7 +63,7 @@ public class ProducerTestBase {
     protected static final String STORAGE_PATH = "/tmp";
 
     protected static final int NUMBER_OF_THREADS_IN_POOL = 2;
-    protected static final int NUMBER_OF_STREAMS = 10;
+    protected static final int NUMBER_OF_STREAMS = 500;
 
     protected int fps_ = TEST_FPS;
     protected int keyFrameInterval_ = TEST_KEY_FRAME_INTERVAL;
@@ -328,6 +328,15 @@ public class ProducerTestBase {
     protected void freeStreams() {
         try {
             kinesisVideoProducer.freeStreams();
+        } catch (ProducerException e) {
+            e.printStackTrace();
+            fail();
+        }
+    }
+
+    protected void freeStream(final KinesisVideoProducerStream stream) {
+        try {
+            kinesisVideoProducer.freeStream(stream);
         } catch (ProducerException e) {
             e.printStackTrace();
             fail();
