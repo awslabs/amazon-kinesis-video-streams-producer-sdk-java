@@ -106,10 +106,10 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
 
         assumeTrue("The lower bound should be lower than the upper bound!",
                 INTERMITTENT_PRODUCER_WAIT_TIME_BEFORE_SENDING_EOFR_WAIT_LOWER_BOUND
-                        .compareTo(INTERMITTENT_PRODUCER_WAIT_TIME_BEFORE_SENDING_EOFR_WAIT_UPPER_BOUND) < 1);
+                        .compareTo(INTERMITTENT_PRODUCER_WAIT_TIME_BEFORE_SENDING_EOFR_WAIT_UPPER_BOUND) < 0);
 
         assumeTrue("You need to increase the number of streams the client is configured for before starting the test!",
-                NUMBER_OF_STREAMS_PER_ITERATION < NUMBER_OF_STREAMS);
+                NUMBER_OF_STREAMS_PER_ITERATION <= NUMBER_OF_STREAMS);
 
         createProducer();
     }
