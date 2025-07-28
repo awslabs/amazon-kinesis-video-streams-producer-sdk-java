@@ -42,7 +42,7 @@ import static org.junit.Assume.assumeTrue;
 /**
  * This test checks for race conditions during the Cleanup/stopping path.
  * When using {@link com.amazonaws.kinesisvideo.producer.ClientInfo.AutomaticStreamingFlags#AUTOMATIC_STREAMING_INTERMITTENT_PRODUCER},
- * the native producer will add send an End of Fragment (eofr) after 20s of no putFrame calls to a stream.
+ * the native producer will add an End of Fragment (eofr) after 20s of no putFrame calls to a stream.
  * <p>
  * This repeated test will run:
  * <ul>
@@ -63,6 +63,8 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
     // Intermittent producer mode --> there is a thread owned by the native code which scans
     // across all the streams owned by the client for any streams without any putFrame calls for the last 20s
     // We will stop the stream around that time to confirm that the stream is successfully stopped.
+    // If the INTERMITTENT_PRODUCER_MAX_TIMEOUT macro in PIC ever changes, update these bounds!
+    // https://github.com/awslabs/amazon-kinesis-video-streams-pic/blob/master/src/client/src/Include_i.h
     private static final Duration INTERMITTENT_PRODUCER_WAIT_TIME_BEFORE_SENDING_EOFR_WAIT_LOWER_BOUND = Duration.ofSeconds(19);
     private static final Duration INTERMITTENT_PRODUCER_WAIT_TIME_BEFORE_SENDING_EOFR_WAIT_UPPER_BOUND = Duration.ofSeconds(24);
 
