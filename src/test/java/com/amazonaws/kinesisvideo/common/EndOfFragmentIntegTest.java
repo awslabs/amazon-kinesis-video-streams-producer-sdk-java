@@ -8,6 +8,7 @@ import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.kinesisvideo.producer.Time;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClient;
+import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
 import com.amazonaws.services.kinesisvideo.model.DeleteStreamRequest;
 import com.amazonaws.services.kinesisvideo.model.DescribeStreamRequest;
 import com.amazonaws.services.kinesisvideo.model.DescribeStreamResult;
@@ -128,7 +129,7 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
             log.error("Failed to free streams {}", this.createdStreams, e);
         }
 
-        final AmazonKinesisVideo awsSdkKinesisVideoClient = AmazonKinesisVideoClient.builder().build();
+        final AmazonKinesisVideo awsSdkKinesisVideoClient = AmazonKinesisVideoClientBuilder.standard().build();
         for (final String streamName : streamNames) {
             try {
                 final DescribeStreamRequest describeStreamRequest = new DescribeStreamRequest().withStreamName(streamName);
@@ -160,25 +161,26 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
     }
 
     /**
-     * Tests that the producer correctly handles and reports {@code KMS_KEY_INVALID_STATE} error when streaming
-     * to a stream configured with a marked for deletion KMS key.
+     * Tests that the producer correctly handles intermittent producer scenarios where streams are stopped
+     * after a random wait period near the intermittent producer timeout threshold.
      *
      * <p><strong>Test Flow:</strong></p>
      * <ol>
-     *   <li>Create a new KMS key for testing</li>
-     *   <li>Create a Kinesis Video Stream configured with the KMS key</li>
-     *   <li>Delete (schedule for deletion) the KMS key</li>
-     *   <li>Attempt to stream video data to the stream</li>
-     *   <li>Verify that KMS error is reported</li>
+     *   <li>Create multiple Kinesis Video Streams for testing</li>
+     *   <li>Start streaming video frames to all streams concurrently</li>
+     *   <li>Each stream will wait for a random period between 19-24 seconds (near the 20s intermittent producer threshold)</li>
+     *   <li>Stop each stream synchronously and free resources</li>
+     *   <li>Verify that all operations complete successfully without errors</li>
      * </ol>
      *
      * <p><strong>Expected Behavior:</strong></p>
      * <ul>
-     *   <li>The stream should be created successfully with the valid KMS key</li>
-     *   <li>After key deletion, streaming attempts should fail</li>
-     *   <li>The error should be captured via the streamErrorReport callback</li>
-     *   <li>No errored ACKs received</li>
-     *   <li>Should have received some PERSISTED ACKS</li>
+     *   <li>All streams should be created successfully</li>
+     *   <li>Video frames should be streamed without errors</li>
+     *   <li>Streams should stop gracefully even when stopped near the intermittent producer timeout</li>
+     *   <li>No error callbacks should be triggered</li>
+     *   <li>All received ACKs should be successful (HTTP 200)</li>
+     *   <li>PERSISTED ACKs should be received</li>
      * </ul>
      */
     @Test
