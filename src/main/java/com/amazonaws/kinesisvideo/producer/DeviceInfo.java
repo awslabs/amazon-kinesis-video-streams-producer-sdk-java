@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.producer;
 
 import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -48,10 +49,12 @@ public class DeviceInfo {
         mClientInfo = clientInfo;
     }
 
+    @CalledByNativeCode
     public int getVersion() {
         return mVersion;
     }
 
+    @CalledByNativeCode
     public String getName() {
         return mName;
     }
@@ -61,42 +64,51 @@ public class DeviceInfo {
         return mStorageInfo;
     }
 
+    @CalledByNativeCode
     public int getStreamCount() {
         return mStreamCount;
     }
 
+    @CalledByNativeCode
     public int getStorageInfoVersion() {
         return mStorageInfo.getVersion();
     }
 
+    @CalledByNativeCode
     public int getDeviceStorageType() {
         return mStorageInfo.getDeviceStorageType();
     }
 
+    @CalledByNativeCode
     public long getStorageSize() {
         return mStorageInfo.getStorageSize();
     }
 
+    @CalledByNativeCode
     public int getSpillRatio() {
         return mStorageInfo.getSpillRatio();
     }
 
     @Nullable
+    @CalledByNativeCode
     public String getRootDirectory() {
         return mStorageInfo.getRootDirectory();
     }
 
     @Nullable
+    @CalledByNativeCode
     public Tag[] getTags() {
         return mTags;
     }
 
     @Nonnull
+    @CalledByNativeCode
     public String getClientId() {
         return mClientId;
     }
 
     @Nonnull
+    @CalledByNativeCode
     public ClientInfo getClientInfo() {
         return mClientInfo;
     }

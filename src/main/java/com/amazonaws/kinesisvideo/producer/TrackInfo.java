@@ -42,29 +42,47 @@ public class TrackInfo {
         this.trackType = trackType;
     }
 
+    /**
+     * {@link com.amazonaws.kinesisvideo.util.CalledByNativeCode} via {@link StreamInfo}.
+     */
     public int getVersion() {
         return version;
     }
 
+    /**
+     * {@link com.amazonaws.kinesisvideo.util.CalledByNativeCode} via {@link StreamInfo}.
+     */
     public long getTrackId() {
         return trackId;
     }
 
+    /**
+     * {@link com.amazonaws.kinesisvideo.util.CalledByNativeCode} via {@link StreamInfo}.
+     */
     @Nullable
     public String getCodecId() {
         return codecId;
     }
 
+    /**
+     * {@link com.amazonaws.kinesisvideo.util.CalledByNativeCode} via {@link StreamInfo}.
+     */
     @Nullable
     public String getTrackName() {
         return trackName;
     }
 
+    /**
+     * {@link com.amazonaws.kinesisvideo.util.CalledByNativeCode} via {@link StreamInfo}.
+     */
     @Nullable
     public byte[] getCodecPrivateData() {
         return codecPrivateData;
     }
 
+    /**
+     * {@link com.amazonaws.kinesisvideo.util.CalledByNativeCode} via {@link StreamInfo}.
+     */
     public MkvTrackInfoType getTrackType() {
         return trackType;
     }

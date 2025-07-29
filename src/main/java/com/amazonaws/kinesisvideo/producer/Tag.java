@@ -3,6 +3,7 @@ package com.amazonaws.kinesisvideo.producer;
 import javax.annotation.Nonnull;
 
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
 
 /**
  * Kinesis Video Tag representation.
@@ -27,6 +28,7 @@ public class Tag {
      * @param name Name of the tag
      * @param value Value of the tag
      */
+    @CalledByNativeCode
     public Tag(@Nonnull final String name, @Nonnull final String value) {
         mName = Preconditions.checkNotNull(name);
         mValue = Preconditions.checkNotNull(value);
@@ -37,6 +39,7 @@ public class Tag {
      * @return tag name
      */
     @Nonnull
+    @CalledByNativeCode
     public String getName() {
         return mName;
     }
@@ -46,6 +49,7 @@ public class Tag {
      * @return tag value
      */
     @Nonnull
+    @CalledByNativeCode
     public String getValue() {
         return mValue;
     }

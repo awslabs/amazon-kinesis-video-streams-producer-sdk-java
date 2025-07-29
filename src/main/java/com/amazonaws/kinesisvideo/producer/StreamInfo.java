@@ -3,6 +3,7 @@ package com.amazonaws.kinesisvideo.producer;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -343,89 +344,110 @@ public class StreamInfo {
         mAllowStreamCreation = allowStreamCreation;
     }
 
+    @CalledByNativeCode
     public int getVersion() {
         return mVersion;
     }
 
     @Nullable
+    @CalledByNativeCode
     public String getName() {
         return mName;
     }
 
+    @CalledByNativeCode
     public int getStreamingType() {
         return mStreamingType.getIntValue();
     }
 
     @Nonnull
+    @CalledByNativeCode
     public String getContentType() {
         return mContentType;
     }
 
     @Nullable
+    @CalledByNativeCode
     public String getKmsKeyId() {
         return mKmsKeyId;
     }
 
+    @CalledByNativeCode
     public long getRetentionPeriod() {
         return mRetentionPeriod;
     }
 
+    @CalledByNativeCode
     public boolean isAdaptive() {
         return mAdaptive;
     }
 
+    @CalledByNativeCode
     public long getMaxLatency() {
         return mMaxLatency;
     }
 
+    @CalledByNativeCode
     public long getFragmentDuration() {
         return mFragmentDuration;
     }
 
+    @CalledByNativeCode
     public boolean isKeyFrameFragmentation() {
         return mKeyFrameFragmentation;
     }
 
+    @CalledByNativeCode
     public boolean isFrameTimecodes() {
         return mFrameTimecodes;
     }
 
+    @CalledByNativeCode
     public boolean isAbsoluteFragmentTimes() {
         return mAbsoluteFragmentTimes;
     }
 
+    @CalledByNativeCode
     public boolean isFragmentAcks() {
         return mFragmentAcks;
     }
 
+    @CalledByNativeCode
     public boolean isRecoverOnError() {
         return mRecoverOnError;
     }
 
+    @CalledByNativeCode
     public int getAvgBandwidthBps() {
         return mAvgBandwidthBps;
     }
 
+    @CalledByNativeCode
     public int getFrameRate() {
         return mFrameRate;
     }
 
+    @CalledByNativeCode
     public long getBufferDuration() {
         return mBufferDuration;
     }
 
+    @CalledByNativeCode
     public long getReplayDuration() {
         return mReplayDuration;
     }
 
+    @CalledByNativeCode
     public long getConnectionStalenessDuration() {
         return mConnectionStalenessDuration;
     }
 
+    @CalledByNativeCode
     public long getTimecodeScale() {
         return mTimecodeScale;
     }
 
+    @CalledByNativeCode
     public boolean isRecalculateMetrics() {
         return mRecalculateMetrics;
     }
@@ -436,6 +458,7 @@ public class StreamInfo {
     }
 
     @Nullable
+    @CalledByNativeCode
     public byte[] getSegmentUuidBytes() {
         if (mSegmentUuid == null) {
             return null;
@@ -448,58 +471,69 @@ public class StreamInfo {
     }
 
     @Nonnull
+    @CalledByNativeCode
     public TrackInfo[] getTrackInfoList() {
         return mTrackInfoList;
     }
 
+    @CalledByNativeCode
     public int getTrackInfoCount() {
         return mTrackInfoList.length;
     }
 
     @Nullable
+    @CalledByNativeCode
     public String getCodecId(final int trackIndex) {
         return mTrackInfoList[trackIndex].getCodecId();
     }
 
     @Nullable
+    @CalledByNativeCode
     public String getTrackName(final int trackIndex) {
         return mTrackInfoList[trackIndex].getTrackName();
     }
 
     @Nullable
+    @CalledByNativeCode
     public byte[] getCodecPrivateData() {
         return mTrackInfoList == null || mTrackInfoList.length == 0 ? null : mTrackInfoList[0].getCodecPrivateData();
     }
 
     @Nullable
+    @CalledByNativeCode
     public String getCodecId() {
         return mTrackInfoList == null || mTrackInfoList.length == 0 ? null : mTrackInfoList[0].getCodecId();
     }
 
     @Nullable
+    @CalledByNativeCode
     public String getTrackName() {
         return mTrackInfoList == null || mTrackInfoList.length == 0 ? null : mTrackInfoList[0].getTrackName();
     }
 
     @Nullable
+    @CalledByNativeCode
     public byte[] getCodecPrivateData(final int trackIndex) {
         Preconditions.checkState(mTrackInfoList != null && trackIndex < mTrackInfoList.length,
                 "Requested track is not available in track info list.");
         return mTrackInfoList[trackIndex].getCodecPrivateData();
     }
 
+    @CalledByNativeCode
     public long getTrackId(final int trackIndex) {
         Preconditions.checkState(mTrackInfoList != null && trackIndex < mTrackInfoList.length,
                 "Requested track is not available in track info list.");
         return mTrackInfoList[trackIndex].getTrackId();
     }
 
+    @CalledByNativeCode
     public int getTrackInfoType(final int trackIndex) {
         Preconditions.checkState(mTrackInfoList != null && trackIndex < mTrackInfoList.length,
                 "Requested track is not available in track info list.");
         return mTrackInfoList[trackIndex].getTrackType().intValue();
     }
 
+    @CalledByNativeCode
     public int getTrackInfoVersion(final int trackIndex) {
         Preconditions.checkState(mTrackInfoList != null && trackIndex < mTrackInfoList.length,
                 "Requested track is not available in track info list.");
@@ -507,23 +541,28 @@ public class StreamInfo {
     }
 
     @Nullable
+    @CalledByNativeCode
     public Tag[] getTags() {
         return mTags;
     }
 
     @Nonnull
+    @CalledByNativeCode
     public int getNalAdaptationFlags() {
         return mNalAdaptationFlags.getIntValue();
     }
 
+    @CalledByNativeCode
     public int getFrameOrderMode() {
         return mFrameOrderMode.intValue();
     }
 
+    @CalledByNativeCode
     public int getStorePressurePolicy() {
         return mStorePressurePolicy.getIntValue();
     }
 
+    @CalledByNativeCode
     public boolean isAllowStreamCreation() {
         return mAllowStreamCreation;
     }

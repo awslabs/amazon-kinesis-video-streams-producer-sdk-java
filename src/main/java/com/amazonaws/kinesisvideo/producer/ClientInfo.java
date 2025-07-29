@@ -1,5 +1,7 @@
 package com.amazonaws.kinesisvideo.producer;
 
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
+
 /**
  * Client information object.
  *
@@ -75,42 +77,52 @@ public class ClientInfo {
         mServiceCallConnectionTimeout = serviceCallConnectionTimeout;
     }
 
+    @CalledByNativeCode
     public int getVersion() {
         return mVersion;
     }
 
+    @CalledByNativeCode
     public long getCreateClientTimeout() {
         return mCreateClientTimeout;
     }
 
+    @CalledByNativeCode
     public long getCreateStreamTimeout() {
         return mCreateStreamTimeout;
     }
 
+    @CalledByNativeCode
     public long getStopStreamTimeout() {
         return mStopStreamTimeout;
     }
 
+    @CalledByNativeCode
     public long getOfflineBufferAvailabilityTimeout() {
         return mOfflineBufferAvailabilityTimeout;
     }
 
+    @CalledByNativeCode
     public int getLoggerLogLevel() {
         return mLogLevel;
     }
 
+    @CalledByNativeCode
     public boolean getLogMetric() {
         return mLogMetric;
     }
 
+    @CalledByNativeCode
     public int getAutomaticStreamingFlags() {
         return mAutomaticStreamingFlags.getStreamingFlagValue();
     }
 
+    @CalledByNativeCode
     public long getServiceCompletionTimeout() {
         return mServiceCallCompletionTimeout;
     }
 
+    @CalledByNativeCode
     public long getServiceConnectionTimeout() {
         return mServiceCallConnectionTimeout;
     }

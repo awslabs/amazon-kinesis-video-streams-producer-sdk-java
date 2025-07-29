@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.producer;
 
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
 import com.amazonaws.kinesisvideo.util.StreamInfoConstants;
 
 import javax.annotation.Nonnull;
@@ -146,6 +147,7 @@ public class KinesisVideoFragmentAck {
      *
      * @return the current version number
      */
+    @CalledByNativeCode
     public int getVersion() {
         return FRAGMENT_ACK_CURRENT_VERSION;
     }
@@ -162,6 +164,7 @@ public class KinesisVideoFragmentAck {
      * @see FragmentAckType
      */
     @Nonnull
+    @CalledByNativeCode
     public FragmentAckType getAckType() {
         return this.ackType;
     }
@@ -175,6 +178,7 @@ public class KinesisVideoFragmentAck {
      * @see StreamInfoConstants#ABSOLUTE_TIMECODES
      * @see StreamInfoConstants#RELATIVE_TIMECODES
      */
+    @CalledByNativeCode
     public long getTimestamp() {
         return this.timestamp;
     }
@@ -191,6 +195,7 @@ public class KinesisVideoFragmentAck {
      * @return the fragment sequence number (never null)
      */
     @Nonnull
+    @CalledByNativeCode
     public String getSequenceNumber() {
         return this.sequenceNumber;
     }
@@ -213,6 +218,7 @@ public class KinesisVideoFragmentAck {
      * @return the service call result code
      * @see com.amazonaws.kinesisvideo.util.StreamInfoConstants#HTTP_OK
      */
+    @CalledByNativeCode
     public int getResult() {
         return this.result;
     }

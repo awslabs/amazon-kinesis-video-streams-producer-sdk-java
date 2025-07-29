@@ -1,5 +1,6 @@
 package com.amazonaws.kinesisvideo.internal.producer.jni;
 
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
@@ -616,6 +617,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @return Device certificate
      */
     @Nullable
+    @CalledByNativeCode
     private AuthInfo getDeviceCertificate()
     {
         synchronized (mCallbackSyncObject) {
@@ -629,6 +631,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @return Device security token
      */
     @Nullable
+    @CalledByNativeCode
     private AuthInfo getSecurityToken()
     {
         return mAuthCallbacks.getSecurityToken();
@@ -640,6 +643,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @return Device fingerprint
      */
     @Nullable
+    @CalledByNativeCode
     private String getDeviceFingerprint()
     {
         return mAuthCallbacks.getDeviceFingerprint();
@@ -650,6 +654,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      *
      * @param streamHandle     the handle of the stream
      */
+    @CalledByNativeCode
     private void streamUnderflowReport(final long streamHandle) throws ProducerException
     {
         if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -662,6 +667,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports storage overflow pressure
      */
+    @CalledByNativeCode
     private void storageOverflowPressure(final long remainingSize)
     {
         mStorageCallbacks.storageOverflowPressure(remainingSize);
@@ -670,6 +676,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports buffer temporal overflow pressure
      */
+    @CalledByNativeCode
     private void bufferDurationOverflowPressure(final long streamHandle, final long remainDuration) throws ProducerException {
         if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
             throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
@@ -682,6 +689,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream latency pressure
      */
+    @CalledByNativeCode
     private void streamLatencyPressure(final long streamHandle, final long duration) throws ProducerException
     {
         if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -695,6 +703,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream connection staleness
      */
+    @CalledByNativeCode
     private void streamConnectionStale(final long streamHandle, final long lastAckDuration) throws ProducerException
     {
         if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -712,6 +721,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param uploadHandle the client stream upload handle
      * @param fragmentAck ACK for the fragment
      */
+    @CalledByNativeCode
     private void fragmentAckReceived(final long streamHandle, final long uploadHandle, @Nonnull final KinesisVideoFragmentAck fragmentAck)
             throws ProducerException
     {
@@ -726,6 +736,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports dropped frame
      */
+    @CalledByNativeCode
     private void droppedFrameReport(final long streamHandle, final long frameTimecode) throws ProducerException
     {
         if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -739,6 +750,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports dropped fragment
      */
+    @CalledByNativeCode
     private void droppedFragmentReport(final long streamHandle, final long fragmentTimecode) throws ProducerException
     {
         if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -752,6 +764,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream error.
      */
+    @CalledByNativeCode
     private void streamErrorReport(final long streamHandle, final long uploadHandle, final long fragmentTimecode, final long statusCode) throws ProducerException
     {
         if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -765,6 +778,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream data is available
      */
+    @CalledByNativeCode
     private void streamDataAvailable(final long streamHandle, final String streamName, final long uploadHandle, final long duration, final long availableSize) throws ProducerException
     {
         if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
@@ -778,6 +792,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream is ready
      */
+    @CalledByNativeCode
     private void streamReady(final long streamHandle) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
@@ -796,6 +811,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports stream is closed
      */
+    @CalledByNativeCode
     private void streamClosed(final long streamHandle, final long uploadHandle) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
@@ -811,6 +827,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     /**
      * Reports client is ready
      */
+    @CalledByNativeCode
     private void clientReady(final long clientHandle) throws ProducerException
     {
         synchronized (mCallbackSyncObject) {
@@ -839,6 +856,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param customData - Custom data to use to call the event functions
      * @return STATUS of the call
      */
+    @CalledByNativeCode
     private int createStream(final @Nonnull String deviceName,
             final @Nonnull String streamName,
             final @Nonnull String contentType,
@@ -881,6 +899,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param streamHandle - Custom data to use to call the event functions
      * @return STATUS of the call
      */
+    @CalledByNativeCode
     private int describeStream(final @Nonnull String streamName,
             final long callAfter,
             final long timeout,
@@ -925,6 +944,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param streamHandle - Custom data to use to call the event functions
      * @return STATUS of the call
      */
+    @CalledByNativeCode
     private int getStreamingEndpoint(final @Nonnull String streamName,
             final @Nonnull String apiName,
             final long callAfter,
@@ -971,6 +991,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param streamHandle - Custom data to use to call the event functions
      * @return STATUS of the call
      */
+    @CalledByNativeCode
     private int getStreamingToken(final @Nonnull String streamName,
             final long callAfter,
             final long timeout,
@@ -1025,6 +1046,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param streamHandle - Custom data to use to call the event functions
      * @return STATUS of the call
      */
+    @CalledByNativeCode
     private int putStream(final @Nonnull String streamName,
             final @Nonnull String containerType,
             final long streamStartTime,
@@ -1079,6 +1101,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param streamHandle - Custom data to use to call the event functions
      * @return STATUS of the call
      */
+    @CalledByNativeCode
     private int tagResource(final @Nonnull String resourceArn,
             final @Nonnull Tag[] tags,
             final long callAfter,
@@ -1128,6 +1151,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param customData - Custom data to use to call the event functions
      * @return STATUS of the call
      */
+    @CalledByNativeCode
     private int createDevice(final @Nonnull String deviceName,
             final long callAfter,
             final long timeout,
@@ -1168,6 +1192,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param customData - Custom data to use to call the event functions
      * @return STATUS of the call
      */
+    @CalledByNativeCode
     private int deviceCertToToken(final @Nonnull String deviceName,
             final long callAfter,
             final long timeout,
@@ -1227,6 +1252,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * @param picFmt - fmt from PIC
      * @param message - the string to be logged
      */
+    @CalledByNativeCode
     public void logPrint(final @Nonnull int level, final @Nonnull String tag, final @Nonnull String picFmt, final @Nonnull String message) {
         String toPrint = "[PIC] " + tag + " - " + message;
         switch (level) {

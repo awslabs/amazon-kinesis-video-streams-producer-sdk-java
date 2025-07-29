@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.producer;
 
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
 import com.amazonaws.kinesisvideo.util.StreamInfoConstants;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -121,26 +122,32 @@ public class KinesisVideoFrame {
         this(index, flags, decodingTs, presentationTs, duration, data, DEFAULT_TRACK_ID);
     }
 
+    @CalledByNativeCode
     public int getIndex() {
         return this.index;
     }
 
+    @CalledByNativeCode
     public int getFlags() {
         return this.flags;
     }
 
+    @CalledByNativeCode
     public long getDecodingTs() {
         return this.decodingTs;
     }
 
+    @CalledByNativeCode
     public long getPresentationTs() {
         return this.presentationTs;
     }
 
+    @CalledByNativeCode
     public long getDuration() {
         return this.duration;
     }
 
+    @CalledByNativeCode
     public int getSize() {
         return this.data.capacity();
     }
@@ -152,11 +159,13 @@ public class KinesisVideoFrame {
      * @return a read-only ByteBuffer containing this frame's data.
      */
     @Nonnull
+    @CalledByNativeCode
     public ByteBuffer getData() {
         // Don't return data directly to make sure each caller gets its own set of position/limit pointers.
         return this.data.duplicate();
     }
 
+    @CalledByNativeCode
     public long getTrackId() {
         return this.trackId;
     }
@@ -170,6 +179,7 @@ public class KinesisVideoFrame {
                 .toString();
     }
 
+    @CalledByNativeCode
     public int getVersion() {
         return this.version;
     }
