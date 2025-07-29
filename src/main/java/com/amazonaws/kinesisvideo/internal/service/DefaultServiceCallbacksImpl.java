@@ -1,5 +1,6 @@
 package com.amazonaws.kinesisvideo.internal.service;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.StaticCredentialsProvider;
@@ -668,6 +669,8 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         // TODO: Implement this properly
         if (e == null) {
             return HTTP_OK;
+        } else if (e instanceof AmazonServiceException) {
+            return ((AmazonServiceException) e).getStatusCode();
         } else if (e.getClass().getName().endsWith(RESOURCE_NOT_FOUND)) {
             return HTTP_NOT_FOUND;
         } else if (e.getClass().getName().endsWith(RESOURCE_IN_USE)) {
