@@ -394,6 +394,43 @@ dependency/libkvspic/kvspic-src/src/state/src/State.c
 7. Return bytes filled in buffer</pre>
     </div>
 </details>
+
+<details>
+    <summary style="font-size:1.5em; color:#720e9e"><strong>Stream Callbacks</strong></summary>
+    <div>
+        <h3>What do Stream Callbacks do?</h3>
+        <div>
+            <p>
+                Stream callbacks notify the user of events happening during streaming, following the standard observability pattern.
+                These callbacks enable client applications to customize the processing of streaming events asynchronously.
+            </p>
+            <p>Examples include: <code>streamErrorReport</code> and <code>fragmentAckReceived</code>.</p>
+            <div style="background-color: #e5e5ff; padding: 15px; border-left: 4px solid #ccccff; margin: 15px 0;">
+                <strong>Note:</strong>
+                <p>See <a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-reference-callbacks.html">AWS Documentation</a> for more information.</p>
+            </div>
+        </div>
+
+        <h3>Configuration</h3>
+        <div>
+            <p><strong>Summary:</strong> Configure the media source with the callbacks for each stream.</p>
+            <p>
+                During media source registration with the client, the client will ask the media source for Stream Callbacks.
+                If none are provided, it will use the default (no-op) callbacks.
+            </p>
+        </div>
+
+        <h3>Flow</h3>
+        <div>
+            <ol>
+                <li>PIC calls JNI</li>
+                <li>JNI calls NativeKinesisVideoProducerJni (Java)</li>
+                <li>NativeKinesisVideoProducerJni forwards the call to NativeKinesisVideoProducerStream</li>
+                <li>NativeKinesisVideoProducerStream forwards the call to the configured callbacks in the media source</li>
+            </ol>
+        </div>
+    </div>
+</details>
 </div>
 
 <h3>See also:</h3>
