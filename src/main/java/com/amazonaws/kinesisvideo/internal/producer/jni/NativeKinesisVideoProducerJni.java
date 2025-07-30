@@ -656,6 +656,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             throw new ProducerException("Invalid stream handle.", STATUS_INVALID_OPERATION);
         }
         final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        mLog.trace("[{}] streamUnderflowReport", kinesisVideoProducerStream.getStreamName());
         kinesisVideoProducerStream.streamUnderflowReport();
     }
 
@@ -664,6 +665,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private void storageOverflowPressure(final long remainingSize)
     {
+        mLog.trace("storageOverflowPressure - {}", remainingSize);
         mStorageCallbacks.storageOverflowPressure(remainingSize);
     }
 
@@ -676,6 +678,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         }
 
         final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        mLog.trace("[{}] bufferDurationOverflowPressure - {}", kinesisVideoProducerStream.getStreamName(), remainDuration);
         kinesisVideoProducerStream.bufferDurationOverflowPressure(remainDuration);
     }
 
@@ -689,6 +692,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         }
 
         final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        mLog.trace("[{}] streamLatencyPressure - {}", kinesisVideoProducerStream.getStreamName(), duration);
         kinesisVideoProducerStream.streamLatencyPressure(duration);
     }
 
@@ -702,6 +706,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         }
 
         final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        mLog.trace("[{}] streamConnectionStale - {}", kinesisVideoProducerStream.getStreamName(), lastAckDuration);
         kinesisVideoProducerStream.streamConnectionStale(lastAckDuration);
     }
 
@@ -720,6 +725,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         }
 
         final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        mLog.trace("[{}] fragmentAckReceived - {}", kinesisVideoProducerStream.getStreamName(), fragmentAck);
         kinesisVideoProducerStream.fragmentAckReceived(uploadHandle, fragmentAck);
     }
 
@@ -733,6 +739,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         }
 
         final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        mLog.trace("[{}] droppedFrameReport - {}", kinesisVideoProducerStream.getStreamName(), frameTimecode);
         kinesisVideoProducerStream.droppedFrameReport(frameTimecode);
     }
 
@@ -746,6 +753,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         }
 
         final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        mLog.trace("[{}] droppedFragmentReport - {}", kinesisVideoProducerStream.getStreamName(), fragmentTimecode);
         kinesisVideoProducerStream.droppedFragmentReport(fragmentTimecode);
     }
 
@@ -759,6 +767,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         }
 
         final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+        mLog.trace("[{}] streamErrorReport - {}, 0x{}", kinesisVideoProducerStream.getStreamName(), fragmentTimecode, Long.toHexString(statusCode));
         kinesisVideoProducerStream.streamErrorReport(uploadHandle, fragmentTimecode, statusCode);
     }
 
@@ -788,6 +797,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
                 }
 
                 final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+                mLog.trace("[{}] streamReady", kinesisVideoProducerStream.getStreamName());
                 kinesisVideoProducerStream.streamReady();
             }
         }
@@ -804,6 +814,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             }
 
             final KinesisVideoProducerStream kinesisVideoProducerStream = mKinesisVideoHandleMap.get(streamHandle);
+            mLog.trace("[{}] streamClosed", kinesisVideoProducerStream.getStreamName());
             kinesisVideoProducerStream.streamClosed(uploadHandle);
         }
     }
@@ -819,6 +830,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             }
 
             mIsReady = true;
+            mLog.trace("clientReady");
 
             // Release the ready latch
             mReadyLatch.countDown();
