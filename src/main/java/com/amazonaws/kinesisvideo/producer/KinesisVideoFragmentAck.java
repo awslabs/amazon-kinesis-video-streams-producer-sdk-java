@@ -100,6 +100,7 @@ public class KinesisVideoFragmentAck {
      *
      * @see KinesisVideoFragmentAck#KinesisVideoFragmentAck(FragmentAckType, long, String, int)
      */
+    @CalledByNativeCode
     public KinesisVideoFragmentAck(final int ackType,
                                    final long timestamp,
                                    @Nonnull final String sequenceNumber,
