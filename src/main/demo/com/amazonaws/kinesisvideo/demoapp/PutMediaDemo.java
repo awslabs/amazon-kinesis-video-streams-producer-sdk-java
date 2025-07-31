@@ -40,6 +40,7 @@ import java.util.concurrent.CountDownLatch;
  *  2. Convert MP4 to MKV
  *      ffmpeg -i input.mp4 -b:v 10M -minrate 10M -maxrate 10M -bufsize 10M -bf 0 input.mkv
  */
+@Deprecated
 public final class PutMediaDemo {
     private static final String DEFAULT_REGION = "us-west-2";
     private static final String PUT_MEDIA_API = "/putMedia";
