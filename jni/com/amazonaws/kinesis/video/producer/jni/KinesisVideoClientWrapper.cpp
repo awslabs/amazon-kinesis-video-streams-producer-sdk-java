@@ -2632,6 +2632,8 @@ VOID KinesisVideoClientWrapper::logPrintFunc(UINT32 level, PCHAR tag, PCHAR fmt,
     CHAR buffer[MAX_LOG_MESSAGE_LENGTH];
     va_list list;
     INT32 envState;
+    jthrowable pendingException = NULL;
+    BOOL hadPendingException = FALSE;
 
     // Prevent infinite logging loops if mGlobalJniObjRef has already been freed
     if (mGlobalJniObjRef == NULL) {
@@ -2657,6 +2659,13 @@ VOID KinesisVideoClientWrapper::logPrintFunc(UINT32 level, PCHAR tag, PCHAR fmt,
         attached = TRUE;
     }
 
+    // Save any pending exception before we do JNI calls
+    if (env->ExceptionCheck()) {
+        hadPendingException = TRUE;
+        pendingException = env->ExceptionOccurred();
+        env->ExceptionClear(); // Clear it temporarily so we can make JNI calls
+    }
+
     va_start(list, fmt);
     vsnprintf(buffer, MAX_LOG_MESSAGE_LENGTH, fmt, list);
     va_end(list);
@@ -2673,7 +2682,15 @@ VOID KinesisVideoClientWrapper::logPrintFunc(UINT32 level, PCHAR tag, PCHAR fmt,
 
     env->CallVoidMethod(mGlobalJniObjRef, mLogPrintMethodId, level, jstrTag, jstrFmt, jstrBuffer);
 
-    CHK_JVM_EXCEPTION(env);
+    // Don't use CHK_JVM_EXCEPTION here as it would clear our saved exception
+    // Just check if the logging call itself threw an exception
+    if (env->ExceptionCheck()) {
+        // The logging call threw an exception, clear it and log it
+        jthrowable loggingException = env->ExceptionOccurred();
+        env->ExceptionClear();
+        std::cerr << "An exception occurred during logging call" << std::endl;
+        env->DeleteLocalRef(loggingException);
+    }
 
     /*
     Sample logs from PIC as displayed by log4j2 in Java Producer SDK
@@ -2700,6 +2717,12 @@ CleanUp:
 
     if (jstrBuffer != NULL) {
         env->DeleteLocalRef(jstrBuffer);
+    }
+
+    // Restore the pending exception if we had one
+    if (hadPendingException && pendingException != NULL) {
+        env->Throw(pendingException);
+        env->DeleteLocalRef(pendingException);
     }
 
     // Detach the thread if we have attached it to JVM
