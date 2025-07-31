@@ -50,22 +50,37 @@ public class StorageInfo {
         mRootDirectory = rootDirectory;
     }
 
+    /**
+     * {@link com.amazonaws.kinesisvideo.util.CalledByNativeCode} via {@link DeviceInfo}.
+     */
     public int getVersion() {
         return mVersion;
     }
 
+    /**
+     * {@link com.amazonaws.kinesisvideo.util.CalledByNativeCode} via {@link DeviceInfo}.
+     */
     public int getDeviceStorageType() {
         return mDeviceStorageType.getIntValue();
     }
 
+    /**
+     * {@link com.amazonaws.kinesisvideo.util.CalledByNativeCode} via {@link DeviceInfo}.
+     */
     public long getStorageSize() {
         return mStorageSize;
     }
 
+    /**
+     * {@link com.amazonaws.kinesisvideo.util.CalledByNativeCode} via {@link DeviceInfo}.
+     */
     public int getSpillRatio() {
         return mSpillRatio;
     }
 
+    /**
+     * {@link com.amazonaws.kinesisvideo.util.CalledByNativeCode} via {@link DeviceInfo}.
+     */
     @Nonnull
     public String getRootDirectory() {
         return mRootDirectory;

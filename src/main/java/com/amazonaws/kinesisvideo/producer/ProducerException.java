@@ -3,6 +3,7 @@ package com.amazonaws.kinesisvideo.producer;
 import javax.annotation.Nonnull;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
 
 /**
  * Producer exception class extending basic {@link Exception}.
@@ -53,6 +54,7 @@ public class ProducerException extends KinesisVideoException {
         mStatusCode = statusCodeFromException(exception);
     }
 
+    @CalledByNativeCode
     public ProducerException(final @Nonnull String message, final int statusCode) {
         super(message + " StatusCode: 0x" + Integer.toHexString(statusCode));
         mStatusCode = statusCode;

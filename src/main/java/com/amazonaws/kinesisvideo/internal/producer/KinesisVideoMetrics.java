@@ -1,5 +1,7 @@
 package com.amazonaws.kinesisvideo.internal.producer;
 
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
+
 /**
  * Kinesis Video client object metrics provided by the native codebase.
  *
@@ -24,6 +26,7 @@ public class KinesisVideoMetrics {
      * @param totalFrameRate total frame rate for all streams
      * @param totalTransferRate total transfer rate for all streams in bytes per second
      */
+    @CalledByNativeCode
     public void setMetrics(final long contentStoreSize,
                            final long contentStoreAllocatedSize,
                            final long contentStoreAvailableSize,
