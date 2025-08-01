@@ -25,6 +25,8 @@ import javax.annotation.Nullable;
 
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.mediasource.DefaultOnStreamDataAvailable;
+import com.amazonaws.kinesisvideo.producer.KinesisVideoFragmentAck;
+import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
@@ -34,6 +36,9 @@ import com.amazonaws.kinesisvideo.client.mediasource.MediaSourceState;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.kinesisvideo.producer.Tag;
+import com.amazonaws.kinesisvideo.streaming.DefaultStreamCallbacks;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -42,6 +47,9 @@ import java.util.concurrent.CompletableFuture;
  * a series of H264 frames.
  */
 public class ImageFileMediaSource implements MediaSource {
+
+    private static final Logger log = LogManager.getLogger(ImageFileMediaSource.class);
+
     // Codec private data could be extracted using gstreamer plugin
     // CHECKSTYLE:SUPPRESS:LineLength
     // GST_DEBUG=4 gst-launch-1.0 rtspsrc location="YourRtspUrl" short-header=TRUE protocols=tcp ! rtph264depay ! decodebin ! videorate ! videoscale ! vtenc_h264_hw allow-frame-reordering=FALSE max-keyframe-interval=25 bitrate=1024 realtime=TRUE ! video/x-h264,stream-format=avc,alignment=au,profile=baseline,width=640,height=480,framerate=1/25 ! multifilesink location=./frame%03d.h264 index=1 | grep codec_data
@@ -107,9 +115,9 @@ public class ImageFileMediaSource implements MediaSource {
                 DEFAULT_TIMESCALE,
                 RECALCULATE_METRICS,
                 AVCC_EXTRA_DATA,
-                new Tag[] {
+                new Tag[]{
                         new Tag("device", "Test Device"),
-                        new Tag("stream", "Test Stream") },
+                        new Tag("stream", "Test Stream")},
                 NAL_ADAPTATION_FLAG_NONE,
                 imageFileMediaSourceConfiguration.isAllowStreamCreation());
     }
@@ -172,6 +180,50 @@ public class ImageFileMediaSource implements MediaSource {
     @Nullable
     @Override
     public StreamCallbacks getStreamCallbacks() {
-        return null;
+        return new DefaultStreamCallbacks() {
+            @Override
+            public void fragmentAckReceived(final long uploadHandle, @Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException {
+                super.fragmentAckReceived(uploadHandle, fragmentAck);
+
+                log.debug("[{}] - Fragment ack received: {}",
+                        ImageFileMediaSource.this.streamName,
+                        fragmentAck.toString()
+                                .replace("\n", "")
+                                .replace(" ", "")
+                );
+
+                if (KinesisVideoFragmentAck.FRAGMENT_ACK_RESULT_STREAM_READ_ERROR <= fragmentAck.getResult() &&
+                        fragmentAck.getResult() < KinesisVideoFragmentAck.FRAGMENT_ACK_RESULT_INTERNAL_ERROR) {
+                    try {
+                        log.warn("fragmentAckReceived - Stopping {} due to: {}",
+                                ImageFileMediaSource.this.streamName, fragmentAck.getResult());
+                        ImageFileMediaSource.this.stop();
+                    } catch (final KinesisVideoException e) {
+                        log.error("fragmentAckReceived - Encountered an error stopping the stream: {}", ImageFileMediaSource.this.streamName, e);
+                        throw new ProducerException(e);
+                    }
+                }
+            }
+
+            @Override
+            public void streamErrorReport(final long uploadHandle, final long frameTimecode, final long statusCode) throws ProducerException {
+                super.streamErrorReport(uploadHandle, frameTimecode, statusCode);
+
+                log.debug("[{}] - Stream error report received: 0x{}",
+                        ImageFileMediaSource.this.streamName,
+                        Long.toHexString(statusCode)
+                );
+
+                if (!ProducerException.isRetryableError((int) statusCode)) {
+                    try {
+                        log.warn("streamErrorReport - Stopping {} due to: 0x{}", ImageFileMediaSource.this.streamName, Long.toHexString(statusCode));
+                        ImageFileMediaSource.this.stop();
+                    } catch (final KinesisVideoException e) {
+                        log.error("streamErrorReport - Encountered an error stopping the stream: {}", ImageFileMediaSource.this.streamName, e);
+                        throw new ProducerException(e);
+                    }
+                }
+            }
+        };
     }
 }

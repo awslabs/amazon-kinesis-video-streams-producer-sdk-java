@@ -41,6 +41,10 @@ import javax.annotation.concurrent.ThreadSafe;
 @Immutable
 @ThreadSafe
 public class KinesisVideoFragmentAck {
+
+    public static final int FRAGMENT_ACK_RESULT_STREAM_READ_ERROR = 4000;
+    public static final int FRAGMENT_ACK_RESULT_INTERNAL_ERROR = 5000;
+
     /**
      * The current version of the fragment acknowledgement struct in the native layer.
      */

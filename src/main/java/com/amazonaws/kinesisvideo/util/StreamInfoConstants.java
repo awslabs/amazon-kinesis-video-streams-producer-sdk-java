@@ -7,6 +7,10 @@ import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_SE
  * All the time unit used in this class is 100 ns (minimum unit used in producer SDK)
  */
 public final class StreamInfoConstants {
+
+    public static final long INVALID_UPLOAD_HANDLE = 0xFFFFFFFFFFFFFFFFL;
+    public static final long ZERO_FRAGMENT_TIMECODE = 0;
+
     public static final int HTTP_NOT_SET = 0;
     public static final int HTTP_OK = 200;
     public static final int HTTP_BAD_REQUEST = 400;

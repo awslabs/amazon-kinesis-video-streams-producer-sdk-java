@@ -8,6 +8,7 @@ import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
 import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
+import com.amazonaws.kinesisvideo.util.StreamInfoConstants;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
@@ -217,7 +218,9 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                         kinesisVideoProducer.createStreamResult(customData, streamArn, statusCode);
                     } catch (final ProducerException e) {
                         // TODO: Deal with the runtime exception properly in this and following cases
-                        log.error("[{}] Encountered an issue notifying PIC the result of the CreateStream API call.", streamName, e);
+                        // The customData is a pointer to the KinesisVideoProducerStream object, we need access
+                        // to get the stream's streamErrorReport callback to notify
+                        log.error("[{}] PIC threw an exception from createStreamResult call.", streamName, e);
                         throw new RuntimeException(e);
                     }
                 }
@@ -261,8 +264,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     try {
                         kinesisVideoProducer.describeStreamResult(stream, streamHandle, streamDescription, statusCode);
                     } catch (final ProducerException e) {
-                        log.error("[{}] Encountered an issue notifying PIC the result of the DescribeStream API call.", streamName, e);
-                        throw new RuntimeException(e);
+                        notifyCallResult(stream, "DescribeStream", e);
                     }
                 }
             }
@@ -309,8 +311,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     try {
                         kinesisVideoProducer.getStreamingEndpointResult(stream, streamHandle, endpoint, statusCode);
                     } catch (final ProducerException e) {
-                        log.error("[{}] Encountered an issue notifying PIC the result of the GetDataEndpoint API call.", streamName, e);
-                        throw new RuntimeException(e);
+                        notifyCallResult(stream, "GetStreamingEndpoint", e);
                     }
                 }
             }
@@ -375,8 +376,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                                 expiration,
                                 statusCode);
                     } catch (final ProducerException e) {
-                        log.error("[{}] Encountered an issue notifying PIC the result of the credentials refresh call.", streamName, e);
-                        throw new RuntimeException(e);
+                        notifyCallResult(stream, "GetStreamingToken", e);
                     }
                 }
             }
@@ -450,8 +450,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                         log.info("[{}] putStreamResult uploadHandle {} {}", streamName, clientUploadHandle, statusCode);
                         kinesisVideoProducer.putStreamResult(kinesisVideoProducerStream, clientUploadHandle, statusCode);
                     } catch (final ProducerException e) {
-                        log.error("[{}] Encountered an issue notifying PIC the result of the PutMedia API call.", streamName, e);
-                        throw new RuntimeException(e);
+                        notifyCallResult(kinesisVideoProducerStream, "PutStream", e);
                     }
                 }
             }
@@ -502,8 +501,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     try {
                         kinesisVideoProducer.tagResourceResult(stream, streamHandle, statusCode);
                     } catch (final ProducerException e) {
-                        log.error("[{}] Encountered an issue notifying PIC the result of the TagStream API call.", streamName, e);
-                        throw new RuntimeException(e);
+                        notifyCallResult(stream, "TagResource", e);
                     }
                 }
             }
@@ -686,6 +684,38 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 // Default to bad request
                 return HTTP_BAD_REQUEST;
             }
+        }
+    }
+
+    /**
+     * Post an error to the {@link com.amazonaws.kinesisvideo.producer.StreamCallbacks#streamErrorReport(long, long, long)} callback.
+     * <p>
+     *   The error report's handle will be {@link StreamInfoConstants#INVALID_UPLOAD_HANDLE} and the timecode will be
+     *   {@link StreamInfoConstants#ZERO_FRAGMENT_TIMECODE}.
+     * </p>
+     *
+     * @param stream Stream that ran into an error
+     * @param method For logging purposes, the method that errored.
+     * @param producerException The exception to post onto the error report callback
+     *
+     * @see <a href="https://github.com/awslabs/amazon-kinesis-video-streams-producer-c/blob/master/src/source/CurlApiCallbacks.c">notifyCallResult in Producer-C's CurlApiCallbacks</a>
+     */
+    protected void notifyCallResult(@Nonnull final KinesisVideoProducerStream stream,
+                                    @Nonnull final String method,
+                                    @Nonnull final ProducerException producerException) {
+        Preconditions.checkNotNull(stream);
+        Preconditions.checkNotNull(method);
+        Preconditions.checkNotNull(producerException);
+
+        try {
+            log.error("[{}] - {} calling streamErrorReport with error: 0x{}", stream.getStreamName(),
+                    method, Long.toHexString(producerException.getStatusCode()), producerException);
+            stream.streamErrorReport(StreamInfoConstants.INVALID_UPLOAD_HANDLE,
+                    StreamInfoConstants.ZERO_FRAGMENT_TIMECODE,
+                    producerException.getStatusCode());
+        } catch (final Throwable e) {
+            // The provided callback implementation (by application) threw an error. We ignore it and move on.
+            log.error("[{}] - NotifyCallResult threw an exception for {}!", stream.getStreamName(), method, e);
         }
     }
 }
