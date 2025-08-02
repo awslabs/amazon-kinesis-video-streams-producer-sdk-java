@@ -5,6 +5,7 @@ import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
+import javax.annotation.concurrent.ThreadSafe;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -13,15 +14,35 @@ import java.util.Date;
  * Consumer is responsible for checking the {@link #expiration} before using the credentials.
  * <p>
  * If the credentials are non-temporary, the session token will be {@code null} and the expiration
- * will be {@link #CREDENTIALS_NEVER_EXPIRE}.
+ * will be {@link #getCredentialsNeverExpire()}.
  * </p>
  */
 @Immutable
+@ThreadSafe
 public class KinesisVideoCredentials implements Serializable {
     /**
-     * Sentinel value indicating the credentials never expire.
+     * Internal immutable sentinel value indicating the credentials never expire.
      */
+    private static final Date CREDENTIALS_NEVER_EXPIRE_INTERNAL = new Date(Long.MAX_VALUE);
+    
+    /**
+     * Sentinel value indicating the credentials never expire.
+     * @deprecated This exposes a mutable Date object. Use {@link #getCredentialsNeverExpire()} instead.
+     */
+    @Deprecated
     public static final Date CREDENTIALS_NEVER_EXPIRE = new Date(Long.MAX_VALUE);
+    
+    /**
+     * Returns a defensive copy of the sentinel value indicating credentials never expire.
+     * This method should be used instead of the deprecated {@link #CREDENTIALS_NEVER_EXPIRE} constant
+     * to maintain immutability.
+     * 
+     * @return A new Date instance representing credentials that never expire
+     */
+    @Nonnull
+    public static Date getCredentialsNeverExpire() {
+        return new Date(CREDENTIALS_NEVER_EXPIRE_INTERNAL.getTime());
+    }
 
     /**
      * AWS Access Key ID, non-empty.
@@ -56,7 +77,7 @@ public class KinesisVideoCredentials implements Serializable {
      */
     public KinesisVideoCredentials(@Nonnull final String accessKey,
                                    @Nonnull final String secretKey) {
-        this(accessKey, secretKey, null, CREDENTIALS_NEVER_EXPIRE);
+        this(accessKey, secretKey, null, CREDENTIALS_NEVER_EXPIRE_INTERNAL);
     }
 
     /**
@@ -83,14 +104,14 @@ public class KinesisVideoCredentials implements Serializable {
             Preconditions.checkArgument(!sessionToken.isEmpty(), "Session token cannot be empty!");
         }
 
-        Preconditions.checkArgument((sessionToken == null && CREDENTIALS_NEVER_EXPIRE.equals(expiration)) ||
-                        (sessionToken != null && !CREDENTIALS_NEVER_EXPIRE.equals(expiration)),
+        Preconditions.checkArgument((sessionToken == null && CREDENTIALS_NEVER_EXPIRE_INTERNAL.equals(expiration)) ||
+                        (sessionToken != null && !CREDENTIALS_NEVER_EXPIRE_INTERNAL.equals(expiration)),
                 "Temporary credentials should have a session token and non-temporary should not!");
 
         this.accessKey = accessKey;
         this.secretKey = secretKey;
         this.sessionToken = sessionToken;
-        this.expiration = expiration;
+        this.expiration = new Date(expiration.getTime());
     }
 
     /**
@@ -119,11 +140,11 @@ public class KinesisVideoCredentials implements Serializable {
 
     /**
      * @return When the credentials will no longer be valid. If the credentials are non-temporary,
-     * this will be {@link #CREDENTIALS_NEVER_EXPIRE}.
+     * this will be {@link #getCredentialsNeverExpire()}.
      */
     @Nonnull
     public Date getExpiration() {
-        return this.expiration;
+        return new Date(this.expiration.getTime());
     }
 
     /**
@@ -132,6 +153,6 @@ public class KinesisVideoCredentials implements Serializable {
      * @return true if the credentials are temporary (have an expiration).
      */
     public boolean isTemporary() {
-        return !CREDENTIALS_NEVER_EXPIRE.equals(this.expiration);
+        return !CREDENTIALS_NEVER_EXPIRE_INTERNAL.equals(this.expiration);
     }
 }

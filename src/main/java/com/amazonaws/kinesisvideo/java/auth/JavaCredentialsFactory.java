@@ -6,6 +6,7 @@ import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 import java.time.Duration;
 
 /**
@@ -13,7 +14,8 @@ import java.time.Duration;
  * There are two types of KinesisVideoCredentialsProvider - one that provides temporary credentials (session token),
  * and non-temporary that just provides access key + secret key.
  */
-public class JavaCredentialsFactory {
+@ThreadSafe
+public final class JavaCredentialsFactory {
     private JavaCredentialsFactory() {
         throw new UnsupportedOperationException();
     }
@@ -22,8 +24,8 @@ public class JavaCredentialsFactory {
      * Returns the correct Kinesis Video Credentials Provider based on if the AWS Credentials provider returns a session token or not.
      * Use this if you know your session token lasts for 1 hour.
      */
-    public static KinesisVideoCredentialsProvider getKinesisVideoCredentialsProvider(@Nonnull final AWSCredentialsProvider awsCredentialsProvider) {
-        return getKinesisVideoCredentialsProvider(awsCredentialsProvider, Duration.ofHours(1));
+    public static KinesisVideoCredentialsProvider createKinesisVideoCredentialsProvider(@Nonnull final AWSCredentialsProvider awsCredentialsProvider) {
+        return createKinesisVideoCredentialsProvider(awsCredentialsProvider, Duration.ofHours(1));
     }
 
     /**
@@ -33,8 +35,8 @@ public class JavaCredentialsFactory {
      * @return the correct (temporary/non-temporary) Kinesis Video Credentials Provider based on the AWS Credentials Provider
      */
     @SuppressWarnings({"ConstantConditions"}) // @Nonnull is a compile-time check, it can still be null at runtime
-    public static KinesisVideoCredentialsProvider getKinesisVideoCredentialsProvider(@Nonnull final AWSCredentialsProvider awsCredentialsProvider,
-                                                                                     @Nonnull final Duration credentialsRefreshIntervalFallback) {
+    public static KinesisVideoCredentialsProvider createKinesisVideoCredentialsProvider(@Nonnull final AWSCredentialsProvider awsCredentialsProvider,
+                                                                                        @Nonnull final Duration credentialsRefreshIntervalFallback) {
 
         Preconditions.checkArgument(awsCredentialsProvider != null, "awsCredentialsProvider must not be null");
         Preconditions.checkArgument(credentialsRefreshIntervalFallback != null, "credentialsRefreshIntervalFallback must not be null");
