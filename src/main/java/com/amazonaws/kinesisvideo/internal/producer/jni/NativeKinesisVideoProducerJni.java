@@ -135,6 +135,10 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      */
     private boolean mIsTrackingMallocs;
 
+    // We can only create one stream at a time
+    private StreamCallbacks inCreationStreamServiceCallbacks;
+    private StreamInfo inCreationStreamStreamInfo;
+
     /**
      * Public constructor.
      * @param authCallbacks Authentication callbacks
@@ -351,18 +355,29 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
 
         synchronized (mSyncObject) {
             // Create the native stream
-            final long streamHandle = createKinesisVideoStream(mClientHandle, streamInfo);
-            final KinesisVideoProducerStream kinesisVideoProducerStream = new NativeKinesisVideoProducerStream(this,
-                    streamInfo,
-                    streamHandle,
-                    mLog,
-                    streamCallbacks, 
-                    mDeviceInfo);
+            try {
+                inCreationStreamStreamInfo = streamInfo;
+                inCreationStreamServiceCallbacks = streamCallbacks;
 
-            // Insert into the maps
-            mKinesisVideoHandleMap.put(streamHandle, kinesisVideoProducerStream);
+                final long streamHandle = createKinesisVideoStream(mClientHandle, streamInfo);
+                final KinesisVideoProducerStream kinesisVideoProducerStream = new NativeKinesisVideoProducerStream(this,
+                        streamInfo,
+                        streamHandle,
+                        mLog,
+                        streamCallbacks,
+                        mDeviceInfo);
 
-            return kinesisVideoProducerStream;
+                // Insert into the maps
+                mKinesisVideoHandleMap.put(streamHandle, kinesisVideoProducerStream);
+
+                return kinesisVideoProducerStream;
+            } catch (final Exception e) {
+                mLog.error("Encountered exception creating {}", streamInfo.getSummary(), e);
+                throw e;
+            } finally {
+                inCreationStreamStreamInfo = null;
+                inCreationStreamServiceCallbacks = null;
+            }
         }
     }
 
@@ -882,8 +897,10 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     {
         synchronized (mCallbackSyncObject) {
             try {
-                final KinesisVideoProducerStream stream = mKinesisVideoHandleMap.get(customData);
-                Preconditions.checkNotNull(stream, "Invalid stream handle: 0x" + Long.toHexString(customData));
+                KinesisVideoProducerStream stream = mKinesisVideoHandleMap.get(customData);
+                if (stream == null) {
+                    stream = new PartialKinesisVideoProducerStream(customData, inCreationStreamStreamInfo, inCreationStreamServiceCallbacks);
+                }
 
                 mServiceCallbacks.createStream(deviceName, streamName, contentType,
                         kmsKeyId, retentionPeriod, callAfter, timeout, authData,
@@ -920,9 +937,14 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             final int authType,
             final long streamHandle) throws ProducerException
     {
+        KinesisVideoProducerStream stream = mKinesisVideoHandleMap.get(streamHandle);
+        if (stream == null) {
+            stream = new PartialKinesisVideoProducerStream(streamHandle, inCreationStreamStreamInfo, inCreationStreamServiceCallbacks);
+        }
+
         try {
             mServiceCallbacks.describeStream(streamName, callAfter, timeout, authData, authType,
-                    streamHandle, mKinesisVideoHandleMap.get(streamHandle));
+                    streamHandle, stream);
             return STATUS_SUCCESS;
         } catch (final ProducerException e) {
             return e.getStatusCode();
