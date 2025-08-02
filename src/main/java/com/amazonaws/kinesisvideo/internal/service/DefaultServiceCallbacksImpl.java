@@ -183,7 +183,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                              final long timeout,
                              @Nullable final byte[] authData,
                              final int authType,
-                             final long customData)
+                             final KinesisVideoProducerStream stream)
             throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
@@ -214,7 +214,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     log.error("[{}] Kinesis Video service client (CreateStream) returned an error. Reporting to Kinesis Video PIC.", streamName, t);
                 } finally {
                     try {
-                        kinesisVideoProducer.createStreamResult(customData, streamArn, statusCode);
+                        kinesisVideoProducer.createStreamResult(stream, streamArn, statusCode);
                     } catch (final ProducerException e) {
                         // TODO: Deal with the runtime exception properly in this and following cases
                         log.error("[{}] Encountered an issue notifying PIC the result of the CreateStream API call.", streamName, e);

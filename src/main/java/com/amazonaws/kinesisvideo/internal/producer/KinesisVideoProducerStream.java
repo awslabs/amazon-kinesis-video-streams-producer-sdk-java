@@ -4,6 +4,7 @@ import com.amazonaws.kinesisvideo.producer.KinesisVideoFragmentAck;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
+import com.amazonaws.kinesisvideo.producer.StreamInfo;
 
 import java.io.InputStream;
 
@@ -139,4 +140,7 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
      * Reset current connection of producer stream
      */
     void resetConnection() throws ProducerException;
+
+    @Nonnull
+    StreamInfo getStreamInfo();
 }

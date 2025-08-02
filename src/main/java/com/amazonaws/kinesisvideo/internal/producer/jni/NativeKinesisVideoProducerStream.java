@@ -547,4 +547,10 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
             throw new ProducerException(e);
         }
     }
+
+    @Nonnull
+    @Override
+    public StreamInfo getStreamInfo() {
+        return mStreamInfo;
+    }
 }
