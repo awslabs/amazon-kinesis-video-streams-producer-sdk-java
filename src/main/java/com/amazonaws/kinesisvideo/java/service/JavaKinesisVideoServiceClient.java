@@ -258,10 +258,12 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withDnsResolver(new KvsFilteredDnsResolver(ipVersionFilter));
     }
 
+    @SuppressWarnings("Deprecated")
     public JavaKinesisVideoServiceClient() {
         this(LogManager.getLogger(JavaKinesisVideoClient.class));
     }
 
+    @Deprecated
     public JavaKinesisVideoServiceClient(@Nonnull final Logger log) {
         this.log = Preconditions.checkNotNull(log);
 

@@ -11,16 +11,23 @@ import javax.annotation.Nullable;
 import java.io.InputStream;
 
 /**
- * KinesisVideoProducerStream that only supports {@link #getStreamInfo()} and the {@link #streamErrorReport(long, long, long)} functionality.
+ * KinesisVideoProducerStream that only supports:
+ * <ul>
+ *  <li>{@link #getStreamInfo()}</li>
+ *  <li>{@link #streamErrorReport(long, long, long)}</li>
+ *  <li>{@link #getStreamHandle()}</li>
+ * </ul>
  *
  * @see KinesisVideoProducerStream
  */
-public class PartialKinesisVideoProducerStream implements KinesisVideoProducerStream {
+public class PendingCreationKinesisVideoStream implements KinesisVideoProducerStream {
     final StreamInfo streamInfo;
     final StreamCallbacks streamCallbacks;
     final long streamHandle;
 
-    public PartialKinesisVideoProducerStream(final long streamHandle, @Nonnull final StreamInfo streamInfo, @Nonnull final StreamCallbacks streamCallbacks) {
+    public PendingCreationKinesisVideoStream(final long streamHandle,
+                                             @Nonnull final StreamInfo streamInfo,
+                                             @Nonnull final StreamCallbacks streamCallbacks) {
         this.streamHandle = streamHandle;
         this.streamInfo = streamInfo;
         this.streamCallbacks = streamCallbacks;

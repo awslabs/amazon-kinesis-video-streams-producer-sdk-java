@@ -38,7 +38,7 @@ public interface ServiceCallbacks
     boolean isInitialized();
 
     /**
-     * Schedules a call to create stream with the specified parameters. PIC will attempt to schedule stream creation if
+     * Asynchronous call to create stream with the specified parameters. PIC will attempt to schedule stream creation if
      * the {@link #describeStream(String, long, long, byte[], int, long, KinesisVideoProducerStream)} posts a
      * {@link KinesisVideoProducer#describeStreamResult(KinesisVideoProducerStream, long, StreamDescription, int)} of
      * 404 (Resource Not Found). This call will be skipped if {@link StreamInfo#isAllowStreamCreation()} is not allowed.
@@ -69,11 +69,11 @@ public interface ServiceCallbacks
             long callAfter,
             long timeout,
             final @Nullable byte[] authData,
-                      final int authType,
-                      final @Nonnull KinesisVideoProducerStream stream) throws ProducerException;
+            final int authType,
+            final @Nonnull KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to describe stream with the specified parameters.
+     * Asynchronous call to describe stream with the specified parameters.
      * <p>
      *   This method will notify PIC the success or failure of the operation via
      *   {@link KinesisVideoProducer#describeStreamResult(KinesisVideoProducerStream, long, StreamDescription, int)}
@@ -99,7 +99,7 @@ public interface ServiceCallbacks
             KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to get streaming endpoint with the specified parameters.
+     * Asynchronous call to get streaming endpoint with the specified parameters.
      * <p>
      *   This method will notify PIC the success or failure of the operation via
      *   {@link KinesisVideoProducer#getStreamingEndpointResult(KinesisVideoProducerStream, long, String, int)}.
@@ -127,7 +127,7 @@ public interface ServiceCallbacks
                               KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to get streaming token
+     * Asynchronous call to get streaming token
      * @param streamName - Stream name
      * @param callAfter - Call after this time - 100ns
      * @param timeout - Time out for the call - 100ns
@@ -146,7 +146,7 @@ public interface ServiceCallbacks
                            KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to put stream API
+     * Asynchronous call to put stream API
      * @param streamName - Stream name
      * @param containerType - Container type
      * @param streamStartTime - Stream start timestamp
@@ -173,7 +173,7 @@ public interface ServiceCallbacks
             KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to tag resource API
+     * Asynchronous call to tag resource API
      * @param resourceArn - Resource ARN
      * @param tags - Tags to apply
      * @param callAfter - Call after this time - 100ns
@@ -194,7 +194,7 @@ public interface ServiceCallbacks
             KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to create device
+     * Asynchronous call to create device
      * @param deviceName - Device name
      * @param callAfter - Call after this time - 100ns
      * @param timeout - Time out for the call - 100ns
@@ -211,7 +211,7 @@ public interface ServiceCallbacks
             final long customData) throws ProducerException;
 
     /**
-     * Schedules a call to device certificate to token API. Called when AuthType is AUTH_INFO_TYPE_CERT.
+     * Asynchronous call to device certificate to token API. Called when AuthType is AUTH_INFO_TYPE_CERT.
      *
      * @param deviceName - Device name
      * @param callAfter - Call after this time - 100ns

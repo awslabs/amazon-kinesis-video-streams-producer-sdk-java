@@ -706,6 +706,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
      * @param stream     stream that encountered the error
      * @param methodName for logging purposes
      * @param ex         the exception that occurred
+     * @see <a href="https://github.com/awslabs/amazon-kinesis-video-streams-producer-c/blob/master/src/source/CurlApiCallbacks.c">Producer-C notifyCallResult</a>
      */
     @SuppressWarnings({"ConstantConditions"})
     protected void notifyCallResult(@Nonnull final KinesisVideoProducerStream stream,
