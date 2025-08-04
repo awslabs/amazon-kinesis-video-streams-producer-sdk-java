@@ -90,7 +90,7 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
                              final long timeout,
                              @Nullable final byte[] authData,
                              final int authType,
-                             final long customData)
+                             final KinesisVideoProducerStream stream)
             throws ProducerException {
         throw new ProducerException(
                 "Stream need to be pre-existing if using CachedInfoMultiAuthServiceCallbacksImpl.", 0);

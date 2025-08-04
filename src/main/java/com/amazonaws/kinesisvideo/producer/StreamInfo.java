@@ -566,4 +566,13 @@ public class StreamInfo {
     public boolean isAllowStreamCreation() {
         return mAllowStreamCreation;
     }
+
+    /**
+     * This is like a {@code toString} method except it doesn't print the full representation of this StreamInfo.
+     *
+     * @return A summarized version of this StreamInfo for logging purposes.
+     */
+    public String getSummary() {
+        return this.mName;
+    }
 }

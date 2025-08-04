@@ -172,6 +172,6 @@ public class ImageFileMediaSource implements MediaSource {
     @Nullable
     @Override
     public StreamCallbacks getStreamCallbacks() {
-        return null;
+        return imageFileMediaSourceConfiguration.getStreamCallbacks();
     }
 }

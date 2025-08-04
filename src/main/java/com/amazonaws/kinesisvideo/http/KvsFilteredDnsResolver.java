@@ -53,9 +53,9 @@ public class KvsFilteredDnsResolver implements DnsResolver, com.amazonaws.DnsRes
      */
     @Override
     public InetAddress[] resolve(final String host) throws UnknownHostException {
-        log.debug("Resolving {}", host);
+        log.trace("Resolving {}", host);
         final InetAddress[] resolvedAddresses = Arrays.stream(dnsResolver.resolve(host))
-                .peek(inetAddr -> log.debug("Resolved IP: {}", inetAddr))
+                .peek(inetAddr -> log.trace("Resolved IP: {}", inetAddr))
                 .filter(this.ipVersionFilter::matches)
                 .toArray(InetAddress[]::new);
 
@@ -63,7 +63,7 @@ public class KvsFilteredDnsResolver implements DnsResolver, com.amazonaws.DnsRes
             throw new UnknownHostException("Not able to resolve any " + ipVersionFilter + " addresses for " + host + "!");
         }
 
-        log.debug("{} filtered IP's: {}", ipVersionFilter, Arrays.toString(resolvedAddresses));
+        log.trace("{} filtered IP's: {}", ipVersionFilter, Arrays.toString(resolvedAddresses));
 
         // Will always return an array with at least 1 element
         return resolvedAddresses;

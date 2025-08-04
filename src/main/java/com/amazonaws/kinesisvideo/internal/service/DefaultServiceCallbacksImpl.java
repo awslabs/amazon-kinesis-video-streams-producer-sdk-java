@@ -7,22 +7,30 @@ import com.amazonaws.kinesisvideo.auth.StaticCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
-import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
-import com.amazonaws.kinesisvideo.producer.ProducerException;
+import com.amazonaws.kinesisvideo.internal.producer.ReadResult;
 import com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks;
+import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
+import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
+import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.StreamDescription;
 import com.amazonaws.kinesisvideo.producer.Tag;
 import com.amazonaws.kinesisvideo.producer.Time;
-import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
-import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
+import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -183,7 +191,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                              final long timeout,
                              @Nullable final byte[] authData,
                              final int authType,
-                             final long customData)
+                             final KinesisVideoProducerStream stream)
             throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
@@ -214,7 +222,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     log.error("[{}] Kinesis Video service client (CreateStream) returned an error. Reporting to Kinesis Video PIC.", streamName, t);
                 } finally {
                     try {
-                        kinesisVideoProducer.createStreamResult(customData, streamArn, statusCode);
+                        kinesisVideoProducer.createStreamResult(stream, streamArn, statusCode);
                     } catch (final ProducerException e) {
                         // TODO: Deal with the runtime exception properly in this and following cases
                         log.error("[{}] Encountered an issue notifying PIC the result of the CreateStream API call.", streamName, e);
@@ -628,7 +636,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
     @Nullable
     protected static KinesisVideoCredentialsProvider getCredentialsProvider(@Nullable final byte[] authData,
-                                                                    @Nonnull final Logger log) {
+                                                                            @Nonnull final Logger log) {
         if (null == authData) {
             log.warn("NULL credentials have been returned by the credentials provider.");
             return null;
@@ -686,6 +694,36 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 // Default to bad request
                 return HTTP_BAD_REQUEST;
             }
+        }
+    }
+
+    /**
+     * Post the exception onto the {@link com.amazonaws.kinesisvideo.producer.StreamCallbacks#streamErrorReport(long, long, long)}
+     * callback so the application can decide what to do with the error.
+     * The {@code upload handle} will be {@link ReadResult#INVALID_UPLOAD_HANDLE_VALUE}, and the {@code fragment timecode}
+     * will be {@link ReadResult#ZERO_FRAGMENT_TIMECODE}.
+     *
+     * @param stream     stream that encountered the error
+     * @param methodName for logging purposes
+     * @param ex         the exception that occurred
+     * @see <a href="https://github.com/awslabs/amazon-kinesis-video-streams-producer-c/blob/master/src/source/CurlApiCallbacks.c">Producer-C notifyCallResult</a>
+     */
+    @SuppressWarnings({"ConstantConditions"})
+    protected void notifyCallResult(@Nonnull final KinesisVideoProducerStream stream,
+                                    @Nonnull final String methodName,
+                                    @Nonnull final ProducerException ex) {
+        Preconditions.checkArgument(stream != null, "Stream cannot be null");
+        Preconditions.checkArgument(ex != null, "Exception cannot be null");
+
+        try {
+            log.error("[{}], {} streamErrorReport", stream.getStreamInfo().getSummary(), methodName);
+            stream.streamErrorReport(ReadResult.INVALID_UPLOAD_HANDLE_VALUE, ReadResult.ZERO_FRAGMENT_TIMECODE,
+                    ex.getStatusCode());
+        } catch (final Throwable t) {
+            // The user-implemented streamErrorReport threw an exception - it is their application's responsibility
+            // to handle errors on their end.
+            log.warn("[{}], {} Calling streamErrorReport with 0x{} threw an exception",
+                    stream.getStreamInfo().getSummary(), methodName, Long.toHexString(ex.getStatusCode()), t);
         }
     }
 }

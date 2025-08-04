@@ -11,6 +11,7 @@ public class ReadResult {
      * Invalid upload handle value which is specified in the native codebase.
      */
     public static final long INVALID_UPLOAD_HANDLE_VALUE = -1;
+    public static final long ZERO_FRAGMENT_TIMECODE = 0;
 
     private int readBytes = 0;
     private boolean isEndOfStream = false;

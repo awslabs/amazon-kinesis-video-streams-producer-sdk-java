@@ -18,6 +18,7 @@ import com.amazonaws.kinesisvideo.common.function.Consumer;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.http.KvsFilteredDnsResolver;
 import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
+import com.amazonaws.kinesisvideo.java.client.JavaKinesisVideoClient;
 import com.amazonaws.kinesisvideo.producer.StreamDescription;
 import com.amazonaws.kinesisvideo.producer.StreamStatus;
 import com.amazonaws.kinesisvideo.util.VersionUtil;
@@ -35,6 +36,7 @@ import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointResult;
 import com.amazonaws.services.kinesisvideo.model.TagStreamRequest;
 import com.amazonaws.services.kinesisvideo.model.TagStreamResult;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
@@ -256,6 +258,12 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .withDnsResolver(new KvsFilteredDnsResolver(ipVersionFilter));
     }
 
+    @SuppressWarnings("Deprecated")
+    public JavaKinesisVideoServiceClient() {
+        this(LogManager.getLogger(JavaKinesisVideoClient.class));
+    }
+
+    @Deprecated
     public JavaKinesisVideoServiceClient(@Nonnull final Logger log) {
         this.log = Preconditions.checkNotNull(log);
 

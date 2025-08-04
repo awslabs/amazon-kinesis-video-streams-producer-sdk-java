@@ -2,6 +2,7 @@ package com.amazonaws.kinesisvideo.java.mediasource.file;
 
 
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
+import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_CONTENT_TYPE;
 
@@ -15,6 +16,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
     private final String contentType;
     private final boolean allowStreamCreation;
     private final long startTimeMs;
+    private final StreamCallbacks streamCallbacks;
 
     public ImageFileMediaSourceConfiguration(final Builder builder) {
         this.fps = builder.fps;
@@ -25,6 +27,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         this.contentType = builder.contentType;
         this.allowStreamCreation = builder.allowStreamCreation;
         this.startTimeMs = builder.startTimeMs;
+        this.streamCallbacks = builder.streamCallbacks;
     }
 
     public int getFps() {
@@ -67,6 +70,10 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         return allowStreamCreation;
     }
 
+    public StreamCallbacks getStreamCallbacks() {
+        return streamCallbacks;
+    }
+
     public static class Builder implements MediaSourceConfiguration.Builder<ImageFileMediaSourceConfiguration> {
 
         private int fps;
@@ -77,6 +84,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         private String contentType = VIDEO_CONTENT_TYPE;
         private boolean allowStreamCreation;
         private long startTimeMs = System.currentTimeMillis();
+        private StreamCallbacks streamCallbacks = null;
 
         public Builder fps(final int fps) {
             this.fps = fps;
@@ -118,6 +126,11 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
 
         public Builder startTimeMs(final long startTimeMs) {
             this.startTimeMs = startTimeMs;
+            return this;
+        }
+
+        public Builder streamCallbacks(final StreamCallbacks streamCallbacks) {
+            this.streamCallbacks = streamCallbacks;
             return this;
         }
 

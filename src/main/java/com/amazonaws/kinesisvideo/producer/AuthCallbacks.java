@@ -8,7 +8,9 @@ import javax.annotation.Nullable;
  *
  * These will be used to integrate with the Auth
  *
- *
+ * <p>Based on the configured AuthType, PIC will invoke the correct function.</p>
+ * <p>PIC will pass the serialized auth bits to the stream callbacks, except PutStream. The auth bits for putStream come
+ * from getStreamingToken</p>
  */
 public interface AuthCallbacks
 {
