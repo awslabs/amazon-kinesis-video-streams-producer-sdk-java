@@ -65,6 +65,7 @@ public class MultiAuthServiceCallbacksImplTest {
 
     private static final Logger log = LogManager.getLogger(MultiAuthServiceCallbacksImplTest.class);
 
+    private static final Long STATUS_DESCRIBE_STREAM_CALL_FAILED = 0x52000011L;
     private static final String FAILING_STREAMS_POSTFIX = "-fail";
     private static final String IMAGE_DIR = "src/main/resources/data/h264/";
     private static final Duration DURATION_TO_STREAM = Duration.ofSeconds(30);
@@ -299,7 +300,8 @@ public class MultiAuthServiceCallbacksImplTest {
                 if (streamName.endsWith(FAILING_STREAMS_POSTFIX)) {
                     // The fail stream would have still been retrying due to 403
                     assertEquals("Bad stream sent media! Received acks: " + context.acksReceived, 0, context.acksReceived.size());
-                    assertEquals("Bad stream should not have seen an errors! Errors seen: " + context.errorsReceived, 0, context.errorsReceived.size());
+                    assertEquals("Bad stream should not have seen an error! Errors seen: " + context.errorsReceived, 1, context.errorsReceived.size());
+                    assertEquals("Bad stream should have received describe stream failed error! Errors seen: " + context.errorsReceived, STATUS_DESCRIBE_STREAM_CALL_FAILED, context.errorsReceived.get(0));
                 } else {
                     // Validate:
                     // - Received persisted acks
