@@ -22,6 +22,7 @@ import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.kinesisvideo.storage.DefaultStorageCallbacks;
 import com.amazonaws.kinesisvideo.streaming.DefaultStreamCallbacks;
+import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
@@ -49,12 +50,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
+import static com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream.READY_TIMEOUT_IN_MILLISECONDS;
+import static com.amazonaws.kinesisvideo.producer.ProducerException.STATUS_OPERATION_TIMED_OUT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -66,9 +70,9 @@ public class MultiAuthServiceCallbacksImplTest {
     private static final Logger log = LogManager.getLogger(MultiAuthServiceCallbacksImplTest.class);
 
     private static final Long STATUS_DESCRIBE_STREAM_CALL_FAILED = 0x52000011L;
-    private static final String FAILING_STREAMS_POSTFIX = "-fail";
+    private static final String FAILING_STREAMS_POSTFIX = "fail";
     private static final String IMAGE_DIR = "src/main/resources/data/h264/";
-    private static final Duration DURATION_TO_STREAM = Duration.ofSeconds(30);
+    private static final Duration DURATION_TO_STREAM = Duration.ofSeconds(5);
     private static final String IMAGE_FILENAME_FORMAT = "frame-%03d.h264";
     private static final int START_FILE_INDEX = 1;
     private static final int END_FILE_INDEX = 375;
@@ -80,6 +84,8 @@ public class MultiAuthServiceCallbacksImplTest {
     private final List<String> streamNamePassingStreams = new ArrayList<>();
     private final List<String> streamNameFailingStreams = new ArrayList<>();
 
+    private static final Duration CREATE_STREAM_TIMEOUT = Duration.ofMillis(READY_TIMEOUT_IN_MILLISECONDS);
+
     /**
      * Test parameters for parameterized tests.
      * Each array contains: [numberOfHealthyStreams, numberOfKmsErroredStreams]
@@ -90,6 +96,7 @@ public class MultiAuthServiceCallbacksImplTest {
     public static Collection<Object[]> testParameters() {
         return Arrays.asList(new Object[][]{
                 {1, 1},  // 1 healthy stream, 1 stream with invalid credentials
+                {1, 2},  // 1 healthy stream, 2 streams with invalid credentials
                 {5, 5},  // 5 healthy streams, 5 streams with invalid credentials
         });
     }
@@ -116,8 +123,9 @@ public class MultiAuthServiceCallbacksImplTest {
         boolean success = true;
 
         for (int i = 0; i < this.healthyStreamCount; i++) {
-            final String streamNamePassingStream = prefix + UUID.randomUUID();
+            final String streamNamePassingStream = String.join("-", prefix, "Healthy", Integer.toString(i), Long.toString(System.nanoTime()), "MultiAuthServiceCallbacksImplTest");
             try {
+                log.info("Creating healthy stream {}", streamNamePassingStream);
                 final CreateStreamRequest createStreamRequest = new CreateStreamRequest()
                         .withStreamName(streamNamePassingStream)
                         .withDataRetentionInHours(2);
@@ -130,8 +138,9 @@ public class MultiAuthServiceCallbacksImplTest {
         }
 
         for (int i = 0; i < this.invalidCredentialsStreamCount; i++) {
-            final String streamNameFailingStream = prefix + UUID.randomUUID() + UUID.randomUUID() + FAILING_STREAMS_POSTFIX;
+            final String streamNameFailingStream = String.join("-", prefix, "Unhealthy", Integer.toString(i), Long.toString(System.nanoTime()), "MultiAuthServiceCallbacksImplTest", FAILING_STREAMS_POSTFIX);
             try {
+                log.info("Creating unhealthy stream {}", streamNameFailingStream);
                 final CreateStreamRequest createStreamRequest = new CreateStreamRequest()
                         .withStreamName(streamNameFailingStream)
                         .withDataRetentionInHours(2);
@@ -185,12 +194,13 @@ public class MultiAuthServiceCallbacksImplTest {
     }
 
     @Rule
-    public Timeout globalTimeout = Timeout.seconds(60);
+    public Timeout globalTimeout = Timeout.seconds(120);
 
     private class StreamContext {
         public MediaSource mediaSource;
         public final List<KinesisVideoFragmentAck> acksReceived = new ArrayList<>();
         public final List<Long> errorsReceived = new ArrayList<>();
+        public AtomicBoolean completedWithException = new AtomicBoolean(false);
     }
 
     @Test
@@ -240,7 +250,7 @@ public class MultiAuthServiceCallbacksImplTest {
 
             // Create CachedInfoServiceCallback
             final ServiceCallbacks serviceCallbacks =
-                    new MultiAuthServiceCallbacksImpl(executor, configuration, new JavaKinesisVideoServiceClient(log), testFunction);
+                    new MultiAuthServiceCallbacksImpl(executor, configuration, new JavaKinesisVideoServiceClient(), testFunction);
             // create Kinesis Video high level client
             final KinesisVideoClient kinesisVideoClient = KinesisVideoJavaClientFactory
                     .createKinesisVideoClient(log, configuration, executor, null, serviceCallbacks);
@@ -263,22 +273,35 @@ public class MultiAuthServiceCallbacksImplTest {
                 streamContext.mediaSource = mediaSource;
 
                 // registerMediaSource is synchronous - it will block while the native stream is in the creation state
-                registerExecutorBadCredentialsStreams.submit(() -> {
-                    try {
-                        kinesisVideoClient.registerMediaSource(mediaSource);
-                        fail("Creating the failed stream should have timed out!");
-                    } catch (final KinesisVideoException e) {
-                        // Expected timeout failure
-                    } catch (final Throwable e) {
-                        log.error("Unexpected exception creating the failure stream", e);
-                        fail();
+                // note that registerMediaSource calls createStreamSync which is synchronized, so creating multiple threads
+                // currently verifies that it's thread safe
+                registerExecutorBadCredentialsStreams.submit(new LoggedExitRunnable(streamNameFailingStream + "-registerMediaSource") {
+                    @Override
+                    public void execute() {
+                        try {
+                            log.info("Calling registerMediaSource {}", streamNameFailingStream);
+                            kinesisVideoClient.registerMediaSource(mediaSource);
+                            fail("Creating the failed stream (" + streamNameFailingStream + ") should have timed out!");
+                        } catch (final KinesisVideoException e) {
+                            // Expected timeout failure
+                            streamContext.completedWithException.set(true);
+                            log.info("{} received expected failure", streamNameFailingStream, e);
+
+                            assertTrue(streamNameFailingStream + " should have returned a ProducerException!", e instanceof ProducerException);
+                            assertEquals(streamNameFailingStream + " should have returned operation timed out!", STATUS_OPERATION_TIMED_OUT, ((ProducerException) e).getStatusCode());
+                        } catch (final Throwable e) {
+                            log.error("{} received unexpected exception creating the failure stream", streamNameFailingStream, e);
+                            fail();
+                        }
                     }
                 });
             }
 
             log.info("Main thread sleeping {} ms.", DURATION_TO_STREAM.toMillis());
             Thread.sleep(DURATION_TO_STREAM.toMillis());
-            log.info("Stopping stream...");
+
+            registerExecutorBadCredentialsStreams.shutdown();
+            registerExecutorBadCredentialsStreams.awaitTermination(CREATE_STREAM_TIMEOUT.getSeconds() * this.invalidCredentialsStreamCount + 5, TimeUnit.SECONDS);
 
             // unregister healthy streams from client and free client
             for (final Map.Entry<String, StreamContext> streamContext : testStreams.entrySet()) {
@@ -286,30 +309,38 @@ public class MultiAuthServiceCallbacksImplTest {
                 final StreamContext context = streamContext.getValue();
 
                 if (!streamName.endsWith(FAILING_STREAMS_POSTFIX)) {
+                    log.info("Unregistering media source: {}", streamName);
                     kinesisVideoClient.unregisterMediaSource(context.mediaSource);
                 }
             }
-            kinesisVideoClient.free();
+
+            log.info("Shutdown client executor service");
             executor.shutdown();
-            registerExecutorBadCredentialsStreams.shutdown();
+
+            log.info("Free client");
+            kinesisVideoClient.free();
 
             for (final Map.Entry<String, StreamContext> streamContext : testStreams.entrySet()) {
                 final String streamName = streamContext.getKey();
                 final StreamContext context = streamContext.getValue();
+                log.info("Verifying the stream: {}", streamName);
 
                 if (streamName.endsWith(FAILING_STREAMS_POSTFIX)) {
                     // The fail stream would have still been retrying due to 403
-                    assertEquals("Bad stream sent media! Received acks: " + context.acksReceived, 0, context.acksReceived.size());
-                    assertEquals("Bad stream should not have seen an error! Errors seen: " + context.errorsReceived, 1, context.errorsReceived.size());
-                    assertEquals("Bad stream should have received describe stream failed error! Errors seen: " + context.errorsReceived, STATUS_DESCRIBE_STREAM_CALL_FAILED, context.errorsReceived.get(0));
+                    assertTrue("Bad stream (" + streamName + ") didn't finish with an exception!", context.completedWithException.get());
+                    assertEquals("Bad stream (" + streamName + ") sent media! Received acks: " + context.acksReceived, 0, context.acksReceived.size());
+                    assertTrue("Bad stream (" + streamName + ") should have seen 0 or 1 errors! Errors seen: " + context.errorsReceived, context.errorsReceived.size() <= 1);
+                    if (context.errorsReceived.size() == 1) {
+                        assertEquals("Bad stream (" + streamName + ") should have received describe stream failed error! Errors seen: " + context.errorsReceived, STATUS_DESCRIBE_STREAM_CALL_FAILED, context.errorsReceived.get(0));
+                    }
                 } else {
                     // Validate:
                     // - Received persisted acks
                     // - No errors
                     // - Largest fragment ack timecode is within ACKS_DURATION_THRESHOLD of DURATION_TO_STREAM
-                    assertTrue("Success stream didn't receive any persisted ACKS!", context.acksReceived.stream().anyMatch(ack -> ack.getAckType().getIntType() == FragmentAckType.FRAGMENT_ACK_TYPE_PERSISTED));
-                    assertEquals("Success stream saw an error!", 0, context.errorsReceived.size());
-                    assertTrue("Success stream didn't stream for around " + DURATION_TO_STREAM.getSeconds() + " seconds!", context.acksReceived.stream().anyMatch(ack -> Math.abs(ack.getTimestamp() - DURATION_TO_STREAM.toMillis()) <= ACKS_DURATION_THRESHOLD.toMillis()));
+                    assertTrue("Success stream (" + streamName + ") didn't receive any persisted ACKS!", context.acksReceived.stream().anyMatch(ack -> ack.getAckType().getIntType() == FragmentAckType.FRAGMENT_ACK_TYPE_PERSISTED));
+                    assertEquals("Success stream (" + streamName + ") saw an error!", 0, context.errorsReceived.size());
+                    assertTrue("Success stream (" + streamName + ") didn't stream for around " + DURATION_TO_STREAM.getSeconds() + " seconds!", context.acksReceived.stream().anyMatch(ack -> Math.abs(ack.getTimestamp() - DURATION_TO_STREAM.toMillis()) <= ACKS_DURATION_THRESHOLD.toMillis()));
                 }
             }
         } catch (final KinesisVideoException | InterruptedException e) {

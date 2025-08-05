@@ -376,6 +376,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
 
     @Override
     public void streamFreed() throws ProducerException {
+        mLog.debug("{} Stream Freed.", mStreamInfo.getSummary());
         streamClosed(ReadResult.INVALID_UPLOAD_HANDLE_VALUE);
         mStreamHandle = NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE;
     }
@@ -523,7 +524,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         // Block until client is ready or it times out.
         try {
             if (!mReadyLatch.await(READY_TIMEOUT_IN_MILLISECONDS, TimeUnit.MILLISECONDS)) {
-                throw new ProducerException("KinesisVideo producer stream creation time out", ProducerException.STATUS_OPERATION_TIMED_OUT);
+                throw new ProducerException(this.mStreamInfo.getSummary() + ": KinesisVideo producer stream creation time out", ProducerException.STATUS_OPERATION_TIMED_OUT);
             }
         } catch (final InterruptedException e) {
             throw new ProducerException(e);

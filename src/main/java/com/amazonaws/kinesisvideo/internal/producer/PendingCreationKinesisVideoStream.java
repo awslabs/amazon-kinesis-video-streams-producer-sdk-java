@@ -1,10 +1,13 @@
 package com.amazonaws.kinesisvideo.internal.producer;
 
+import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFragmentAck;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -21,16 +24,27 @@ import java.io.InputStream;
  * @see KinesisVideoProducerStream
  */
 public class PendingCreationKinesisVideoStream implements KinesisVideoProducerStream {
+
+    private static final Logger log = LogManager.getLogger(PendingCreationKinesisVideoStream.class);
+
     final StreamInfo streamInfo;
     final StreamCallbacks streamCallbacks;
     final long streamHandle;
 
+    @SuppressWarnings("ConstantConditions")
     public PendingCreationKinesisVideoStream(final long streamHandle,
                                              @Nonnull final StreamInfo streamInfo,
                                              @Nonnull final StreamCallbacks streamCallbacks) {
+
+        Preconditions.checkArgument(streamInfo != null, "streamInfo cannot be null!");
+        Preconditions.checkArgument(streamCallbacks != null, "streamCallbacks cannot be null!");
+
         this.streamHandle = streamHandle;
         this.streamInfo = streamInfo;
         this.streamCallbacks = streamCallbacks;
+
+        log.debug("Created Pending Kinesis Video Stream ({}) with handle: 0x{}",
+                streamInfo.getSummary(), Long.toHexString(streamHandle));
     }
 
     @Override
