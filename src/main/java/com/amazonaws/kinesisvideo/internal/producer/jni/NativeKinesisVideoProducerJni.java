@@ -354,14 +354,17 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkState(isInitialized());
 
         synchronized (mSyncObject) {
+            Preconditions.checkState(streamInProgressStreamCallbacks == null && streamInProgressStreamInfo == null);
             // Create the native stream
+            long streamHandle = INVALID_STREAM_HANDLE_VALUE;
             try {
                 // KinesisVideoProducerStream hasn't been added into the map yet,
                 // the service callbacks need access to the streamInfo and the callbacks
                 streamInProgressStreamInfo = streamInfo;
                 streamInProgressStreamCallbacks = streamCallbacks;
 
-                final long streamHandle = createKinesisVideoStream(mClientHandle, streamInfo);
+                streamHandle = createKinesisVideoStream(mClientHandle, streamInfo);
+
                 final KinesisVideoProducerStream kinesisVideoProducerStream = new NativeKinesisVideoProducerStream(this,
                         streamInfo,
                         streamHandle,
@@ -375,6 +378,9 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
                 return kinesisVideoProducerStream;
             } catch (final Exception e) {
                 mLog.error("Encountered exception creating {}", streamInfo.getSummary(), e);
+                if (streamHandle != INVALID_CLIENT_HANDLE_VALUE) {
+                    freeKinesisVideoStream(mClientHandle, streamHandle);
+                }
                 throw e;
             } finally {
                 streamInProgressStreamInfo = null;
