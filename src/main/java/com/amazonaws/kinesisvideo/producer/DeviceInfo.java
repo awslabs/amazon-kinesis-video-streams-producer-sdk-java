@@ -23,20 +23,28 @@ public class DeviceInfo {
      */
     public static final int DEVICE_INFO_CURRENT_VERSION = 1;
 
-    private final int mVersion;
-    private final String mName;
-    private final StorageInfo mStorageInfo;
-    private final int mStreamCount;
-    private final Tag[] mTags;
-    private final String mClientId;
-    private final ClientInfo mClientInfo;
+    private int mVersion;
+    private String mName;
+    private StorageInfo mStorageInfo;
+    private int mStreamCount;
+    private Tag[] mTags;
+    private String mClientId;
+    private ClientInfo mClientInfo;
 
+    /**
+     * Use {@link #createDeviceInfoV0} instead.
+     */
+    @Deprecated
     public DeviceInfo(int version, @Nullable final String name, @Nonnull final StorageInfo storageInfo,
             int streamCount, @Nullable final Tag[] tags) {
         this(version, name, storageInfo, streamCount, tags,
                 "JNI " + NativeKinesisVideoProducerJni.EXPECTED_LIBRARY_VERSION, new ClientInfo());
     }
 
+    /**
+     * Use {@link #createDeviceInfoV1} instead.
+     */
+    @Deprecated
     public DeviceInfo(int version, @Nullable final String name, @Nonnull final StorageInfo storageInfo,
                       int streamCount, @Nullable final Tag[] tags, @Nonnull final String clientId,
                       @Nonnull final ClientInfo clientInfo) {
@@ -45,6 +53,36 @@ public class DeviceInfo {
         mTags = tags;
         mVersion = version;
         mStreamCount = streamCount;
+        mClientId = clientId;
+        mClientInfo = clientInfo;
+    }
+
+    public static DeviceInfo createDeviceInfoV0(final String name, final StorageInfo storageInfo,
+                                                final int streamCount, final Tag[] tags) {
+        return new DeviceInfo(name, storageInfo, streamCount, tags);
+    }
+
+    // V0 constructor
+    private DeviceInfo(final String name, final StorageInfo storageInfo,
+                       final int streamCount, final Tag[] tags) {
+        mVersion = 0;
+        mStorageInfo = Preconditions.checkNotNull(storageInfo);
+        mName = name;
+        mTags = tags;
+        mStreamCount = streamCount;
+    }
+
+    public static DeviceInfo createDeviceInfoV1(final String name, final StorageInfo storageInfo, final int streamCount, final Tag[] tags, final String clientId, final ClientInfo clientInfo) {
+        return new DeviceInfo(name, storageInfo, streamCount, tags, clientId, clientInfo);
+    }
+
+    // V1 constructor
+    private DeviceInfo(final String name, final StorageInfo storageInfo,
+                       final int streamCount, final Tag[] tags,
+                       final String clientId, final ClientInfo clientInfo) {
+        this(name, storageInfo, streamCount, tags);
+
+        mVersion = 1;
         mClientId = clientId;
         mClientInfo = clientInfo;
     }

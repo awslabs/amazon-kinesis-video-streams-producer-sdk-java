@@ -36,7 +36,7 @@ public class ProducerApiTest extends ProducerTestBase{
      * and, re-create them
      */
     @Test
-    public void createFreeStream() {
+    public void createFreeStream() throws ProducerException {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
         createProducer();
         String testStreamName;
@@ -70,7 +70,7 @@ public class ProducerApiTest extends ProducerTestBase{
      * This test attempts to create multiple streams, sends frame across them and ultimately stop successfully
      */
     @Test
-    public void createProduceStartStopStream() {
+    public void createProduceStartStopStream() throws ProducerException {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
         KinesisVideoFrame frame;
         String testStreamName;
@@ -133,7 +133,7 @@ public class ProducerApiTest extends ProducerTestBase{
      * caching the stream-endpoint
      */
     @Test
-    public void createProduceStartStopStreamEndpointCached() {
+    public void createProduceStartStopStreamEndpointCached() throws ProducerException {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
         KinesisVideoFrame frame;
         String testStreamName;
@@ -205,7 +205,7 @@ public class ProducerApiTest extends ProducerTestBase{
      * caching the stream-endpoint, credentials-provider and, stream-info
      */
     @Test
-    public void createProduceStartStopStreamAllCached() {
+    public void createProduceStartStopStreamAllCached() throws ProducerException {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
         KinesisVideoFrame frame;
         String testStreamName;

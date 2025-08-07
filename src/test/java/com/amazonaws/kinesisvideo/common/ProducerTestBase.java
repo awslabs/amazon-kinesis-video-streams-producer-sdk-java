@@ -1,5 +1,7 @@
 package com.amazonaws.kinesisvideo.common;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,9 +18,12 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
+import com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks;
+import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
 import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsFactory;
 import com.amazonaws.kinesisvideo.producer.Tag;
+import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.internal.client.NativeKinesisVideoClient;
@@ -129,6 +134,16 @@ public class ProducerTestBase {
         return keyFrameInterval_ * frameDuration_ / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
     }
 
+    @FunctionalInterface
+    protected interface ServiceCallbacksConstructor {
+        DefaultServiceCallbacksImpl apply(
+                Logger log,
+                ScheduledExecutorService executor,
+                KinesisVideoClientConfiguration configuration,
+                KinesisVideoServiceClient kinesisVideoServiceClient
+        );
+    }
+
     /**
      * This method is used to create a KinesisVideoProducer which is used by the later methods
      */
@@ -137,13 +152,28 @@ public class ProducerTestBase {
                 DEVICE_NAME, storageInfo_, NUMBER_OF_STREAMS, null,
                 "JNI " + NativeKinesisVideoProducerJni.EXPECTED_LIBRARY_VERSION,
                 new ClientInfo());
-        createProducer(deviceInfo_);
+
+        try {
+            createProducer(deviceInfo_);
+        } catch (Exception e) {
+            log.error("Unable to create Kinesis Video Producer.", e);
+            fail("Unable to create Kinesis Video Producer.");
+        }
+    }
+
+    protected void createProducer(DeviceInfo deviceInfo) {
+        try {
+            createProducer(deviceInfo, DefaultServiceCallbacksImpl::new);
+        } catch (Exception e) {
+            log.error("Unable to create Kinesis Video Producer.", e);
+            fail("Unable to create Kinesis Video Producer.");
+        }
     }
 
     /**
      * This method is used to create a KinesisVideoProducer which is used by the later methods
      */
-    protected void createProducer(DeviceInfo deviceInfo) {
+    protected void createProducer(DeviceInfo deviceInfo, ServiceCallbacksConstructor serviceCallbacksConstructor) throws Exception {
 
         reset(); // reset all flags to initial values so that they can be modified by the stream and storage callbacks
 
@@ -166,7 +196,8 @@ public class ProducerTestBase {
         storageCallbacks = new TestStorageCallbacks(this);
         streamCallbacks = new TestStreamCallBacks(this);
 
-        DefaultServiceCallbacksImpl defaultServiceCallbacks = new DefaultServiceCallbacksImpl(log, executor,
+        // Use the custom service callbacks (used to inject return values for API calls)
+        ServiceCallbacks defaultServiceCallbacks = serviceCallbacksConstructor.apply(log, executor,
                 configuration, serviceClient);
         kinesisVideoClient = new NativeKinesisVideoClient(log,
                 authCallbacks,
@@ -210,19 +241,22 @@ public class ProducerTestBase {
      * @return KinesisVideoProducerStream the created stream
      */
     protected KinesisVideoProducerStream createTestStream(String streamName, StreamInfo.StreamingType streamingType,
-                                                          long maxLatency, long bufferDuration) {
-        return createTestStream(streamName, streamingType, maxLatency, bufferDuration, NAL_ADAPTATION_FLAG_NONE);
+                                                          long maxLatency, long bufferDuration) throws ProducerException {
+        return createTestStream(streamName, streamingType, maxLatency, bufferDuration, NAL_ADAPTATION_FLAG_NONE, false);
     }
 
     protected KinesisVideoProducerStream createTestStream(String streamName, StreamInfo.StreamingType streamingType,
-                                                          long maxLatency, long bufferDuration, StreamInfo.NalAdaptationFlags nalAdaptationFlags) {
+                                                          long maxLatency, long bufferDuration, StreamInfo.NalAdaptationFlags nalAdaptationFlags, boolean skipPreparation) throws ProducerException {
         KinesisVideoProducerStream kinesisVideoProducerStream = null;
         
         final byte[] codecPrivateData = ProducerTestCPDs.getTestCPD(nalAdaptationFlags);
 
         final String prefix = Optional.ofNullable(System.getenv("TEST_STREAMS_PREFIX")).orElse("");
         final String finalStreamName = prefix + streamName;
-        prepareStream(finalStreamName);
+
+        if (!skipPreparation) {
+            prepareStream(finalStreamName);
+        }
 
         final StreamInfo streamInfo = new StreamInfo(
                 StreamInfo.STREAM_INFO_CURRENT_VERSION,
@@ -256,14 +290,7 @@ public class ProducerTestBase {
                 allowStreamCreation
         );
 
-        try {
-            kinesisVideoProducerStream = kinesisVideoProducer.createStreamSync(streamInfo, streamCallbacks);
-
-        } catch (final Exception e) {
-            log.error("Failed to create the stream: {}", finalStreamName, e);
-            fail();
-        }
-        return kinesisVideoProducerStream;
+        return kinesisVideoProducer.createStreamSync(streamInfo, streamCallbacks);
     }
 
     /**
@@ -363,6 +390,24 @@ public class ProducerTestBase {
         } catch (ProducerException e) {
             e.printStackTrace();
             fail();
+        }
+    }
+
+    protected void deleteStream(final String streamName) {
+        final AmazonKinesisVideo awsSdkKinesisVideoClient = AmazonKinesisVideoClient.builder().build();
+        final String prefix = Optional.ofNullable(System.getenv("TEST_STREAMS_PREFIX")).orElse("");
+        final String finalStreamName = prefix + streamName;
+        try {
+            final DescribeStreamRequest describeStreamRequest = new DescribeStreamRequest().withStreamName(finalStreamName);
+            final DescribeStreamResult describeStreamResult = awsSdkKinesisVideoClient.describeStream(describeStreamRequest);
+
+            final DeleteStreamRequest deleteStreamRequest = new DeleteStreamRequest()
+                    .withStreamARN(describeStreamResult.getStreamInfo().getStreamARN())
+                    .withCurrentVersion(describeStreamResult.getStreamInfo().getVersion());
+            awsSdkKinesisVideoClient.deleteStream(deleteStreamRequest);
+        } catch (final Exception e) {
+            log.error("Failed to delete the stream: {}", finalStreamName, e);
+            fail(e.getMessage());
         }
     }
 
