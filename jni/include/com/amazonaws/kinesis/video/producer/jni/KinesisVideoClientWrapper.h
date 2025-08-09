@@ -8,6 +8,8 @@
 
 #define HAVE_PTHREADS 1           // Makes threads.h use pthreads
 
+#include "ClientJVMContext.h"
+#include "ClientRegistry.h"
 #include "SyncMutex.h"
 #include "TimedSemaphore.h"
 #include "JNICommon.h"
@@ -36,7 +38,7 @@
 #ifdef ANDROID_BUILD
 #define ATTACH_CURRENT_THREAD_TO_JVM(env) \
     do { \
-        if (pWrapper->mJvm->AttachCurrentThread(&env, NULL) != 0) { \
+        if (pWrapper->getJVM()->AttachCurrentThread(&env, NULL) != 0) { \
             DLOGE("Fail to attache to JVM!");\
             return STATUS_INVALID_OPERATION; \
         } \
@@ -44,7 +46,7 @@
 #else
 #define ATTACH_CURRENT_THREAD_TO_JVM(env) \
     do { \
-        if (pWrapper->mJvm->AttachCurrentThread((PVOID*) &env, NULL) != 0) { \
+        if (pWrapper->getJVM()->AttachCurrentThread((PVOID*) &env, NULL) != 0) { \
             DLOGE("Fail to attache to JVM!");\
             return STATUS_INVALID_OPERATION; \
         } \
@@ -54,8 +56,7 @@
 class KinesisVideoClientWrapper
 {
     CLIENT_HANDLE mClientHandle;
-    static JavaVM *mJvm; // scope revised to static to make it accessible from static function- logPrintFunc 
-    static jobject mGlobalJniObjRef; // scope revised to static to make it accessible from static function- logPrintFunc
+    ClientJVMContext mJVMContext;
     ClientCallbacks mClientCallbacks;
     DeviceInfo mDeviceInfo;
     AuthInfo mAuthInfo;
@@ -86,13 +87,15 @@ class KinesisVideoClientWrapper
     jmethodID mClientReadyMethodId;
     jmethodID mCreateDeviceMethodId;
     jmethodID mDeviceCertToTokenMethodId;
-    static jmethodID mLogPrintMethodId;
 
     //////////////////////////////////////////////////////////////////////////////////////
     // Internal private methods
     //////////////////////////////////////////////////////////////////////////////////////
     STATUS getAuthInfo(jmethodID, PBYTE*, PUINT32, PUINT64);
     static AUTH_INFO_TYPE authInfoTypeFromInt(UINT32);
+    JavaVM* getJVM() const { return mJVMContext.jvm; }
+    jobject getJavaObjectRef() const { return mJVMContext.javaObjectRef; }
+    jmethodID getLogPrintMethodId() const { return mJVMContext.logPrintMethodId; }
 
     //////////////////////////////////////////////////////////////////////////////////////
     // Static callbacks definitions
