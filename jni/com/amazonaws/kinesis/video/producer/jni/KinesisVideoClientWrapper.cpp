@@ -385,7 +385,12 @@ void KinesisVideoClientWrapper::putKinesisVideoFrame(jlong streamHandle, jobject
 
     PStreamInfo pStreamInfo;
     UINT32 zeroCount = 0;
-    ::kinesisVideoStreamGetStreamInfo(streamHandle, &pStreamInfo);
+    retStatus = ::kinesisVideoStreamGetStreamInfo(streamHandle, &pStreamInfo);
+    if (STATUS_FAILED(retStatus)) {
+        DLOGE("Failed to get stream info with status code 0x%08x", retStatus);
+        throwNativeException(env, EXCEPTION_NAME, "Failed to get stream info", retStatus);
+        return;
+    }
 
     if ((pStreamInfo->streamCaps.nalAdaptationFlags & NAL_ADAPTATION_ANNEXB_NALS) != NAL_ADAPTATION_FLAG_NONE) {
         // In some devices encoder would generate annexb frames with more than 3 trailing zeros

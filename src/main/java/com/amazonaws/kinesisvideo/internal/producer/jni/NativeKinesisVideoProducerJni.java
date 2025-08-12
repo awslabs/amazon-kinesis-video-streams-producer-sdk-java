@@ -536,6 +536,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     {
         Preconditions.checkState(isInitialized());
         Preconditions.checkNotNull(kinesisVideoFrame);
+        Preconditions.checkArgument(mKinesisVideoHandleMap.containsKey(streamHandle), "StreamHandle 0x" + Long.toHexString(streamHandle) + " is not valid!");
 
         putKinesisVideoFrame(mClientHandle, streamHandle, kinesisVideoFrame);
     }
