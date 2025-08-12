@@ -342,6 +342,81 @@ public class PutFrameAtInvalidStatesIntegTest {
 
     @Test
     @SuppressWarnings({"ConstantConditions"})
+    public void whenRawPutFrameCalledAfterJniFreed_thenExceptionThrown() throws Exception {
+        final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(2);
+        final KinesisVideoCredentialsProvider credentialsProvider = JavaCredentialsFactory
+                .createKinesisVideoCredentialsProvider(DefaultAWSCredentialsProviderChain.getInstance());
+        final KinesisVideoClientConfiguration configuration = KinesisVideoClientConfiguration.builder()
+                .withCredentialsProvider(credentialsProvider)
+                .build();
+
+        final NativeKinesisVideoProducerJni jni = new NativeKinesisVideoProducerJni(
+                new DefaultAuthCallbacks(credentialsProvider, executorService,
+                        LogManager.getLogger(NativeKinesisVideoProducerJni.class)),
+                new DefaultStorageCallbacks(),
+                new DefaultServiceCallbacksImpl(
+                        LogManager.getLogger(DefaultServiceCallbacksImpl.class),
+                        executorService, configuration, new JavaKinesisVideoServiceClient())
+        );
+
+        final String deviceName = "whenRawPutFrameCalledAfterStreamFreed_thenExceptionThrown";
+        jni.createSync(createTestDeviceInfo(deviceName));
+        assertTrue(jni.isInitialized());
+        assertTrue(jni.isReady());
+
+        final StreamInfo streamInfo = createStreamInfo(this.streamName);
+        final List<KinesisVideoFragmentAck> acksReceived = new ArrayList<>();
+
+        final CountDownLatch streamReady = new CountDownLatch(1);
+        final KinesisVideoProducerStream stream = jni.createStream(streamInfo, new DefaultStreamCallbacks() {
+            @Override
+            public void streamReady() throws ProducerException {
+                super.streamReady();
+                streamReady.countDown();
+            }
+
+            @Override
+            public void fragmentAckReceived(final long uploadHandle, @Nonnull final KinesisVideoFragmentAck fragmentAck)
+                    throws ProducerException {
+                super.fragmentAckReceived(uploadHandle, fragmentAck);
+                acksReceived.add(fragmentAck);
+            }
+        });
+        assertTrue("Timed out while waiting for stream to be created!",
+                streamReady.await(TEN_SECONDS, TimeUnit.SECONDS));
+        final long streamHandle = stream.getStreamHandle();
+
+        final KinesisVideoFrame[] frames = createFrameset();
+
+        for (int i = 0; i < NUMBER_OF_FRAMES_TO_STREAM; i++) {
+            final KinesisVideoFrame frame = frames[i];
+            jni.putFrame(streamHandle, frame);
+
+            Thread.sleep(FRAME_DURATION_MS);
+        }
+
+        stream.stopStreamSync();
+        jni.freeStream(stream);
+        jni.free();
+
+        final KinesisVideoFrame frameAfterFree = frames[NUMBER_OF_FRAMES_TO_STREAM];
+        try {
+            jni.putFrame(streamHandle, frameAfterFree);
+        } catch (final IllegalStateException e) {
+            // Expected
+            log.info("Received expected IllegalStateException from putFrame", e);
+        } catch (final Exception e) {
+            log.error("PutFrame after free threw an unexpected exception", e);
+            fail("Unexpected exception: " + e);
+        }
+
+        assertFalse("Did not receive any acks!", acksReceived.isEmpty());
+
+        executorService.shutdownNow();
+    }
+
+    @Test
+    @SuppressWarnings({"ConstantConditions"})
     public void whenRawPutFrameCalledWithInvalidHandle_thenExceptionThrown() throws Exception {
         final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(2);
         final KinesisVideoCredentialsProvider credentialsProvider = JavaCredentialsFactory
