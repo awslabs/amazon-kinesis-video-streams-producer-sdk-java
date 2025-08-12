@@ -15,13 +15,18 @@ import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
  * Implementation of the MediaSourceSink interface that pushes frames and stream configuration
  * into an instance of KinesisVideoProducerStream.
  *
- * Primary purpose of this is to be used by the KinesisVideoClient implementation.
+ * <p>Primary purpose of this is to be used by the KinesisVideoClient implementation.</p>
  *
- * For example, when an instance of media source is being created or registered with KinesisVideoClient,
- * an instance of this sink is created, and the media source is initialized with this.
+ * <p>For example, when an instance of media source is being created or registered with KinesisVideoClient,
+ * an instance of this sink is created, and the media source is initialized with this.</p>
  *
- * It's then media source's job to produce the frames and push them into the sink
- * it has been initialized with
+ * <p>It's then media source's job to produce the frames and push them into the sink
+ * it has been initialized with.</p>
+ *
+ * @see MediaSourceSink
+ * @see com.amazonaws.kinesisvideo.client.KinesisVideoClient
+ * @see com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource
+ * @see OnStreamDataAvailable
  */
 public class ProducerStreamSink implements MediaSourceSink {
     private final KinesisVideoProducerStream producerStream;
@@ -47,7 +52,9 @@ public class ProducerStreamSink implements MediaSourceSink {
     }
 
     @Override
-    public void onFragmentMetadata(final String metadataName, final String metadataValue, final boolean persistent)
+    public void onFragmentMetadata(@Nonnull final String metadataName,
+                                   @Nonnull final String metadataValue,
+                                   final boolean persistent)
             throws KinesisVideoException {
         producerStream.putFragmentMetadata(metadataName, metadataValue, persistent);
     }
