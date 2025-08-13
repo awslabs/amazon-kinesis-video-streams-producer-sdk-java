@@ -331,6 +331,7 @@ BOOL setTags(JNIEnv *env, jobjectArray tagArray, PTag* ppTags, PUINT32 pTagCount
     *ppTags = pTags;
 
 CleanUp:
+    CHK_LOG_ERR(retStatus);
 
     if (STATUS_FAILED(retStatus)) {
         retValue = FALSE;

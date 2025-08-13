@@ -107,9 +107,7 @@ public class ImageFileMediaSource implements MediaSource {
                 DEFAULT_TIMESCALE,
                 RECALCULATE_METRICS,
                 AVCC_EXTRA_DATA,
-                new Tag[] {
-                        new Tag("device", "Test Device"),
-                        new Tag("stream", "Test Stream") },
+                imageFileMediaSourceConfiguration.getTags(),
                 NAL_ADAPTATION_FLAG_NONE,
                 imageFileMediaSourceConfiguration.isAllowStreamCreation());
     }

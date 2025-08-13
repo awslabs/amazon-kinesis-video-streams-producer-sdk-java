@@ -3,6 +3,12 @@ package com.amazonaws.kinesisvideo.java.mediasource.file;
 
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
+import com.amazonaws.kinesisvideo.producer.Tag;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import java.util.Arrays;
 
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_CONTENT_TYPE;
 
@@ -17,6 +23,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
     private final boolean allowStreamCreation;
     private final long startTimeMs;
     private final StreamCallbacks streamCallbacks;
+    private final Tag[] tags;
 
     public ImageFileMediaSourceConfiguration(final Builder builder) {
         this.fps = builder.fps;
@@ -28,6 +35,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         this.allowStreamCreation = builder.allowStreamCreation;
         this.startTimeMs = builder.startTimeMs;
         this.streamCallbacks = builder.streamCallbacks;
+        this.tags = builder.tags;
     }
 
     public int getFps() {
@@ -66,6 +74,11 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         return null;
     }
 
+    @Nullable
+    public Tag[] getTags() {
+        return tags;
+    }
+
     public boolean isAllowStreamCreation() {
         return allowStreamCreation;
     }
@@ -85,6 +98,9 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         private boolean allowStreamCreation;
         private long startTimeMs = System.currentTimeMillis();
         private StreamCallbacks streamCallbacks = null;
+        private Tag[] tags = new Tag[] {
+                new Tag("device", "Test Device"),
+                new Tag("stream", "Test Stream") };
 
         public Builder fps(final int fps) {
             this.fps = fps;
@@ -131,6 +147,15 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
 
         public Builder streamCallbacks(final StreamCallbacks streamCallbacks) {
             this.streamCallbacks = streamCallbacks;
+            return this;
+        }
+
+        public Builder tags(@Nullable final Tag... tags) {
+            if (tags != null) {
+                this.tags = Arrays.copyOf(tags, tags.length);
+            } else {
+                this.tags = null;
+            }
             return this;
         }
 
