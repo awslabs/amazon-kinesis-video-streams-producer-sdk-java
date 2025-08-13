@@ -11,15 +11,15 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
                                          jobject deviceInfo): mClientHandle(INVALID_CLIENT_HANDLE_VALUE)
 {
     UINT32 retStatus;
-    ClientRegistry::getInstance().addClient(this);
-
+    std::pair<size_t, int32_t> clientRegistryInfo;
     CHECK(env != NULL && thiz != NULL && deviceInfo != NULL);
 
     // Get and store the JVM so the callbacks can use it later
-    if (env->GetJavaVM(&mJVMContext.jvm) != 0) {
+    if (env->GetJavaVM(&mJVMContext.jvm) != 0 || mJVMContext.jvm == NULL) {
         CHECK_EXT(FALSE, "Couldn't retrieve the JavaVM reference.");
-        ClientRegistry::getInstance().removeClient(this);
     }
+    clientRegistryInfo = ClientRegistry::getInstance().addClient(this); // Note: 'this' cannot be null
+    mJVMContext.clientId = clientRegistryInfo.second;
 
     // Set the callbacks
     if (!setCallbacks(env, thiz)) {
@@ -50,6 +50,9 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
     mAuthInfo.size = 0;
     mAuthInfo.expiration = 0;
     mAuthInfo.type = AUTH_INFO_UNDEFINED;
+
+    DLOGD("Successfully created client #%d, current active clients: %d", clientRegistryInfo.second,
+        clientRegistryInfo.first);
 }
 
 KinesisVideoClientWrapper::~KinesisVideoClientWrapper()

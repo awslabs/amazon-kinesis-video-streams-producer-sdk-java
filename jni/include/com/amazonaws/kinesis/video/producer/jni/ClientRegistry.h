@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <vector>
 #include <mutex>
+#include <utility>
 
 class KinesisVideoClientWrapper;
 
@@ -16,10 +17,12 @@ public:
     static ClientRegistry& getInstance();
 
     /// Thread-safe addition of a client to the registry
-    void addClient(KinesisVideoClientWrapper* client);
+    /// Return: the number of clients in the registry after the addition and the client number
+    std::pair<size_t, int32_t> addClient(KinesisVideoClientWrapper* client);
 
     /// Thread-safe removal of a client from the registry
-    void removeClient(KinesisVideoClientWrapper* client);
+    /// Return: the number of clients in the registry after the removal
+    size_t removeClient(KinesisVideoClientWrapper* client);
 
     /// Thread-safe retrieval of the first client, returns nullptr if empty
     KinesisVideoClientWrapper* getFirstClient();
@@ -27,5 +30,6 @@ public:
 private:
     ClientRegistry() = default;
     std::vector<KinesisVideoClientWrapper*> clients_;
-    std::mutex mutex_;  ///< Protects access to clients_ vector
+    std::mutex mutex_;  ///< Protects access to clients_ vector and totalClients
+    int32_t totalClients = 0;
 };
