@@ -1,0 +1,92 @@
+name: Sanitizer Tests
+
+on:
+  push:
+    branches:
+      - develop
+      - master
+  pull_request:
+    branches:
+      - develop
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}
+
+jobs:
+  sanitizer-tests:
+    strategy:
+      matrix:
+        sanitizer: [ADDRESS_SANITIZER, MEMORY_SANITIZER, THREAD_SANITIZER, UNDEFINED_BEHAVIOR_SANITIZER]
+      fail-fast: false
+
+    env:
+      STREAM_NAME: producer-java-ubuntu-22-${{ matrix.sanitizer }}-ci
+      TEST_STREAMS_PREFIX: producer-java-ubuntu-22-${{ matrix.sanitizer }}-ci
+
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Build JNI with ${{ matrix.sanitizer }}
+        run: |
+          mkdir build
+          cd build
+          cmake .. -D${{ matrix.sanitizer }}=ON
+          make -j
+
+      - name: Build with Maven
+        run: mvn clean compile assembly:single
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+
+      - name: Create the stream (DemoAppMain)
+        working-directory: scripts
+        run: |
+          ./prepareStream.sh "$STREAM_NAME"
+
+        shell: bash
+
+      - name: Run DemoAppMain with ${{ matrix.sanitizer }}
+        run: |
+          JAR_FILE=$(find target -name '*jar-with-dependencies.jar' | head -n 1)
+
+          if [ -z "$JAR_FILE" ]; then
+            echo "Error: JAR file not found!"
+            exit 1
+          fi
+
+          echo "Using JAR file: $JAR_FILE"
+          java -classpath "$JAR_FILE" \
+            -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
+            -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
+            -Daws.sessionToken=${AWS_SESSION_TOKEN} \
+            -Djava.library.path=${JNI_FOLDER} \
+            -Dkvs-stream=$STREAM_NAME \
+            -Dlog4j.configurationFile=.github/log4j2.xml \
+            com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+
+        shell: bash
+
+      - name: Run tests with ${{ matrix.sanitizer }}
+        env:
+          JNI_FOLDER: ${{ github.workspace }}/build
+        run: |
+          mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=${JNI_FOLDER} -Dlog4j.configurationFile=.github/log4j2.xml"

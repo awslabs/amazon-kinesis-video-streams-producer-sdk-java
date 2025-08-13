@@ -12,7 +12,6 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}
-  cancel-in-progress: true
 
 jobs:
   spawn-multiple-instances:
