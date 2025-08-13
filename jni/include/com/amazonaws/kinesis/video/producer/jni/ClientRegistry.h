@@ -5,6 +5,8 @@
 #include <mutex>
 #include <utility>
 
+#include <com/amazonaws/kinesis/video/client/Include.h>
+
 class KinesisVideoClientWrapper;
 
 /**
@@ -18,11 +20,11 @@ public:
 
     /// Thread-safe addition of a client to the registry
     /// Return: the number of clients in the registry after the addition and the client number
-    std::pair<size_t, int32_t> addClient(KinesisVideoClientWrapper* client);
+    std::pair<SIZE_T, UINT32> addClient(KinesisVideoClientWrapper* client);
 
     /// Thread-safe removal of a client from the registry
     /// Return: the number of clients in the registry after the removal
-    size_t removeClient(KinesisVideoClientWrapper* client);
+    SIZE_T removeClient(KinesisVideoClientWrapper* client);
 
     /// Thread-safe retrieval of the first client, returns nullptr if empty
     KinesisVideoClientWrapper* getFirstClient();
@@ -31,5 +33,5 @@ private:
     ClientRegistry() = default;
     std::vector<KinesisVideoClientWrapper*> clients_;
     std::mutex mutex_;  ///< Protects access to clients_ vector and totalClients
-    int32_t totalClients = 0;
+    UINT32 totalClients = 0;
 };
