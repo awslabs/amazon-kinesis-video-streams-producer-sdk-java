@@ -8,6 +8,7 @@ import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.annotation.Nonnull;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,10 +18,14 @@ import java.io.Writer;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 
@@ -191,23 +196,68 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
     public void closeSocket() {
         try {
-            mSocket.close();
+            if (mSocket != null) {
+                mSocket.close();
+                mSocket = null;
+            }
             //Ideally socket close should close this but also explicitly closing the streams
             //as it will fail silently if already closed.
-            mInputStream.close();
-            mOutputStream.close();
+            if (mInputStream != null) {
+                mInputStream.close();
+                mInputStream = null;
+            }
+            if (mOutputStream != null) {
+                mOutputStream.close();
+                mOutputStream = null;
+            }
         } catch (final Throwable e) {
-            e.printStackTrace();
-            throw new RuntimeException("Exception while shutting down!", e);
+            log.error("[{}] Exception thrown on closing thread", mBuilder.mStreamName, e);
+            throw new RuntimeException("Exception while shutting down " + mBuilder.mStreamName + "!", e);
         }
     }
 
     @Override
     public void close() throws IOException {
-        payloadSender.shutdownNow();
-        responseReceiver.shutdownNow();
-        closeSocket();
-        mBuilder.mCompletion.accept(null);
+        Exception capturedException = null;
+        boolean isShutdownSuccess = true;
+        try {
+            if (payloadSender != null) {
+                payloadSender.shutdownNow();
+                if (!payloadSender.awaitTermination(mBuilder.mCloseTimeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                    isShutdownSuccess = false;
+                } else {
+                    payloadSender = null;
+                }
+            }
+            if (responseReceiver != null) {
+                responseReceiver.shutdownNow();
+                if (!responseReceiver.awaitTermination(mBuilder.mCloseTimeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                    isShutdownSuccess = false;
+                } else {
+                    responseReceiver = null;
+                }
+            }
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            capturedException = new IOException("Interrupted while waiting for executor shutdown " + mBuilder.mStreamName, e);
+        } finally {
+            try {
+                closeSocket();
+            } catch (final Exception e) {
+                log.warn("[{}] Error closing socket", mBuilder.mStreamName, e);
+                if (capturedException == null) {
+                    capturedException = e;
+                }
+            }
+            if (capturedException == null && !isShutdownSuccess) {
+                capturedException = new TimeoutException("Timeout while waiting for executor shutdown " + mBuilder.mStreamName);
+            }
+            mBuilder.mCompletion.accept(capturedException);
+        }
+        
+        if (capturedException instanceof IOException) {
+            throw (IOException) capturedException;
+        }
     }
 
 
@@ -221,6 +271,8 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         private IPVersionFilter mIPVersionFilter;
         private Consumer<Exception> mCompletion;
         private String mStreamName = "";
+        @Nonnull
+        private Duration mCloseTimeout = Duration.ofSeconds(5);
         // TODO: Set to correct output channel
 
         private Builder() {
@@ -276,6 +328,14 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
         public Builder setStreamName(final String streamName) {
             mStreamName = streamName;
+            return this;
+        }
+
+        /**
+         * How long to wait for the {@link #close()} operation before timing out.
+         */
+        public Builder closeTimeout(@Nonnull final Duration timeout) {
+            mCloseTimeout = Objects.requireNonNull(timeout);
             return this;
         }
 
