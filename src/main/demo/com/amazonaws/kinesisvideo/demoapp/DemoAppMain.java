@@ -2,6 +2,7 @@ package com.amazonaws.kinesisvideo.demoapp;
 
 import com.amazonaws.kinesisvideo.client.IPVersionFilter;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
+import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.demoapp.contants.DemoTrackInfos;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
@@ -12,9 +13,11 @@ import com.amazonaws.kinesisvideo.java.mediasource.file.AudioVideoFileMediaSourc
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSource;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSourceConfiguration;
 import com.amazonaws.regions.Regions;
+import com.google.common.base.Strings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -69,7 +72,7 @@ public final class DemoAppMain {
 
             // create a media source. this class produces the data and pushes it into
             // Kinesis Video Producer lower level components
-            final MediaSource mediaSource = createImageFileMediaSource();
+            final MediaSource mediaSource = createImageFileMediaSource(STREAM_NAME);
 
             // Audio/Video sample is available for playback on HLS (Http Live Streaming)
             //final MediaSource mediaSource = createFileMediaSource();
@@ -98,7 +101,8 @@ public final class DemoAppMain {
      *
      * @return a MediaSource backed by local H264 frame files
      */
-    private static MediaSource createImageFileMediaSource() {
+    private static MediaSource createImageFileMediaSource(@Nonnull final String streamName) {
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(streamName), "streamName cannot be null or empty");
         final ImageFileMediaSourceConfiguration configuration =
                 new ImageFileMediaSourceConfiguration.Builder()
                         .fps(FPS_25)
@@ -108,6 +112,7 @@ public final class DemoAppMain {
                         .endFileIndex(END_FILE_INDEX)
                         //.contentType("video/hevc") // for h265
                         .allowStreamCreation(false)
+                        .frameGeneratorThreadName(streamName + "-frame-generator")
                         .build();
         final ImageFileMediaSource mediaSource = new ImageFileMediaSource(STREAM_NAME);
         mediaSource.configure(configuration);
