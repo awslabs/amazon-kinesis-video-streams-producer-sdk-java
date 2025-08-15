@@ -19,7 +19,7 @@ import javax.annotation.Nonnull;
  *        public void fragmentAckReceived(final long uploadHandle, &#64;Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException {
  *            super.fragmentAckReceived(uploadHandle, fragmentAck);
  *
- *            // Stop subitting frames on user errors
+ *            // Stop submitting frames on user errors
  *            if (fragmentAck.getAckType().getIntType() == FragmentAckType.FRAGMENT_ACK_TYPE_ERROR &amp;&amp;
  *                4000 &lt;= fragmentAck.getResult() &amp;&amp; fragmentAck.getResult() &lt; 5000) {
  *                log.error("{} - Received an error ack: {}", fragmentAck);
