@@ -30,6 +30,7 @@ import com.amazonaws.services.kinesisvideo.model.CreateStreamRequest;
 import com.amazonaws.services.kinesisvideo.model.DeleteStreamRequest;
 import com.amazonaws.services.kinesisvideo.model.DescribeStreamRequest;
 import com.amazonaws.services.kinesisvideo.model.DescribeStreamResult;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.After;
@@ -71,16 +72,18 @@ public class MultiClientTest extends ProducerTestBase {
     private static final Logger log = LogManager.getLogger(MultiClientTest.class);
     private static final int NUM_CLIENTS = 3;
     private static final int FRAMES_PER_CLIENT = 500;
-    private static final int FPS = 50;
+    private static final int FPS = System.getenv("CI") != null ? 10 : 50;
 
     private static final long FRAME_DURATION_MS = 1000 / FPS;
     private static final int KEYFRAME_INTERVAL = FPS; // GOP = 1 second
+    private static final int DURATION_ZERO = 0;
 
     private ExecutorService testExecutor;
 
     private final List<TestStreamContext> streamContexts = new ArrayList<>();
 
-    private final int GRACE_PERIOD_SECS = 10;
+    // Compensating for slower devices / CI environments
+    private final int GRACE_PERIOD_SECS = 15;
 
     @Rule
     public Timeout globalTimeout = Timeout.seconds(FRAMES_PER_CLIENT / FPS + this.GRACE_PERIOD_SECS);
@@ -118,7 +121,7 @@ public class MultiClientTest extends ProducerTestBase {
             fail("JNI library not found.");
         }
 
-        this.testExecutor = Executors.newFixedThreadPool(NUM_CLIENTS * 2);
+        this.testExecutor = Executors.newFixedThreadPool(NUM_CLIENTS * 2, new ThreadFactoryBuilder().setNameFormat("test-executor-%d").build());
 
         assumeTrue(DefaultAWSCredentialsProviderChain.getInstance().getCredentials() != null);
 
@@ -153,8 +156,16 @@ public class MultiClientTest extends ProducerTestBase {
 
     @After
     public void tearDown() throws Exception {
-        // Clean up streams
         boolean success = true;
+        if (this.testExecutor != null) {
+            this.testExecutor.shutdownNow();
+            if (!this.testExecutor.awaitTermination(100, TimeUnit.MILLISECONDS)) {
+                log.error("testExecutor did not finish in time");
+                success = false;
+            }
+        }
+
+        // Clean up streams
         for (final TestStreamContext testStreamContext : this.streamContexts) {
             final NativeKinesisVideoClient client = testStreamContext.client;
             final KinesisVideoProducer producer = testStreamContext.producer;
@@ -172,6 +183,7 @@ public class MultiClientTest extends ProducerTestBase {
 
             if (producer != null) {
                 try {
+                    producer.freeStreams();
                     producer.free();
                 } catch (final Exception e) {
                     log.warn("Error freeing producer", e);
@@ -190,12 +202,8 @@ public class MultiClientTest extends ProducerTestBase {
 
             if (scheduledExecutorService != null) {
                 scheduledExecutorService.shutdownNow();
+                assumeTrue("scheduledExecutorService timed out while shutting down", scheduledExecutorService.awaitTermination(10, TimeUnit.SECONDS));
             }
-        }
-
-        if (this.testExecutor != null) {
-            this.testExecutor.shutdown();
-            assumeTrue("Timed out while shutting down", this.testExecutor.awaitTermination(10, TimeUnit.SECONDS));
         }
 
         // Clean up streams from AWS
@@ -211,7 +219,7 @@ public class MultiClientTest extends ProducerTestBase {
         for (int i = 0; i < NUM_CLIENTS; i++) {
             final TestStreamContext testStreamContext = this.streamContexts.get(i);
             assumeNotNull(testStreamContext);
-            testStreamContext.scheduledExecutorService = Executors.newScheduledThreadPool(2);
+            testStreamContext.scheduledExecutorService = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder().setNameFormat("client-" + i + "-executor-%d").build());
             final DeviceInfo deviceInfo = createTestDeviceInfo("test-device-" + i);
 
             final AuthCallbacks authCallbacks = new DefaultAuthCallbacks(this.clientConfiguration.getCredentialsProvider(),
@@ -283,7 +291,7 @@ public class MultiClientTest extends ProducerTestBase {
 
         // Wait for all streaming to complete
         for (final Future<Void> task : streamingTasks) {
-            task.get(FRAMES_PER_CLIENT / FPS + this.GRACE_PERIOD_SECS, TimeUnit.SECONDS);
+            task.get(FRAMES_PER_CLIENT / FPS + this.GRACE_PERIOD_SECS + (WAIT_5_SECONDS_FOR_ACKS / 1000), TimeUnit.SECONDS);
         }
 
         // Verify each client received its own callbacks
@@ -315,7 +323,7 @@ public class MultiClientTest extends ProducerTestBase {
 
             final String streamName = testStreamContext.streamName;
             final DeviceInfo deviceInfo = createTestDeviceInfo("test-device-" + i);
-            testStreamContext.scheduledExecutorService = Executors.newScheduledThreadPool(2);
+            testStreamContext.scheduledExecutorService = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder().setNameFormat("client-" + i + "-executor-%d").build());
 
             final AuthCallbacks authCallbacks = new DefaultAuthCallbacks(this.clientConfiguration.getCredentialsProvider(),
                     testStreamContext.scheduledExecutorService, LogManager.getLogger(DefaultAuthCallbacks.class));
@@ -400,12 +408,20 @@ public class MultiClientTest extends ProducerTestBase {
                     frameFlags,
                     timestampHundredsOfNanos,
                     timestampHundredsOfNanos,
-                    FRAME_DURATION_MS * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND,
+                    DURATION_ZERO,
                     frameBuffer
             );
 
             stream.putFrame(frame);
-            Thread.sleep(FRAME_DURATION_MS);
+
+            final long now = System.currentTimeMillis();
+            final long nextFrameMs = startTimestampMs + (frameIndex + 1) * FRAME_DURATION_MS;
+            final long sleepTime = (nextFrameMs - now) / 2;
+            if (sleepTime > 0) {
+                Thread.sleep(sleepTime);
+            } else {
+                log.warn("[{}] Submitting frames behind schedule by {} ms!", testStreamContext.streamName, Math.abs(sleepTime));
+            }
         }
     }
 
