@@ -417,6 +417,7 @@ void KinesisVideoClientWrapper::putKinesisVideoFragmentMetadata(jlong streamHand
     STATUS retStatus = STATUS_SUCCESS;
     JNIEnv *env;
     this->getJVM()->GetEnv((PVOID*) &env, JNI_VERSION_1_6);
+    PCHAR pMetadataNameStr, pMetadataValueStr;
 
     if (!IS_VALID_CLIENT_HANDLE(mClientHandle))
     {
@@ -440,9 +441,17 @@ void KinesisVideoClientWrapper::putKinesisVideoFragmentMetadata(jlong streamHand
     }
 
     // Convert the jstring to PCHAR
-    PCHAR pMetadataNameStr = (PCHAR) env->GetStringUTFChars(metadataName, NULL);
-    PCHAR pMetadataValueStr = (PCHAR) env->GetStringUTFChars(metadataValue, NULL);
-
+    pMetadataNameStr = (PCHAR) env->GetStringUTFChars(metadataName, NULL);
+    if (pMetadataNameStr == NULL) {
+        throwNativeException(env, EXCEPTION_NAME, "JVM unable to get the UTF chars from the metadata name", STATUS_NOT_ENOUGH_MEMORY);
+        return;
+    }
+    pMetadataValueStr = (PCHAR) env->GetStringUTFChars(metadataValue, NULL);
+    if (pMetadataValueStr == NULL) {
+        env->ReleaseStringUTFChars(metadataName, pMetadataNameStr);
+        throwNativeException(env, EXCEPTION_NAME, "JVM unable to get the UTF chars from the metadata value", STATUS_NOT_ENOUGH_MEMORY);
+        return;
+    }
 
     // Call the API
     retStatus = ::putKinesisVideoFragmentMetadata(streamHandle, pMetadataNameStr, pMetadataValueStr, persistent == JNI_TRUE);
@@ -629,6 +638,10 @@ void KinesisVideoClientWrapper::kinesisVideoStreamParseFragmentAck(jlong streamH
 
     // Convert the jstring to PCHAR
     PCHAR pAckStr = (PCHAR) env->GetStringUTFChars(ack, NULL);
+    if (pAckStr == NULL) {
+        throwNativeException(env, EXCEPTION_NAME, "JVM could not get the UTF chars from the ack string", STATUS_INVALID_OPERATION);
+        return;
+    }
 
     // Call the API
     retStatus = ::kinesisVideoStreamParseFragmentAck(streamHandle, uploadHandle, pAckStr, 0);
@@ -771,6 +784,10 @@ void KinesisVideoClientWrapper::createStreamResult(jlong streamHandle, jint http
 
     if (streamArn != NULL) {
         pStreamArn = (PCHAR) env->GetStringUTFChars(streamArn, NULL);
+        if (pStreamArn == NULL) {
+            throwNativeException(env, EXCEPTION_NAME, "JVM unable to get the UTF chars from the stream arn", STATUS_NOT_ENOUGH_MEMORY);
+            return;
+        }
     }
 
     retStatus = ::createStreamResultEvent(streamHandle, (SERVICE_CALL_RESULT) httpStatusCode, pStreamArn);
@@ -909,6 +926,10 @@ void KinesisVideoClientWrapper::createDeviceResult(jlong clientHandle, jint http
 
     if (deviceArn != NULL) {
         pDeviceArn = (PCHAR) env->GetStringUTFChars(deviceArn, NULL);
+        if (pDeviceArn == NULL) {
+            throwNativeException(env, EXCEPTION_NAME, "JVM unable to get the UTF chars from the device arn", STATUS_NOT_ENOUGH_MEMORY);
+            return;
+        }
     }
 
     retStatus = ::createDeviceResultEvent(clientHandle, (SERVICE_CALL_RESULT) httpStatusCode, pDeviceArn);
@@ -1336,6 +1357,7 @@ STATUS KinesisVideoClientWrapper::getDeviceFingerprintFunc(UINT64 customData, PC
     if (jstr != NULL) {
         // Extract the bits from the byte buffer
         bufferPtr = env->GetStringChars(jstr, NULL);
+        CHK_ERR(bufferPtr != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the chars for the device fingerprint");
         strLen = (UINT32)STRLEN((PCHAR) bufferPtr);
         if (strLen >= MAX_AUTH_LEN) {
             retStatus = STATUS_INVALID_ARG;

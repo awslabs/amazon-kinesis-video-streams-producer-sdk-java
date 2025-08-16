@@ -38,6 +38,7 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the device name");
             STRNCPY(pDeviceInfo->name, retChars, MAX_DEVICE_NAME_LEN + 1);
 
             // Ensure we null terminate it
@@ -97,6 +98,7 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the root directory");
             STRNCPY(pDeviceInfo->storageInfo.rootDirectory, retChars, MAX_PATH_LEN + 1);
             pDeviceInfo->storageInfo.rootDirectory[MAX_PATH_LEN] = '\0';
             env->ReleaseStringUTFChars(retString, retChars);
@@ -129,6 +131,7 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the client id");
             STRNCPY(pDeviceInfo->clientId, retChars, MAX_CLIENT_ID_STRING_LENGTH + 1);
             pDeviceInfo->clientId[MAX_CLIENT_ID_STRING_LENGTH] = '\0';
             env->ReleaseStringUTFChars(retString, retChars);
@@ -250,6 +253,8 @@ BOOL setClientInfo(JNIEnv *env, jobject clientInfo, PClientInfo pClientInfo) {
     }
 
 CleanUp:
+    CHK_LOG_ERR(retStatus);
+
     return STATUS_FAILED(retStatus) ? FALSE : TRUE;
 }
 
@@ -303,6 +308,7 @@ BOOL setTags(JNIEnv *env, jobjectArray tagArray, PTag* ppTags, PUINT32 pTagCount
 
         // Extract the chars and copy
         retChars = env->GetStringUTFChars(retString, NULL);
+        CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the tag name");
         STRNCPY(pCurPtr, retChars, MAX_TAG_NAME_LEN + 1);
         pCurPtr[MAX_TAG_NAME_LEN] = '\0';
         env->ReleaseStringUTFChars(retString, retChars);
@@ -317,6 +323,7 @@ BOOL setTags(JNIEnv *env, jobjectArray tagArray, PTag* ppTags, PUINT32 pTagCount
 
         // Extract the chars and copy
         retChars = env->GetStringUTFChars(retString, NULL);
+        CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the tag value");
         STRNCPY(pCurPtr, retChars, MAX_TAG_VALUE_LEN + 1);
         pCurPtr[MAX_TAG_VALUE_LEN] = '\0';
         env->ReleaseStringUTFChars(retString, retChars);
@@ -331,6 +338,7 @@ BOOL setTags(JNIEnv *env, jobjectArray tagArray, PTag* ppTags, PUINT32 pTagCount
     *ppTags = pTags;
 
 CleanUp:
+    CHK_LOG_ERR(retStatus);
 
     if (STATUS_FAILED(retStatus)) {
         retValue = FALSE;
@@ -384,6 +392,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the stream name");
             STRNCPY(pStreamInfo->name, retChars, MAX_STREAM_NAME_LEN + 1);
 
             // Just in case - null terminate the copied string
@@ -412,6 +421,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the content type");
             STRNCPY(pStreamInfo->streamCaps.contentType, retChars, MAX_CONTENT_TYPE_LEN + 1);
             pStreamInfo->streamCaps.contentType[MAX_CONTENT_TYPE_LEN] = '\0';
             env->ReleaseStringUTFChars(retString, retChars);
@@ -429,6 +439,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the kms key id");
             STRNCPY(pStreamInfo->kmsKeyId, retChars, MAX_ARN_LEN + 1);
             pStreamInfo->kmsKeyId[MAX_ARN_LEN] = '\0';
             env->ReleaseStringUTFChars(retString, retChars);
@@ -597,6 +608,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
             if (retString != NULL) {
                 retChars = env->GetStringUTFChars(retString, NULL);
+                CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the track name");
                 STRNCPY(pStreamInfo->streamCaps.trackInfoList[i].trackName, retChars, MKV_MAX_TRACK_NAME_LEN + 1);
                 pStreamInfo->streamCaps.trackInfoList[i].trackName[MKV_MAX_TRACK_NAME_LEN] = '\0';
                 env->ReleaseStringUTFChars(retString, retChars);
@@ -616,6 +628,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
             if (retString != NULL) {
                 retChars = env->GetStringUTFChars(retString, NULL);
+                CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the codec id");
                 STRNCPY(pStreamInfo->streamCaps.trackInfoList[i].codecId, retChars, MKV_MAX_CODEC_ID_LEN + 1);
                 pStreamInfo->streamCaps.trackInfoList[i].codecId[MKV_MAX_CODEC_ID_LEN] = '\0';
                 env->ReleaseStringUTFChars(retString, retChars);
@@ -898,6 +911,7 @@ BOOL setFragmentAck(JNIEnv* env, jobject fragmentAck, PFragmentAck pFragmentAck)
 
         if (retString != NULL) {
             const char* retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the sequence number");
             STRNCPY(pFragmentAck->sequenceNumber, retChars, MAX_FRAGMENT_SEQUENCE_NUMBER + 1);
             pFragmentAck->sequenceNumber[MAX_FRAGMENT_SEQUENCE_NUMBER] = '\0';
             env->ReleaseStringUTFChars(retString, retChars);
@@ -915,6 +929,8 @@ BOOL setFragmentAck(JNIEnv* env, jobject fragmentAck, PFragmentAck pFragmentAck)
     }
 
 CleanUp:
+    CHK_LOG_ERR(retStatus);
+
     return STATUS_FAILED(retStatus) ? FALSE : TRUE;
 }
 
@@ -951,6 +967,7 @@ BOOL setStreamDescription(JNIEnv* env, jobject streamDescription, PStreamDescrip
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the device name");
             STRNCPY(pStreamDesc->deviceName, retChars, MAX_DEVICE_NAME_LEN + 1);
             pStreamDesc->deviceName[MAX_DEVICE_NAME_LEN] = '\0';
             env->ReleaseStringUTFChars(retString, retChars);
@@ -968,6 +985,7 @@ BOOL setStreamDescription(JNIEnv* env, jobject streamDescription, PStreamDescrip
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the stream name");
             STRNCPY(pStreamDesc->streamName, retChars, MAX_STREAM_NAME_LEN + 1);
             pStreamDesc->streamName[MAX_STREAM_NAME_LEN] = '\0';
             env->ReleaseStringUTFChars(retString, retChars);
@@ -985,6 +1003,7 @@ BOOL setStreamDescription(JNIEnv* env, jobject streamDescription, PStreamDescrip
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the content type");
             STRNCPY(pStreamDesc->contentType, retChars, MAX_CONTENT_TYPE_LEN + 1);
             pStreamDesc->contentType[MAX_CONTENT_TYPE_LEN] = '\0';
             env->ReleaseStringUTFChars(retString, retChars);
@@ -1002,6 +1021,7 @@ BOOL setStreamDescription(JNIEnv* env, jobject streamDescription, PStreamDescrip
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the update version");
             STRNCPY(pStreamDesc->updateVersion, retChars, MAX_UPDATE_VERSION_LEN + 1);
             pStreamDesc->updateVersion[MAX_UPDATE_VERSION_LEN] = '\0';
             env->ReleaseStringUTFChars(retString, retChars);
@@ -1019,6 +1039,7 @@ BOOL setStreamDescription(JNIEnv* env, jobject streamDescription, PStreamDescrip
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the stream arn");
             STRNCPY(pStreamDesc->streamArn, retChars, MAX_ARN_LEN + 1);
             pStreamDesc->streamArn[MAX_ARN_LEN] = '\0';
             env->ReleaseStringUTFChars(retString, retChars);
@@ -1060,6 +1081,7 @@ BOOL setStreamDescription(JNIEnv* env, jobject streamDescription, PStreamDescrip
 
         if (retString != NULL) {
             retChars = env->GetStringUTFChars(retString, NULL);
+            CHK_ERR(retChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the kms key id");
             STRNCPY(pStreamDesc->kmsKeyId, retChars, MAX_ARN_LEN + 1);
             pStreamDesc->kmsKeyId[MAX_ARN_LEN] = '\0';
             env->ReleaseStringUTFChars(retString, retChars);
@@ -1069,19 +1091,26 @@ BOOL setStreamDescription(JNIEnv* env, jobject streamDescription, PStreamDescrip
     }
 
 CleanUp:
+    CHK_LOG_ERR(retStatus);
+
     return STATUS_FAILED(retStatus) ? FALSE : TRUE;
 }
 
 BOOL setStreamingEndpoint(JNIEnv* env, jstring streamingEndpoint, PCHAR pEndpoint)
 {
     CHECK(env != NULL && streamingEndpoint != NULL && pEndpoint != NULL);
+    STATUS retStatus = STATUS_SUCCESS;
 
     const char *endpointChars = env->GetStringUTFChars(streamingEndpoint, NULL);
+    CHK_ERR(endpointChars != NULL, STATUS_NOT_ENOUGH_MEMORY, "JVM unable to get the UTF chars for the streaming endpoint");
     STRNCPY(pEndpoint, endpointChars, MAX_URI_CHAR_LEN + 1);
     pEndpoint[MAX_URI_CHAR_LEN] = '\0';
     env->ReleaseStringUTFChars(streamingEndpoint, endpointChars);
 
-    return TRUE;
+CleanUp:
+    CHK_LOG_ERR(retStatus);
+
+    return STATUS_FAILED(retStatus) ? FALSE : TRUE;
 }
 
 BOOL setStreamDataBuffer(JNIEnv* env, jobject dataBuffer, UINT32 offset, PBYTE* ppBuffer)
