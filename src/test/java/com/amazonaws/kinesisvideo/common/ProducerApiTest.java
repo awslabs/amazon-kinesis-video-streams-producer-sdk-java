@@ -120,7 +120,7 @@ public class ProducerApiTest extends ProducerTestBase{
                 e.printStackTrace();
                 fail();
             }
-            assertTrue(stopCalled_);
+            awaitStopCalled();
             // stopCalled_ is set to false initially. It is set to true by the streamClosed
             // callback which is invoked only when a stream is closed successfully
             freeTestStream(kinesisVideoProducerStreams[i]);
@@ -194,7 +194,7 @@ public class ProducerApiTest extends ProducerTestBase{
                 e.printStackTrace();
                 fail();
             }
-            assertTrue(stopCalled_);
+            awaitStopCalled();
             freeTestStream(kinesisVideoProducerStreams[i]);
             kinesisVideoProducerStreams[i] = null;
         }
@@ -266,9 +266,24 @@ public class ProducerApiTest extends ProducerTestBase{
                 e.printStackTrace();
                 fail();
             }
-            assertTrue(stopCalled_);
+            awaitStopCalled();
             freeTestStream(kinesisVideoProducerStreams[i]);
             kinesisVideoProducerStreams[i] = null;
         }
+    }
+
+    private void awaitStopCalled() {
+        // Poll every 100ms for up to 1s
+        for (int i = 0; i < 10; i++) {
+            if (stopCalled_) {
+                return;
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (final InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        fail("stopCalled_ is not true");
     }
 }
