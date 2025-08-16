@@ -86,7 +86,7 @@ public class MultiClientTest extends ProducerTestBase {
     private final int GRACE_PERIOD_SECS = 15;
 
     @Rule
-    public Timeout globalTimeout = Timeout.seconds(FRAMES_PER_CLIENT / FPS + this.GRACE_PERIOD_SECS);
+    public Timeout globalTimeout = Timeout.seconds(FRAMES_PER_CLIENT / FPS + this.GRACE_PERIOD_SECS + (WAIT_5_SECONDS_FOR_ACKS / 1000));
 
     private static class TestStreamContext {
         @Nullable
@@ -423,6 +423,8 @@ public class MultiClientTest extends ProducerTestBase {
                 log.warn("[{}] Submitting frames behind schedule by {} ms!", testStreamContext.streamName, Math.abs(sleepTime));
             }
         }
+
+        Thread.sleep(WAIT_5_SECONDS_FOR_ACKS);
     }
 
     @Nonnull
