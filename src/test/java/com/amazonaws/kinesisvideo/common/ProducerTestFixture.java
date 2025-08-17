@@ -100,8 +100,8 @@ class TestStreamCallBacks extends DefaultStreamCallbacks {
 
     @Override
     public void streamClosed(final long uploadHandle) throws ProducerException {
-        log.info("Reporting stream stopped");
         producerTestBase.stopCalled_ = true;
+        log.info("Reporting stream stopped");
     }
 
     @Override

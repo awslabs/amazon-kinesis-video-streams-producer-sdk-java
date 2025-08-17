@@ -5,6 +5,7 @@ import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfigurationDefaults
 import com.amazonaws.kinesisvideo.common.function.Consumer;
 import com.amazonaws.kinesisvideo.socket.SocketFactory;
 import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -140,7 +141,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
     private void sendPayloadInBackground() {
         if (mBuilder.mSender != null) {
-            payloadSender = Executors.newFixedThreadPool(1);
+            payloadSender = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Sending-" + mBuilder.mStreamName).build());
             payloadSender.execute(new LoggedExitRunnable("PutMedia-Sending-" + mBuilder.mStreamName) {
                 @Override
                 public void execute() {
@@ -167,7 +168,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
     private void receiveResponseInBackground() {
         if (mBuilder.mReceiver != null) {
-            responseReceiver = Executors.newFixedThreadPool(1);
+            responseReceiver = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Receiving-" + mBuilder.mStreamName).build());
             responseReceiver.execute(new LoggedExitRunnable("PutMedia-Receiving-" + mBuilder.mStreamName) {
                 @Override
                 public void execute() {

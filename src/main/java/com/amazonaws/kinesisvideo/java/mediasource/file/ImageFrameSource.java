@@ -5,9 +5,11 @@ import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.mediasource.OnStreamDataAvailable;
 
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,7 +35,8 @@ import static com.amazonaws.kinesisvideo.producer.Time.NANOS_IN_A_MILLISECOND;
 public class ImageFrameSource {
     public static final int METADATA_INTERVAL = 8;
     private static final long FRAME_DURATION_20_MS = 20L;
-    private final ExecutorService executor = Executors.newFixedThreadPool(1);
+    @Nonnull
+    private final ExecutorService executor;
     private final int fps;
     private final ImageFileMediaSourceConfiguration configuration;
 
@@ -52,6 +55,8 @@ public class ImageFrameSource {
         this.totalFiles = getTotalFiles(configuration.getStartFileIndex(), configuration.getEndFileIndex());
         this.fps = configuration.getFps();
         this.currentFrameTimestampMs = configuration.getStartTimeMs();
+        this.executor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat(configuration
+                .getFrameGeneratorThreadName()).build());
     }
 
     private int getTotalFiles(final int startIndex, final int endIndex) {

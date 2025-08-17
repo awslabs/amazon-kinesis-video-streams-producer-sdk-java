@@ -1,9 +1,11 @@
 package com.amazonaws.kinesisvideo.java.mediasource.file;
 
 
+import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.Tag;
+import com.google.common.base.Strings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -24,6 +26,8 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
     private final long startTimeMs;
     private final StreamCallbacks streamCallbacks;
     private final Tag[] tags;
+    @Nonnull
+    private final String frameGeneratorThreadName;
 
     public ImageFileMediaSourceConfiguration(final Builder builder) {
         this.fps = builder.fps;
@@ -36,6 +40,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         this.startTimeMs = builder.startTimeMs;
         this.streamCallbacks = builder.streamCallbacks;
         this.tags = builder.tags;
+        this.frameGeneratorThreadName = builder.frameGeneratorThreadName;
     }
 
     public int getFps() {
@@ -87,6 +92,10 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         return streamCallbacks;
     }
 
+    public String getFrameGeneratorThreadName() {
+        return frameGeneratorThreadName;
+    }
+
     public static class Builder implements MediaSourceConfiguration.Builder<ImageFileMediaSourceConfiguration> {
 
         private int fps;
@@ -101,6 +110,8 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         private Tag[] tags = new Tag[] {
                 new Tag("device", "Test Device"),
                 new Tag("stream", "Test Stream") };
+        @Nonnull
+        private String frameGeneratorThreadName = "ImageFileMediaSourceFrameGenerator";
 
         public Builder fps(final int fps) {
             this.fps = fps;
@@ -135,7 +146,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
             return this;
         }
 
-        public Builder allowStreamCreation(final Boolean allowStreamCreation) {
+        public Builder allowStreamCreation(final boolean allowStreamCreation) {
             this.allowStreamCreation = allowStreamCreation;
             return this;
         }
@@ -158,6 +169,11 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
             }
             return this;
         }
+        public Builder frameGeneratorThreadName(@Nonnull final String name) {
+            Preconditions.checkArgument(!Strings.isNullOrEmpty(name), "frame generator thread name should not be null or empty.");
+            this.frameGeneratorThreadName = name;
+            return this;
+        };
 
         @Override
         public ImageFileMediaSourceConfiguration build() {
