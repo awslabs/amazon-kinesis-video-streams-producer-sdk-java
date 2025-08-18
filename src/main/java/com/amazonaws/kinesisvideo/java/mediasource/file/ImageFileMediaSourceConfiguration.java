@@ -4,9 +4,13 @@ package com.amazonaws.kinesisvideo.java.mediasource.file;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
+import com.amazonaws.kinesisvideo.producer.Tag;
 import com.google.common.base.Strings;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import java.util.Arrays;
 
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VIDEO_CONTENT_TYPE;
 
@@ -21,6 +25,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
     private final boolean allowStreamCreation;
     private final long startTimeMs;
     private final StreamCallbacks streamCallbacks;
+    private final Tag[] tags;
     @Nonnull
     private final String frameGeneratorThreadName;
 
@@ -34,6 +39,7 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         this.allowStreamCreation = builder.allowStreamCreation;
         this.startTimeMs = builder.startTimeMs;
         this.streamCallbacks = builder.streamCallbacks;
+        this.tags = builder.tags;
         this.frameGeneratorThreadName = builder.frameGeneratorThreadName;
     }
 
@@ -73,6 +79,11 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         return null;
     }
 
+    @Nullable
+    public Tag[] getTags() {
+        return tags;
+    }
+
     public boolean isAllowStreamCreation() {
         return allowStreamCreation;
     }
@@ -96,6 +107,9 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
         private boolean allowStreamCreation;
         private long startTimeMs = System.currentTimeMillis();
         private StreamCallbacks streamCallbacks = null;
+        private Tag[] tags = new Tag[] {
+                new Tag("device", "Test Device"),
+                new Tag("stream", "Test Stream") };
         @Nonnull
         private String frameGeneratorThreadName = "ImageFileMediaSourceFrameGenerator";
 
@@ -147,6 +161,14 @@ public class ImageFileMediaSourceConfiguration implements MediaSourceConfigurati
             return this;
         }
 
+        public Builder tags(@Nullable final Tag... tags) {
+            if (tags != null) {
+                this.tags = Arrays.copyOf(tags, tags.length);
+            } else {
+                this.tags = null;
+            }
+            return this;
+        }
         public Builder frameGeneratorThreadName(@Nonnull final String name) {
             Preconditions.checkArgument(!Strings.isNullOrEmpty(name), "frame generator thread name should not be null or empty.");
             this.frameGeneratorThreadName = name;
