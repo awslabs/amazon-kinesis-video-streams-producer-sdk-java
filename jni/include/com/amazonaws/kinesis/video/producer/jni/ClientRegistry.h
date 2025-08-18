@@ -4,6 +4,7 @@
 #include <vector>
 #include <mutex>
 #include <utility>
+#include <functional>
 
 #include <com/amazonaws/kinesis/video/client/Include.h>
 
@@ -28,6 +29,10 @@ public:
 
     /// Thread-safe retrieval of the first client, returns nullptr if empty
     KinesisVideoClientWrapper* getFirstClient();
+
+    /// Thread-safe execution of a function using the first client
+    /// If there are no clients in the registry, the function is not executed
+    void withFirstClient(const std::function<void(KinesisVideoClientWrapper*)>& func);
 
 private:
     ClientRegistry() = default;

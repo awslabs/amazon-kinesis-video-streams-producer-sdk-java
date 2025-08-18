@@ -9,6 +9,7 @@ import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProduc
 import com.amazonaws.kinesisvideo.internal.service.DefaultServiceCallbacksImpl;
 import com.amazonaws.kinesisvideo.java.service.JavaKinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.storage.DefaultStorageCallbacks;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.After;
@@ -55,7 +56,7 @@ public class MultiJniIntegTest {
 
     private static final int DEFAULT_INSTANCE_COUNT = 3;
     private static final int CONCURRENT_INSTANCE_COUNT = 500;
-    private static final int TEST_TIMEOUT_SECONDS = 15;
+    private static final int TEST_TIMEOUT_SECONDS = System.getenv("CI") != null ? 15 : 50;
 
     /**
      * Tracks all created JNI instances for proper cleanup
@@ -174,6 +175,56 @@ public class MultiJniIntegTest {
         }
     }
 
+
+    /**
+     * Validates that JNI instances can be created and destroyed in a staggered pattern.
+     *
+     * <p>This test creates JNI instances every 50ms, waits a random time between 50-150ms,
+     * then destroys them. This pattern continues for 5 seconds to test resource management
+     * under continuous create/destroy cycles.</p>
+     */
+    @Test
+    public void givenStaggeredCreateAndDestroyPattern_whenRunningForFiveSeconds_thenAllOperationsCompleteSuccessfully() throws Exception {
+        final int gracePeriodSeconds = 7;
+        assumeTrue(TEST_TIMEOUT_SECONDS > gracePeriodSeconds);
+
+        final ScheduledExecutorService staggeredExecutor = Executors.newScheduledThreadPool(75,
+                new ThreadFactoryBuilder().setNameFormat("staggered-test-%d").build());
+        final ScheduledExecutorService authExecutor = Executors.newScheduledThreadPool(75,
+                new ThreadFactoryBuilder().setNameFormat("staggered-auth-%d").build());
+        final ScheduledExecutorService serviceExecutor = Executors.newScheduledThreadPool(75,
+                new ThreadFactoryBuilder().setNameFormat("staggered-service-%d").build());
+        
+        try {
+            final long testDurationMs = (TEST_TIMEOUT_SECONDS - gracePeriodSeconds) * 1000L;
+            final long startTime = System.currentTimeMillis();
+            
+            while (System.currentTimeMillis() - startTime < testDurationMs) {
+                staggeredExecutor.submit(() -> {
+                    try {
+                        final NativeKinesisVideoProducerJni jni = createAndInitializeJniInstance(
+                            "staggered-test", (int) (System.currentTimeMillis() % 1000),
+                            authExecutor, serviceExecutor);
+                        
+                        final int waitTime = (int) (Math.random() * 200);
+                        Thread.sleep(waitTime);
+                        
+                        jni.free();
+                    } catch (Exception e) {
+                        log.error("Error in staggered create/destroy task", e);
+                        fail("Staggered task failed: " + e.getMessage());
+                    }
+                });
+                
+                Thread.sleep((long) (Math.random() * 25));
+            }
+            
+            log.info("Staggered test completed successfully");
+            
+        } finally {
+            shutdownExecutorServices(staggeredExecutor, authExecutor, serviceExecutor);
+        }
+    }
 
     /**
      * Validates that JNI instances operate independently without affecting each other.

@@ -22,3 +22,12 @@ KinesisVideoClientWrapper* ClientRegistry::getFirstClient() {
     std::lock_guard<std::mutex> lock(mutex_);
     return clients_.empty() ? nullptr : clients_.front();
 }
+
+void ClientRegistry::withFirstClient(const std::function<void(KinesisVideoClientWrapper*)>& func) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    KinesisVideoClientWrapper* client = clients_.empty() ? nullptr : clients_.front();
+    if (client) {
+        func(client);
+    }
+}
+
