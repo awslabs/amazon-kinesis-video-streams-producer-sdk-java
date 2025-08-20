@@ -58,18 +58,18 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
 KinesisVideoClientWrapper::~KinesisVideoClientWrapper()
 {
     STATUS retStatus = STATUS_SUCCESS;
-    JNIEnv *env;
+    JNIEnv *env = NULL;
 
     if (this->getJVM() == NULL) {
         return;
     }
 
-    this->getJVM()->GetEnv((PVOID*) &env, JNI_VERSION_1_6);
-
+    // 1. Free the native PIC client
     if (IS_VALID_CLIENT_HANDLE(mClientHandle))
     {
         if (STATUS_FAILED(retStatus = freeKinesisVideoClient(&mClientHandle))) {
             DLOGE("Failed to free the producer client object");
+            this->getJVM()->GetEnv((PVOID*) &env, JNI_VERSION_1_6);
             if (env != NULL) {
                 throwNativeException(env, EXCEPTION_NAME, "Failed to free the producer client object.", retStatus);
             }
@@ -77,7 +77,19 @@ KinesisVideoClientWrapper::~KinesisVideoClientWrapper()
         }
     }
 
+    // 2. Remove from registry (this will block if logging is in progress)
     ClientRegistry::getInstance().removeClient(this);
+
+    // 3. Clean up reference to NativeKinesisVideoProducerJni java object
+    if (mJVMContext.javaObjectRef != NULL) {
+        if (env == NULL) {
+            this->getJVM()->GetEnv((PVOID*) &env, JNI_VERSION_1_6);
+        }
+        if (env != NULL) {
+            env->DeleteGlobalRef(mJVMContext.javaObjectRef);
+            mJVMContext.javaObjectRef = NULL;
+        }
+    }
 }
 
 void KinesisVideoClientWrapper::stopKinesisVideoStreams()
@@ -2624,113 +2636,109 @@ AUTH_INFO_TYPE KinesisVideoClientWrapper::authInfoTypeFromInt(UINT32 authInfoTyp
 
 VOID KinesisVideoClientWrapper::logPrintFunc(UINT32 level, PCHAR tag, PCHAR fmt, ...)
 {
-    // Note: PIC's logging macros point to a global log printing function, so which client it belongs to is ambiguous.
-    // We cannot change all of the logging APIs (e.g. `DLOGE("Test message");`) to accept which client it belongs to as
-    // a parameter without breaking backwards compatibility.
-    KinesisVideoClientWrapper* pWrapper = ClientRegistry::getInstance().getFirstClient();
-    JNIEnv *env;
-    BOOL attached = FALSE;
-    STATUS retStatus = STATUS_SUCCESS;
-    jstring jstrTag = NULL, jstrFmt = NULL, jstrBuffer = NULL;
     CHAR buffer[MAX_LOG_MESSAGE_LENGTH];
     va_list list;
-    INT32 envState;
-    jthrowable pendingException = NULL;
-    BOOL hadPendingException = FALSE;
-
-    // Fallback to standard out
-    // Prevent infinite logging loops if the JNI Java object ref is already removed
-    if (pWrapper == nullptr || pWrapper->getJavaObjectRef() == nullptr) {
-        va_list args;
-        va_start(args, fmt);
-        vsnprintf(buffer, MAX_LOG_MESSAGE_LENGTH, fmt, args);
-        va_end(args);
-
-        // Print debug info
-        std::cout << "logPrintFunc called after free! "
-                  << "Level: " << level << ", Tag: " << (tag ? tag : "NULL")
-                  << ", Message: " << buffer << std::endl;
-
-        CHK(FALSE, STATUS_SUCCESS);
-    }
-    CHK(pWrapper->getJVM() != NULL, STATUS_SUCCESS);
-
-    envState = pWrapper->getJVM()->GetEnv((PVOID*) &env, JNI_VERSION_1_6);
-    if (envState == JNI_EDETACHED) {
-        if (pWrapper->getJVM()->AttachCurrentThread((PVOID*) &env, NULL) != 0) {
-            goto CleanUp;
-        }
-        attached = TRUE;
-    }
-
-    // Save any pending exception before we do JNI calls
-    if (env->ExceptionCheck()) {
-        hadPendingException = TRUE;
-        pendingException = env->ExceptionOccurred();
-        env->ExceptionClear(); // Clear it temporarily so we can make JNI calls
-    }
-
     va_start(list, fmt);
     vsnprintf(buffer, MAX_LOG_MESSAGE_LENGTH, fmt, list);
     va_end(list);
 
-    if (tag != NULL && fmt != NULL && STRLEN(buffer) > 0) {
-        jstrTag = env->NewStringUTF(tag);
-        jstrFmt = env->NewStringUTF(fmt);
-        jstrBuffer = env->NewStringUTF(buffer);
-    }
+    // Note: PIC's logging macros point to a global log printing function, so which client it belongs to is ambiguous.
+    // We cannot change all of the logging APIs (e.g. `DLOGE("Test message");`) to accept which client it belongs to as
+    // a parameter without breaking backwards compatibility.
+    ClientRegistry::getInstance().withFirstClient([&](KinesisVideoClientWrapper* pWrapper) {
+        JNIEnv *env;
+        BOOL attached = FALSE;
+        STATUS retStatus = STATUS_SUCCESS;
+        jstring jstrTag = NULL, jstrFmt = NULL, jstrBuffer = NULL;
+        INT32 envState;
+        jthrowable pendingException = NULL;
+        BOOL hadPendingException = FALSE;
 
-    CHK(jstrTag != NULL, STATUS_NOT_ENOUGH_MEMORY);
-    CHK(jstrFmt != NULL, STATUS_NOT_ENOUGH_MEMORY);
-    CHK(jstrBuffer != NULL, STATUS_NOT_ENOUGH_MEMORY);
+        // Fallback to standard out
+        // Prevent infinite logging loops if the JNI Java object ref is already removed
+        if (pWrapper == nullptr || pWrapper->getJavaObjectRef() == nullptr) {
+            // Print debug info
+            std::cout << "logPrintFunc called after free! "
+                      << "Level: " << level << ", Tag: " << (tag ? tag : "NULL")
+                      << ", Message: " << buffer << std::endl;
 
-    env->CallVoidMethod(pWrapper->getJavaObjectRef(), pWrapper->getLogPrintMethodId(), level, jstrTag, jstrFmt, jstrBuffer);
+            CHK(FALSE, STATUS_SUCCESS);
+        }
+        CHK(pWrapper->getJVM() != NULL, STATUS_SUCCESS);
 
-    // Don't use CHK_JVM_EXCEPTION here as it would clear our saved exception
-    // Just check if the logging call itself threw an exception
-    if (env->ExceptionCheck()) {
-        // The logging call threw an exception, clear it and log it
-        jthrowable loggingException = env->ExceptionOccurred();
-        env->ExceptionClear();
-        std::cerr << "An exception occurred during logging call" << std::endl;
-        env->DeleteLocalRef(loggingException);
-    }
+        envState = pWrapper->getJVM()->GetEnv((PVOID*) &env, JNI_VERSION_1_6);
+        if (envState == JNI_EDETACHED) {
+            if (pWrapper->getJVM()->AttachCurrentThread((PVOID*) &env, NULL) != 0) {
+                goto CleanUp;
+            }
+            attached = TRUE;
+        }
 
-    /*
-    Sample logs from PIC as displayed by log4j2 in Java Producer SDK
-    2021-12-10 10:01:53,874 [main] TRACE c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] KinesisVideoProducerJNI - Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_createKinesisVideoStream(): Enter
-    2021-12-10 10:01:53,875 [main] INFO  c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] KinesisVideoProducerJNI - Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_createKinesisVideoStream(): Creating Kinesis Video stream.
-    2021-12-10 10:01:53,875 [main] INFO  c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] KinesisVideoClient - createKinesisVideoStream(): Creating Kinesis Video Stream.
-    2021-12-10 10:01:53,875 [main] DEBUG c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] Stream - logStreamInfo(): Kinesis Video Stream Info
+        // Save any pending exception before we do JNI calls
+        if (env->ExceptionCheck()) {
+            hadPendingException = TRUE;
+            pendingException = env->ExceptionOccurred();
+            env->ExceptionClear(); // Clear it temporarily so we can make JNI calls
+        }
 
-    2021-12-10 10:01:53,875 [main] DEBUG c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] Stream - logStreamInfo(): Kinesis Video Stream Info
-    2021-12-10 10:01:53,875 [main] DEBUG c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] Stream - logStreamInfo(): 	Stream name: NewStreamJava12 
-    2021-12-10 10:01:53,875 [main] DEBUG c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] Stream - logStreamInfo(): 	Streaming type: STREAMING_TYPE_REALTIME 
-    2021-12-10 10:01:53,876 [main] DEBUG c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] Stream - logStreamInfo(): 	Content type: video/h264 
-    */
+        if (tag != NULL && fmt != NULL && STRLEN(buffer) > 0) {
+            jstrTag = env->NewStringUTF(tag);
+            jstrFmt = env->NewStringUTF(fmt);
+            jstrBuffer = env->NewStringUTF(buffer);
+        }
 
-CleanUp:
+        CHK(jstrTag != NULL, STATUS_NOT_ENOUGH_MEMORY);
+        CHK(jstrFmt != NULL, STATUS_NOT_ENOUGH_MEMORY);
+        CHK(jstrBuffer != NULL, STATUS_NOT_ENOUGH_MEMORY);
 
-    if (jstrTag != NULL) {
-        env->DeleteLocalRef(jstrTag);
-    }
+        env->CallVoidMethod(pWrapper->getJavaObjectRef(), pWrapper->getLogPrintMethodId(), level, jstrTag, jstrFmt, jstrBuffer);
 
-    if (jstrFmt != NULL) {
-        env->DeleteLocalRef(jstrFmt);
-    }
+        // Don't use CHK_JVM_EXCEPTION here as it would clear our saved exception
+        // Just check if the logging call itself threw an exception
+        if (env->ExceptionCheck()) {
+            // The logging call threw an exception, clear it and log it
+            jthrowable loggingException = env->ExceptionOccurred();
+            env->ExceptionClear();
+            std::cerr << "An exception occurred during logging call" << std::endl;
+            env->DeleteLocalRef(loggingException);
+        }
 
-    if (jstrBuffer != NULL) {
-        env->DeleteLocalRef(jstrBuffer);
-    }
+        /*
+        Sample logs from PIC as displayed by log4j2 in Java Producer SDK
+        2021-12-10 10:01:53,874 [main] TRACE c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] KinesisVideoProducerJNI - Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_createKinesisVideoStream(): Enter
+        2021-12-10 10:01:53,875 [main] INFO  c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] KinesisVideoProducerJNI - Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_createKinesisVideoStream(): Creating Kinesis Video stream.
+        2021-12-10 10:01:53,875 [main] INFO  c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] KinesisVideoClient - createKinesisVideoStream(): Creating Kinesis Video Stream.
+        2021-12-10 10:01:53,875 [main] DEBUG c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] Stream - logStreamInfo(): Kinesis Video Stream Info
 
-    // Restore the pending exception if we had one
-    if (hadPendingException && pendingException != NULL) {
-        env->Throw(pendingException);
-        env->DeleteLocalRef(pendingException);
-    }
+        2021-12-10 10:01:53,875 [main] DEBUG c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] Stream - logStreamInfo(): Kinesis Video Stream Info
+        2021-12-10 10:01:53,875 [main] DEBUG c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] Stream - logStreamInfo(): 	Stream name: NewStreamJava12
+        2021-12-10 10:01:53,875 [main] DEBUG c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] Stream - logStreamInfo(): 	Streaming type: STREAMING_TYPE_REALTIME
+        2021-12-10 10:01:53,876 [main] DEBUG c.a.k.j.c.KinesisVideoJavaClientFactory - [PIC] Stream - logStreamInfo(): 	Content type: video/h264
+        */
 
-    // Detach the thread if we have attached it to JVM
-    if (attached && pWrapper != nullptr) {
-        pWrapper->getJVM()->DetachCurrentThread();
-    }   
+    CleanUp:
+
+        if (jstrTag != NULL) {
+            env->DeleteLocalRef(jstrTag);
+        }
+
+        if (jstrFmt != NULL) {
+            env->DeleteLocalRef(jstrFmt);
+        }
+
+        if (jstrBuffer != NULL) {
+            env->DeleteLocalRef(jstrBuffer);
+        }
+
+        // Restore the pending exception if we had one
+        if (hadPendingException && pendingException != NULL) {
+            env->Throw(pendingException);
+            env->DeleteLocalRef(pendingException);
+        }
+
+        // Detach the thread if we have attached it to JVM
+        if (attached && pWrapper != nullptr) {
+            pWrapper->getJVM()->DetachCurrentThread();
+        }
+    });
 }
