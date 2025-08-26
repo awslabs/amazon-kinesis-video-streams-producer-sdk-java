@@ -227,6 +227,10 @@ void KinesisVideoClientWrapper::getKinesisVideoMetrics(jobject kinesisVideoMetri
                         metrics.totalContentViewsSize,
                         metrics.totalFrameRate,
                         metrics.totalTransferRate);
+    CHK_JVM_EXCEPTION(env);
+
+CleanUp:
+    CHK_LOG_ERR(retStatus);
 }
 
 void KinesisVideoClientWrapper::getKinesisVideoStreamMetrics(jlong streamHandle, jobject kinesisVideoStreamMetrics)
@@ -292,6 +296,10 @@ void KinesisVideoClientWrapper::getKinesisVideoStreamMetrics(jlong streamHandle,
                         metrics.currentViewDuration,
                         metrics.currentFrameRate,
                         metrics.currentTransferRate);
+    CHK_JVM_EXCEPTION(env);
+
+CleanUp:
+    CHK_LOG_ERR(retStatus);
 }
 
 STREAM_HANDLE KinesisVideoClientWrapper::createKinesisVideoStream(jobject streamInfo)
@@ -567,6 +575,7 @@ void KinesisVideoClientWrapper::getKinesisVideoStreamData(jlong streamHandle, jl
                         setterMethodId,
                         filledSize,
                         isEos);
+    CHK_JVM_EXCEPTION(env);
 
 CleanUp:
 
@@ -2389,6 +2398,7 @@ STATUS KinesisVideoClientWrapper::getAuthInfo(jmethodID methodId, PBYTE* ppCert,
 
     // Call the Java func
     jAuthInfoObj = env->CallObjectMethod(pWrapper->getJavaObjectRef(), methodId);
+    CHK_JVM_EXCEPTION(env);
     if (jAuthInfoObj == NULL) {
         DLOGE("Failed to get the object for the AuthInfo object. methodId %s", methodId);
         retStatus = STATUS_INVALID_ARG;
@@ -2684,7 +2694,7 @@ VOID KinesisVideoClientWrapper::logPrintFunc(UINT32 level, PCHAR tag, PCHAR fmt,
                       << "Level: " << level << ", Tag: " << (tag ? tag : "NULL")
                       << ", Message: " << buffer << std::endl;
 
-            CHK(FALSE, STATUS_SUCCESS);
+            return;
         }
         CHK(pWrapper->getJVM() != NULL, STATUS_SUCCESS);
 
@@ -2759,7 +2769,7 @@ VOID KinesisVideoClientWrapper::logPrintFunc(UINT32 level, PCHAR tag, PCHAR fmt,
         }
 
         // Detach the thread if we have attached it to JVM
-        if (attached && pWrapper != nullptr) {
+        if (attached && pWrapper != nullptr && pWrapper->getJVM() != nullptr) {
             pWrapper->getJVM()->DetachCurrentThread();
         }
     });
