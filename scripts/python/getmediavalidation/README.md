@@ -27,8 +27,8 @@ Tools for validating, viewing, and downloading Kinesis Video Stream media fragme
 5. Use the scripts.
     ```shell
     python3 ./bin/download_fragment.py --help
-    python3 ./bin/scripts/fetch_fragment_info.py --help
-    python3 ./bin/scripts/validate_media.py --help
+    python3 ./bin/fetch_fragment_info.py --help
+    python3 ./bin/validate_media.py --help
     ```
 
 ## Project structure
