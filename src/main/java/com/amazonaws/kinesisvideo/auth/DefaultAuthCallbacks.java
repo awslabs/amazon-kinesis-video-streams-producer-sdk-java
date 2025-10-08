@@ -120,6 +120,10 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
         };
 
         final ScheduledFuture<?> future = executor.schedule(task, 0, TimeUnit.NANOSECONDS);
+        if (executor instanceof ScheduledThreadPoolExecutor) {
+            final int pendingQueueSize = ((ScheduledThreadPoolExecutor) executor).getQueue().size();
+            System.out.println("Pending queue size: " + pendingQueueSize);
+        }
 
         // Await for the future to complete
         try {

@@ -7,6 +7,8 @@ import com.amazonaws.kinesisvideo.auth.AbstractKinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import java.util.Date;
@@ -15,6 +17,8 @@ import java.util.Date;
  * Implementation of the AWS Credentials Provider wrapper for Java
  */
 public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentialsProvider {
+
+    private static final Logger log = LogManager.getLogger(JavaCredentialsProviderImpl.class);
 
     private final AWSCredentialsProvider credentialsProvider;
     private Date tokenExpiration;
@@ -48,11 +52,18 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
     @Override
     @Nonnull
     protected KinesisVideoCredentials updateCredentials() {
+        final long startTime = System.currentTimeMillis();
+        log.debug("UpdateCredentials was called. Starting refresh");
+
         // Refresh the token first
         credentialsProvider.refresh();
 
+        final long refreshTime = System.currentTimeMillis() - startTime;
+        log.debug("Refresh took: {}ms, retrieving credentials", refreshTime);
+
         // Get the AWS credentials and create Kinesis Video Credentials
         final AWSCredentials awsCredentials = credentialsProvider.getCredentials();
+        log.debug("GetCredentials took: {}ms", System.currentTimeMillis() - refreshTime);
 
         String sessionToken = null;
         if (awsCredentials instanceof AWSSessionCredentials) {
@@ -64,6 +75,7 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
             tokenExpiration = new Date(System.currentTimeMillis() + rotationPeriodInMillis);
         }
 
+        log.debug("Refreshed credentials with expiration: {}", tokenExpiration);
         return new KinesisVideoCredentials(awsCredentials.getAWSAccessKeyId(),
                 awsCredentials.getAWSSecretKey(),
                 sessionToken,

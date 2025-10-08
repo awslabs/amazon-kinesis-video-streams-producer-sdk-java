@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.ACCESS_DENIED;
@@ -233,6 +234,10 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         };
 
         executor.schedule(task, delay, TimeUnit.NANOSECONDS);
+        if (executor instanceof ScheduledThreadPoolExecutor) {
+            final int pendingQueueSize = ((ScheduledThreadPoolExecutor) executor).getQueue().size();
+            System.out.println("Pending queue size: " + pendingQueueSize);
+        }
     }
 
     @Override
@@ -277,6 +282,10 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         };
 
         executor.schedule(task, delay, TimeUnit.NANOSECONDS);
+        if (executor instanceof ScheduledThreadPoolExecutor) {
+            final int pendingQueueSize = ((ScheduledThreadPoolExecutor) executor).getQueue().size();
+            System.out.println("Pending queue size: " + pendingQueueSize);
+        }
     }
 
     @Override
@@ -325,6 +334,10 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         };
 
         executor.schedule(task, delay, TimeUnit.NANOSECONDS);
+        if (executor instanceof ScheduledThreadPoolExecutor) {
+            final int pendingQueueSize = ((ScheduledThreadPoolExecutor) executor).getQueue().size();
+            System.out.println("Pending queue size: " + pendingQueueSize);
+        }
     }
 
     @Override
@@ -391,6 +404,10 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         };
 
         executor.schedule(task, delay, TimeUnit.NANOSECONDS);
+        if (executor instanceof ScheduledThreadPoolExecutor) {
+            final int pendingQueueSize = ((ScheduledThreadPoolExecutor) executor).getQueue().size();
+            System.out.println("Pending queue size: " + pendingQueueSize);
+        }
     }
 
     @Override
@@ -466,6 +483,10 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         };
 
         executor.schedule(task, delay, TimeUnit.NANOSECONDS);
+        if (executor instanceof ScheduledThreadPoolExecutor) {
+            final int pendingQueueSize = ((ScheduledThreadPoolExecutor) executor).getQueue().size();
+            System.out.println("Pending queue size: " + pendingQueueSize);
+        }
     }
 
     @Override
@@ -518,6 +539,10 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         };
 
         executor.schedule(task, delay, TimeUnit.NANOSECONDS);
+        if (executor instanceof ScheduledThreadPoolExecutor) {
+            final int pendingQueueSize = ((ScheduledThreadPoolExecutor) executor).getQueue().size();
+            System.out.println("Pending queue size: " + pendingQueueSize);
+        }
     }
 
     @Override
@@ -548,6 +573,10 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         };
 
         executor.schedule(task, delay, TimeUnit.NANOSECONDS);
+        if (executor instanceof ScheduledThreadPoolExecutor) {
+            final int pendingQueueSize = ((ScheduledThreadPoolExecutor) executor).getQueue().size();
+            System.out.println("Pending queue size: " + pendingQueueSize);
+        }
     }
 
     @Override

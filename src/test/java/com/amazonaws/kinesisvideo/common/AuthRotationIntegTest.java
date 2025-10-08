@@ -17,6 +17,7 @@ import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSourceConf
 import com.amazonaws.kinesisvideo.java.service.JavaKinesisVideoServiceClient;
 import com.amazonaws.kinesisvideo.producer.ClientInfo;
 import com.amazonaws.kinesisvideo.producer.DeviceInfo;
+import com.amazonaws.kinesisvideo.producer.KinesisVideoFragmentAck;
 import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.StorageInfo;
 import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
@@ -46,12 +47,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.amazonaws.kinesisvideo.common.ProducerTestBase.NUMBER_OF_STREAMS;
 import static com.amazonaws.kinesisvideo.common.ProducerTestBase.SPILL_RATIO_PERCENT;
 import static com.amazonaws.kinesisvideo.common.ProducerTestBase.STORAGE_PATH;
 import static com.amazonaws.kinesisvideo.common.ProducerTestBase.STORAGE_SIZE_MEGS;
-import static com.amazonaws.kinesisvideo.producer.ProducerException.STATUS_OPERATION_TIMED_OUT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -59,10 +60,10 @@ import static org.junit.Assume.assumeTrue;
 
 /**
  * Integration test for auth refresh timeout scenarios using MediaSource interface.
- * Tests behavior when credential refresh is slow and causes registerMediaSource timeouts.
+ * Verifies that when the client auth rotation occurs, PutMedia is rotated seamlessly.
  */
-public class AuthRefreshTimeoutIntegTest {
-    private static final Logger log = LogManager.getLogger(AuthRefreshTimeoutIntegTest.class);
+public class AuthRotationIntegTest {
+    private static final Logger log = LogManager.getLogger(AuthRotationIntegTest.class);
 
     private static final String IMAGE_DIR = "src/main/resources/data/h264/";
     private static final String IMAGE_FILENAME_FORMAT = "frame-%03d.h264";
@@ -72,21 +73,19 @@ public class AuthRefreshTimeoutIntegTest {
     private final List<String> createdStreams = new ArrayList<>();
     private NativeKinesisVideoClient kinesisVideoClient;
     private ScheduledExecutorService executor;
-    private SlowCredentialsProvider slowCredentialsProvider;
 
     private final long timeoutMillis = 2000;
     private final long timeoutNanos = this.timeoutMillis * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
     private final Duration credentialRefreshInterval = Duration.ofSeconds(45);
+    private final Duration gracePeriod = Duration.ofSeconds(8);
+    private final AtomicInteger refreshCalled = new AtomicInteger(0);
 
     @Before
     public void setUp() throws KinesisVideoException {
         this.executor = Executors.newScheduledThreadPool(2);
 
-        // Create slow credentials provider
-        this.slowCredentialsProvider = new SlowCredentialsProvider(100 * this.timeoutMillis);
-
         final KinesisVideoClientConfiguration config = KinesisVideoClientConfiguration.builder()
-                .withCredentialsProvider(JavaCredentialsFactory.createKinesisVideoCredentialsProvider(this.slowCredentialsProvider, this.credentialRefreshInterval))
+                .withCredentialsProvider(JavaCredentialsFactory.createKinesisVideoCredentialsProvider(new TemporaryCredentialsProvider(refreshCalled), credentialRefreshInterval))
                 .build();
 
         final DefaultAuthCallbacks authCallbacks = new DefaultAuthCallbacks(
@@ -112,8 +111,6 @@ public class AuthRefreshTimeoutIntegTest {
 
     @After
     public void tearDown() {
-        this.slowCredentialsProvider.unthrottle();
-
         if (this.kinesisVideoClient != null) {
             try {
                 this.kinesisVideoClient.stopAllMediaSources();
@@ -144,50 +141,22 @@ public class AuthRefreshTimeoutIntegTest {
         }
     }
 
+    /**
+     * <ol>
+     *     <li>Start 5 streams</li>
+     *     <li>When the credentials are about to expire, register 15 more streams spaced out</li>
+     *     <li>All the streams should continue normally</li>
+     * </ol>
+     */
     @Test
-    public void test_When_AuthRefreshIsSlow_Then_RegisterMediaSourceTimesOut() {
-        final String testName = "AuthRefreshTimeoutIntegTest";
-
-        this.slowCredentialsProvider.throttle();
-
-        for (int i = 0; i < 5; i++) {
-            final MediaSource mediaSource = createMediaSource(testName, i);
-            try {
-                this.kinesisVideoClient.registerMediaSource(mediaSource);
-                fail("Expected timeout but registerMediaSource succeeded");
-            } catch (final KinesisVideoException e) {
-                assertTrue("Expected to receive ProducerException but received: " + e, e instanceof ProducerException);
-                assertEquals("Expected timed out", STATUS_OPERATION_TIMED_OUT, ((ProducerException) e).getStatusCode());
-            }
-        }
-    }
-
-    @Test
-    public void testWhenGetTokenIsSlow_Then_RegisterMediaSourceTimesOut() {
-        final String testName = "AuthRefreshTimeoutIntegTest-registerMediaSourceTimesOut";
-
-        this.slowCredentialsProvider.throttle();
-
-        for (int i = 0; i < 10; i++) {
-            final MediaSource mediaSource = createMediaSource(testName, i);
-            try {
-                this.kinesisVideoClient.registerMediaSource(mediaSource);
-                fail("Expected timeout but registerMediaSource succeeded");
-            } catch (final KinesisVideoException e) {
-                assertTrue("Expected to receive ProducerException but received: " + e, e instanceof ProducerException);
-                assertEquals("Expected timed out", STATUS_OPERATION_TIMED_OUT, ((ProducerException) e).getStatusCode());
-            }
-        }
-    }
-
-
-    @Test
-    public void testWhenClientAuthRefreshIsSlow_Then_EverythingTimesOut() throws InterruptedException{
-        final String testName = "AuthRefreshTimeoutIntegTest-everythingTimesOut";
+    public void testWhenClientAuthRotates_thenStreamContinuesNormally() throws InterruptedException{
+        final String testName = "AuthRotationIntegTest-workingFine";
+        final List<StreamContext> streamContexts = new ArrayList<>();
 
         // Should go through fine
         for (int i = 0; i < 5; i++) {
-            final MediaSource mediaSource = createMediaSource(testName, i);
+            final StreamContext streamContext = initializeMediaSourceAndContext(testName, i);
+            final MediaSource mediaSource = streamContext.mediaSource;
             try {
                 this.kinesisVideoClient.registerMediaSource(mediaSource);
                 log.info("Registered mediasource: {}", i);
@@ -195,23 +164,24 @@ public class AuthRefreshTimeoutIntegTest {
             } catch (final KinesisVideoException e) {
                 fail("Unexpected exception: " + e);
             }
+            streamContexts.add(streamContext);
         }
-
-        this.slowCredentialsProvider.throttle();
 
         Thread.sleep(credentialRefreshInterval.toMillis() - 5000);
 
-        // Should all error out
-        for (int i = 5; i < 15; i++) {
-            final MediaSource mediaSource = createMediaSource(testName, i);
+        // Should be working fine
+        for (int i = 5; i < 20; i++) {
+            final StreamContext streamContext = initializeMediaSourceAndContext(testName, i);
+            final MediaSource mediaSource = streamContext.mediaSource;
             try {
                 log.info("Registering mediasource: {}", i);
                 this.kinesisVideoClient.registerMediaSource(mediaSource);
-                fail("Expected timeout but registerMediaSource succeeded");
+                mediaSource.start();
             } catch (final KinesisVideoException e) {
-                assertTrue("Expected to receive ProducerException but received: " + e, e instanceof ProducerException);
-                assertEquals("Expected timed out", STATUS_OPERATION_TIMED_OUT, ((ProducerException) e).getStatusCode());
+                fail("Unexpected exception: " + e);
             }
+
+            streamContexts.add(streamContext);
 
             // Space them out
             try {
@@ -220,11 +190,41 @@ public class AuthRefreshTimeoutIntegTest {
                 Thread.currentThread().interrupt();
             }
         }
+
+        // Validate results
+        for (int i = 0; i < 5; i++) {
+            System.out.println(i + " ----------------");
+            final StreamContext streamContext = streamContexts.get(i);
+
+            assertTrue("Stream " + i + " did not receive any acks!", !streamContext.acksReceived.isEmpty());
+
+            // Search for the refresh -- the ack timestamp should have been around 45000 then down to around 0
+            // Note since acks are asynchronous, it might be out of order, so we use a threshold instead
+
+            boolean rotated = false;
+            KinesisVideoFragmentAck prev = null;
+            for (final KinesisVideoFragmentAck ack : streamContext.acksReceived) {
+                if (prev != null) {
+                    long timestampGap = prev.getTimestamp() - ack.getTimestamp();
+
+                    if (timestampGap >= credentialRefreshInterval.toMillis() - gracePeriod.toMillis()) {
+                        log.debug("Detected the refresh after {}ms", timestampGap);
+                        rotated = true;
+                        break;
+                    }
+                }
+                prev = ack;
+            }
+
+            assertTrue("Stream " + i + " was not rotated!", rotated);
+        }
+
+        System.out.println("Refresh was called: " + refreshCalled.get() + " times!");
     }
 
 
     @SuppressWarnings("ConstantConditions")
-    private MediaSource createMediaSource(@Nonnull final String testName, final int index) {
+    private StreamContext initializeMediaSourceAndContext(@Nonnull final String testName, final int index) {
         assumeTrue(testName != null);
         assumeTrue(index >= 0);
         final String streamName = testName + "_" + index + "_" + System.currentTimeMillis();
@@ -239,6 +239,8 @@ public class AuthRefreshTimeoutIntegTest {
                 .withDataRetentionInHours(2));
         this.createdStreams.add(finalStreamName);
 
+        final StreamContext streamContext = new StreamContext();
+
         // Create minimal media source
         final MediaSource mediaSource = new ImageFileMediaSource(finalStreamName);
         final ImageFileMediaSourceConfiguration config = new ImageFileMediaSourceConfiguration.Builder()
@@ -249,27 +251,43 @@ public class AuthRefreshTimeoutIntegTest {
                 .endFileIndex(END_FILE_INDEX)
                 .allowStreamCreation(false)
                 .frameGeneratorThreadName(streamName + "-frame-generator")
+                .streamCallbacks(new DefaultStreamCallbacks() {
+                    @Override
+                    public void streamErrorReport(long uploadHandle, long frameTimecode, long statusCode) {
+                        streamContext.errorsReceived.add(uploadHandle);
+                    }
+
+                    @Override
+                    public void fragmentAckReceived(long uploadHandle, @Nonnull KinesisVideoFragmentAck fragmentAck) throws ProducerException {
+                        streamContext.acksReceived.add(fragmentAck);
+                    }
+                })
                 .build();
         mediaSource.configure(config);
 
-        return mediaSource;
+        streamContext.mediaSource = mediaSource;
+
+        return streamContext;
+    }
+
+    private class StreamContext {
+        public MediaSource mediaSource;
+        public final List<KinesisVideoFragmentAck> acksReceived = new ArrayList<>();
+        public final List<Long> errorsReceived = new ArrayList<>();
     }
 
     /**
-     * Credentials provider that simulates slow refresh by adding delay
+     * Credentials provider that always returns temporary credentials
      */
-    private static class SlowCredentialsProvider implements AWSCredentialsProvider {
-        private final long delayMs;
+    private static class TemporaryCredentialsProvider implements AWSCredentialsProvider {
+
         private final AWSCredentials credentials;
+        private final AtomicInteger refreshCount;
 
-        private boolean nextCallSlow;
-
-        public SlowCredentialsProvider(final long delayMs) {
-            assumeTrue("delayMs must be positive!", delayMs > 0);
-            this.delayMs = delayMs;
-            this.nextCallSlow = false;
-
+        public TemporaryCredentialsProvider(AtomicInteger refreshCount) {
             AWSCredentials creds = DefaultAWSCredentialsProviderChain.getInstance().getCredentials();
+            assumeTrue(creds != null);
+
             if (!(creds instanceof AWSSessionCredentials)) {
                 final AWSSecurityTokenService sts = AWSSecurityTokenServiceClientBuilder.standard().build();
                 final GetSessionTokenResult result = sts.getSessionToken(new GetSessionTokenRequest().withDurationSeconds(900)); // minimum: 15 mins
@@ -277,14 +295,7 @@ public class AuthRefreshTimeoutIntegTest {
             }
 
             this.credentials = creds;
-        }
-
-        public void throttle() {
-            this.nextCallSlow = true;
-        }
-
-        public void unthrottle() {
-            this.nextCallSlow = false;
+            this.refreshCount = refreshCount;
         }
 
         @Override
@@ -294,17 +305,8 @@ public class AuthRefreshTimeoutIntegTest {
 
         @Override
         public void refresh() {
-            if (!this.nextCallSlow) {
-                log.info("Fast refresh with no delay");
-                return;
-            }
-
-            try {
-                log.info("Simulating slow credential refresh with {}ms delay", this.delayMs);
-                Thread.sleep(this.delayMs);
-            } catch (final InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            log.info("Refresh called");
+            refreshCount.getAndIncrement();
         }
     }
 }
