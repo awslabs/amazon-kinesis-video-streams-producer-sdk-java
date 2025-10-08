@@ -521,9 +521,15 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
 
     public void awaitReady() throws ProducerException
     {
+        long readyTimeoutMs = mDeviceInfo.getClientInfo().getCreateStreamTimeout() / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
+        if (readyTimeoutMs == 0) {
+            readyTimeoutMs = READY_TIMEOUT_IN_MILLISECONDS;
+        }
+
         // Block until client is ready or it times out.
         try {
-            if (!mReadyLatch.await(READY_TIMEOUT_IN_MILLISECONDS, TimeUnit.MILLISECONDS)) {
+            mLog.info("Waiting {}ms for stream {} to be ready", readyTimeoutMs, mStreamInfo.getSummary());
+            if (!mReadyLatch.await(readyTimeoutMs, TimeUnit.MILLISECONDS)) {
                 throw new ProducerException(this.mStreamInfo.getSummary() + ": KinesisVideo producer stream creation time out", ProducerException.STATUS_OPERATION_TIMED_OUT);
             }
         } catch (final InterruptedException e) {

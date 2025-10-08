@@ -175,6 +175,7 @@ public class NativeKinesisVideoClient extends AbstractKinesisVideoClient {
     @Override
     public void unregisterMediaSource(@Nonnull final MediaSource mediaSource) throws KinesisVideoException {
         Preconditions.checkNotNull(mediaSource);
+        Preconditions.checkState(mMediaSourceToStreamMap.containsKey(mediaSource), mediaSource.getStreamInfo().getSummary() + ": MediaSource could not be unregistered. It may not have been registered successfully.");
         mediaSource.stop();
         super.unregisterMediaSource(mediaSource);
 

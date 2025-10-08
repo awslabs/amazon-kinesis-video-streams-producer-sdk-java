@@ -53,12 +53,24 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
      */
     private long expiration;
 
+    /**
+     * How long to wait for the credentials update before timing out.
+     */
+    private long timeoutMillis;
+
     public DefaultAuthCallbacks(@Nonnull KinesisVideoCredentialsProvider credentialsProvider,
                                 @Nonnull final ScheduledExecutorService executor,
                                 @Nonnull Logger log) {
         this.credentialsProvider = Preconditions.checkNotNull(credentialsProvider);
         this.executor = Preconditions.checkNotNull(executor);
         this.log = Preconditions.checkNotNull(log);
+        this.timeoutMillis = CREDENTIALS_UPDATE_TIMEOUT_MILLIS;
+    }
+
+    public void setCredentialsUpdateTimeoutMillis(final long timeoutMillis) {
+        Preconditions.checkArgument(timeoutMillis > 0);
+
+        this.timeoutMillis = timeoutMillis;
     }
 
     @Nullable
@@ -111,7 +123,11 @@ public class DefaultAuthCallbacks implements AuthCallbacks {
 
         // Await for the future to complete
         try {
-            future.get(CREDENTIALS_UPDATE_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+            log.info("Start credentials refresh. Waiting up to {}ms", timeoutMillis);
+            final long start = System.currentTimeMillis();
+            future.get(timeoutMillis, TimeUnit.MILLISECONDS);
+            final long elapsed = System.currentTimeMillis() - start;
+            log.info("Fetch credentials took {}ms", elapsed);
         } catch (final InterruptedException e) {
             log.error("Awaiting for the credentials update threw an exception", e);
         } catch (final ExecutionException e) {
