@@ -1060,6 +1060,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
                                         final long expiration,
                                         final int httpStatusCode) throws ProducerException
     {
+        mLog.info("Calling GetStreamingTokenResult in the JNI");
         synchronized (mSyncObject) {
             final int tokenSize = token == null ? 0 : token.length;
 
@@ -1072,6 +1073,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
                 }
             }
         }
+        mLog.info("GetStreamingTokenResult completed in the JNI");
     }
 
     /**

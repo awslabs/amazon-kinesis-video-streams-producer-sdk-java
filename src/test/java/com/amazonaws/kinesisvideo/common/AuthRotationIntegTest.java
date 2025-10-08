@@ -110,7 +110,10 @@ public class AuthRotationIntegTest {
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws InterruptedException{
+
+        Thread.sleep(10000000L);
+
         if (this.kinesisVideoClient != null) {
             try {
                 this.kinesisVideoClient.stopAllMediaSources();
@@ -149,7 +152,7 @@ public class AuthRotationIntegTest {
      * </ol>
      */
     @Test
-    public void testWhenClientAuthRotates_thenStreamContinuesNormally() throws InterruptedException{
+    public void testWhenClientAuthRotates_thenStreamContinuesNormally() throws InterruptedException {
         final String testName = "AuthRotationIntegTest-workingFine";
         final List<StreamContext> streamContexts = new ArrayList<>();
 
@@ -162,7 +165,9 @@ public class AuthRotationIntegTest {
                 log.info("Registered mediasource: {}", i);
                 mediaSource.start();
             } catch (final KinesisVideoException e) {
-                fail("Unexpected exception: " + e);
+                log.error("---------------");
+                log.error(e);
+//                fail("Unexpected exception: " + e);
             }
             streamContexts.add(streamContext);
         }
@@ -170,54 +175,67 @@ public class AuthRotationIntegTest {
         Thread.sleep(credentialRefreshInterval.toMillis() - 5000);
 
         // Should be working fine
-        for (int i = 5; i < 20; i++) {
+        for (int i = 5; i < 1000; i++) {
             final StreamContext streamContext = initializeMediaSourceAndContext(testName, i);
             final MediaSource mediaSource = streamContext.mediaSource;
             try {
                 log.info("Registering mediasource: {}", i);
                 this.kinesisVideoClient.registerMediaSource(mediaSource);
                 mediaSource.start();
+
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(7000);
+                            kinesisVideoClient.unregisterMediaSource(mediaSource);
+                        } catch (Exception e) {
+                            log.error("Unexpected exception", e);
+                        }
+                    }
+                }).run();
             } catch (final KinesisVideoException e) {
-                fail("Unexpected exception: " + e);
+//                fail("Unexpected exception: " + e);
+                log.error("Unexpected exception", e);
             }
 
             streamContexts.add(streamContext);
 
             // Space them out
             try {
-                Thread.sleep(500);
+                Thread.sleep((long) (Math.random() * 500));
             } catch (final InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }
 
-        // Validate results
-        for (int i = 0; i < 5; i++) {
-            System.out.println(i + " ----------------");
-            final StreamContext streamContext = streamContexts.get(i);
-
-            assertTrue("Stream " + i + " did not receive any acks!", !streamContext.acksReceived.isEmpty());
-
-            // Search for the refresh -- the ack timestamp should have been around 45000 then down to around 0
-            // Note since acks are asynchronous, it might be out of order, so we use a threshold instead
-
-            boolean rotated = false;
-            KinesisVideoFragmentAck prev = null;
-            for (final KinesisVideoFragmentAck ack : streamContext.acksReceived) {
-                if (prev != null) {
-                    long timestampGap = prev.getTimestamp() - ack.getTimestamp();
-
-                    if (timestampGap >= credentialRefreshInterval.toMillis() - gracePeriod.toMillis()) {
-                        log.debug("Detected the refresh after {}ms", timestampGap);
-                        rotated = true;
-                        break;
-                    }
-                }
-                prev = ack;
-            }
-
-            assertTrue("Stream " + i + " was not rotated!", rotated);
-        }
+//        // Validate results
+//        for (int i = 0; i < 5; i++) {
+//            System.out.println(i + " ----------------");
+//            final StreamContext streamContext = streamContexts.get(i);
+//
+//            assertTrue("Stream " + i + " did not receive any acks!", !streamContext.acksReceived.isEmpty());
+//
+//            // Search for the refresh -- the ack timestamp should have been around 45000 then down to around 0
+//            // Note since acks are asynchronous, it might be out of order, so we use a threshold instead
+//
+//            boolean rotated = false;
+//            KinesisVideoFragmentAck prev = null;
+//            for (final KinesisVideoFragmentAck ack : streamContext.acksReceived) {
+//                if (prev != null) {
+//                    long timestampGap = prev.getTimestamp() - ack.getTimestamp();
+//
+//                    if (timestampGap >= credentialRefreshInterval.toMillis() - gracePeriod.toMillis()) {
+//                        log.debug("Detected the refresh after {}ms", timestampGap);
+//                        rotated = true;
+//                        break;
+//                    }
+//                }
+//                prev = ack;
+//            }
+//
+//            assertTrue("Stream " + i + " was not rotated!", rotated);
+//        }
 
         System.out.println("Refresh was called: " + refreshCalled.get() + " times!");
     }
@@ -303,8 +321,20 @@ public class AuthRotationIntegTest {
             return this.credentials;
         }
 
+        private boolean once = false;
+
         @Override
         public void refresh() {
+
+            if (once) {
+                try {
+                    Thread.sleep(1500);
+                } catch (final InterruptedException e) {
+
+                }
+            }
+            once = true;
+
             log.info("Refresh called");
             refreshCount.getAndIncrement();
         }

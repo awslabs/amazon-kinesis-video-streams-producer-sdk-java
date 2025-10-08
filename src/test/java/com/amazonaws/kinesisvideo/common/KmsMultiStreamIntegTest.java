@@ -634,5 +634,10 @@ public class KmsMultiStreamIntegTest extends ProducerTestBase {
 
             this.streamInfo.acksReceived.add(fragmentAck);
         }
+
+        @Override
+        public void streamClosed(long uploadHandle) throws ProducerException {
+            System.out.println("Stream ---------------------------------- ------------------------" + this.streamInfo.streamName + " closed");
+        }
     }
 }

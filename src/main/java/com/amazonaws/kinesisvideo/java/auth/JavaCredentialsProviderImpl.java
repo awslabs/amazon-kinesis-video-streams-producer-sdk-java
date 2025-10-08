@@ -58,8 +58,8 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
         // Refresh the token first
         credentialsProvider.refresh();
 
-        final long refreshTime = System.currentTimeMillis() - startTime;
-        log.debug("Refresh took: {}ms, retrieving credentials", refreshTime);
+        final long refreshTime = System.currentTimeMillis();
+        log.debug("Refresh took: {}ms, retrieving credentials", refreshTime - startTime);
 
         // Get the AWS credentials and create Kinesis Video Credentials
         final AWSCredentials awsCredentials = credentialsProvider.getCredentials();
