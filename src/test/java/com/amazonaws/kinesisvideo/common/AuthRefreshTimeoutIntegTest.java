@@ -42,15 +42,21 @@ import org.junit.Test;
 import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import static com.amazonaws.kinesisvideo.common.ProducerTestBase.NUMBER_OF_STREAMS;
 import static com.amazonaws.kinesisvideo.common.ProducerTestBase.SPILL_RATIO_PERCENT;
 import static com.amazonaws.kinesisvideo.common.ProducerTestBase.STORAGE_PATH;
 import static com.amazonaws.kinesisvideo.common.ProducerTestBase.STORAGE_SIZE_MEGS;
+import static com.amazonaws.kinesisvideo.producer.ProducerException.STATUS_AUTH_CALL_FAILED;
+import static com.amazonaws.kinesisvideo.producer.ProducerException.STATUS_INVALID_STREAM_STATE;
 import static com.amazonaws.kinesisvideo.producer.ProducerException.STATUS_OPERATION_TIMED_OUT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -60,6 +66,7 @@ import static org.junit.Assume.assumeTrue;
 /**
  * Integration test for auth refresh timeout scenarios using MediaSource interface.
  * Tests behavior when credential refresh is slow and causes registerMediaSource timeouts.
+ * The SDK should emit the errors to the application.
  */
 public class AuthRefreshTimeoutIntegTest {
     private static final Logger log = LogManager.getLogger(AuthRefreshTimeoutIntegTest.class);
@@ -201,6 +208,15 @@ public class AuthRefreshTimeoutIntegTest {
 
         Thread.sleep(credentialRefreshInterval.toMillis() - 5000);
 
+        // The first ones should time out since the retries haven't been exhausted yet
+        // The next few should fail with the auth failed after the retries are exhausted
+        // and the rest should fail with the invalid state since the client is no longer
+        // ready (since it's currently in the auth state)
+        final Set<Integer> expectedErrorCodes = new HashSet<>();
+        expectedErrorCodes.add(STATUS_OPERATION_TIMED_OUT);
+        expectedErrorCodes.add(STATUS_AUTH_CALL_FAILED);
+        expectedErrorCodes.add(STATUS_INVALID_STREAM_STATE);
+
         // Should all error out
         for (int i = 5; i < 15; i++) {
             final MediaSource mediaSource = createMediaSource(testName, i);
@@ -210,7 +226,10 @@ public class AuthRefreshTimeoutIntegTest {
                 fail("Expected timeout but registerMediaSource succeeded");
             } catch (final KinesisVideoException e) {
                 assertTrue("Expected to receive ProducerException but received: " + e, e instanceof ProducerException);
-                assertEquals("Expected timed out", STATUS_OPERATION_TIMED_OUT, ((ProducerException) e).getStatusCode());
+
+                final int statusCode = ((ProducerException) e).getStatusCode();
+                assertTrue("Stream " + i + " - expected one of the error codes: " + expectedErrorCodes + ", but received: " + statusCode,
+                        expectedErrorCodes.contains(statusCode));
             }
 
             // Space them out

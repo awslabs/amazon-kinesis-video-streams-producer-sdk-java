@@ -34,6 +34,8 @@ public class ProducerException extends KinesisVideoException {
     public static final int STATUS_INVALID_OPERATION = STATUS_BASE + 0x0000000d;
     public static final int STATUS_NOT_IMPLEMENTED = STATUS_BASE + 0x0000000e;
     public static final int STATUS_OPERATION_TIMED_OUT = STATUS_BASE + 0x0000000f;
+    public static final int STATUS_AUTH_CALL_FAILED = 0x52000040;
+    public static final int STATUS_INVALID_STREAM_STATE = 0x5200000E;
 
     /**
      * Status code returned from native
