@@ -3,6 +3,7 @@ package com.amazonaws.kinesisvideo.client;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.kinesisvideo.client.signing.KinesisVideoAWS4Signer;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
+import com.amazonaws.kinesisvideo.util.KinesisVideoStreamResource;
 import com.amazonaws.regions.DefaultAwsRegionProviderChain;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
@@ -11,6 +12,7 @@ import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -60,21 +62,25 @@ public class PutMediaClientErrorTest {
 
     private static final int TIMEOUT_SECONDS = 10;
     private static final String END_OF_STREAM_MSG = "0\r\n\r\n";
-    private static final String TEST_STREAM = "test-stream";
     private static final String PUT_MEDIA_POSTFIX = "/putMedia";
     private static final String SERVICE_NAME = "kinesisvideo";
 
     private URI putMediaUri; // Put media data endpoint + "/putMedia"
     private String region;
     private KinesisVideoAWS4Signer putMediaAWS4Signer;
+    private KinesisVideoStreamResource.KinesisVideoStreamConfiguration streamConfiguration;
+    private KinesisVideoStreamResource kinesisVideoStreamResource;
 
     @Before
     public void setUp() throws Exception {
+        this.streamConfiguration = new KinesisVideoStreamResource.KinesisVideoStreamConfiguration();
+        this.kinesisVideoStreamResource = new KinesisVideoStreamResource(this.streamConfiguration);
+
         // Endpoint discovery
         final AmazonKinesisVideo kinesisVideoClient = AmazonKinesisVideoClientBuilder.defaultClient();
 
         final GetDataEndpointResult dataEndpointResult = kinesisVideoClient.getDataEndpoint(new GetDataEndpointRequest()
-                .withStreamName(TEST_STREAM)
+                .withStreamName(streamConfiguration.streamName)
                 .withAPIName(APIName.PUT_MEDIA));
 
         kinesisVideoClient.shutdown();
@@ -91,6 +97,11 @@ public class PutMediaClientErrorTest {
                         .build();
         this.putMediaAWS4Signer = new KinesisVideoAWS4Signer(DefaultAWSCredentialsProviderChain.getInstance(),
                 clientConfiguration);
+    }
+
+    @After
+    public void tearDown() {
+        this.kinesisVideoStreamResource.close();
     }
 
     /**
@@ -132,7 +143,7 @@ public class PutMediaClientErrorTest {
         final PutMediaClient client = PutMediaClient.builder()
                 .putMediaDestinationUri(this.putMediaUri)
                 .signWith(this.putMediaAWS4Signer)
-                .streamName(TEST_STREAM)
+                .streamName(this.streamConfiguration.streamName)
                 .mkvStream(garbageStream)
                 .timestamp(System.currentTimeMillis())
                 .fragmentTimecodeType("RELATIVE")
