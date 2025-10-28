@@ -136,10 +136,18 @@ public final class PutMediaClient {
                     rawOutputStream.flush();
                     log.debug("Data sent. counter: {}", counter);
                 } catch (final Exception e) {
-                    log.debug("Exception while sending data.", e);
-                    throw new RuntimeException("Exception while sending encoded chunk in MKV stream ! ", e);
+                    log.debug(mBuilder.mStreamName + ": Exception while sending data.", e);
+                    throw new RuntimeException(mBuilder.mStreamName + ": Exception while sending encoded chunk in MKV stream ! ", e);
                 } finally {
                     tryCloseOutputFileStream(outputFileStream);
+
+                    if (mBuilder.mMkvStream != null) {
+                        try {
+                            mBuilder.mMkvStream.close();
+                        } catch (final IOException e) {
+                            log.error(e.getMessage());
+                        }
+                    }
                 }
             }
         };

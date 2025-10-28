@@ -23,10 +23,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 
 public final class ParallelSimpleHttpClient implements HttpClient {
+
+    private static final int AWAIT_THREAD_TERMINATE_SECS = 1;
+
     private static final String SPACE = " ";
     private static final String CLRF = "\r\n";
     private static final String HTTP_1_1 = "HTTP/1.1";
@@ -245,7 +249,33 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         payloadSender.shutdownNow();
         responseReceiver.shutdownNow();
         closeSocket();
+
+        awaitTryShutdownThreads();
+
         mBuilder.mCompletion.accept(null);
+    }
+
+    // Wait for the threads to terminate
+    // If the threads are not alive, returns immediately
+    // Expecting these to be near instantaneous
+    private void awaitTryShutdownThreads() {
+        try {
+            if (!payloadSender.awaitTermination(AWAIT_THREAD_TERMINATE_SECS, TimeUnit.SECONDS)) {
+                log.error("{}: Payload sender couldn't shutdown within {} seconds", mBuilder.mStreamName, AWAIT_THREAD_TERMINATE_SECS);
+            }
+        } catch (final InterruptedException e) {
+            log.error("{}: Interrupted while waiting for payload sender shutdown", mBuilder.mStreamName, e);
+            Thread.currentThread().interrupt();
+        }
+
+        try {
+            if (responseReceiver.awaitTermination(AWAIT_THREAD_TERMINATE_SECS, TimeUnit.SECONDS)) {
+                log.error("{}: Response receiver couldn't shutdown within {} seconds", mBuilder.mStreamName, AWAIT_THREAD_TERMINATE_SECS);
+            }
+        } catch (final InterruptedException e) {
+            log.error("{}: Interrupted while waiting for response receiver shutdown", mBuilder.mStreamName, e);
+            Thread.currentThread().interrupt();
+        }
     }
 
 
