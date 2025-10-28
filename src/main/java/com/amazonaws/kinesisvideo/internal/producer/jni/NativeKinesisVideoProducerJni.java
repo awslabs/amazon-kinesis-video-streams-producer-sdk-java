@@ -26,6 +26,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -89,6 +91,11 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * Keeps the mapping between the stream handle and the Kinesis Video stream object
      */
     private final Map<Long, KinesisVideoProducerStream> mKinesisVideoHandleMap = new HashMap<Long, KinesisVideoProducerStream>();
+
+    /**
+     * Keeps track of handles that are ready in the Native side, but the Java object creation is still in progress for.
+     */
+    private final Set<Long> mPendingHandlesMap = ConcurrentHashMap.newKeySet();
 
     /**
      * Callbacks for integration with the device auth subsystem.
@@ -404,7 +411,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         final NativeKinesisVideoProducerStream stream = (NativeKinesisVideoProducerStream) createStream(streamInfo, streamCallbacks);
         try {
             // Block until ready
-            stream.awaitReady();
+            stream.awaitReady(mPendingHandlesMap);
         } catch (final ProducerException e) {
             freeStream(stream);
             throw e;
@@ -830,7 +837,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         synchronized (mCallbackSyncObject) {
             synchronized (mSyncObject) {
                 if (!mKinesisVideoHandleMap.containsKey(streamHandle)) {
-                    mLog.info("Stream Ready for non-existing stream handle {}", streamHandle);
+                    mLog.info("Stream Ready for non-existing stream handle 0x{}", Long.toHexString(streamHandle));
+                    mPendingHandlesMap.add(streamHandle);
                     return;
                 }
 

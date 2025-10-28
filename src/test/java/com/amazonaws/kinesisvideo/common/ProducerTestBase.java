@@ -14,6 +14,7 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.kinesisvideo.auth.DefaultAuthCallbacks;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
+import com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks;
 import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
 import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsFactory;
 import com.amazonaws.kinesisvideo.producer.Tag;
@@ -88,7 +89,7 @@ public class ProducerTestBase {
     protected List<KinesisVideoFragmentAck> receivedFragmentAcks_ = new ArrayList<>();
 
     // set by the createProducer method to be used throughout
-    private StreamCallbacks streamCallbacks;
+    protected StreamCallbacks streamCallbacks;
     private KinesisVideoClientConfiguration configuration;
     private AWSCredentialsProvider awsCredentialsProvider;
     private JavaKinesisVideoServiceClient serviceClient;
@@ -96,7 +97,8 @@ public class ProducerTestBase {
     private NativeKinesisVideoClient kinesisVideoClient;
     private AuthCallbacks authCallbacks;
     private StorageCallbacks storageCallbacks;
-    private KinesisVideoProducer kinesisVideoProducer;
+    protected KinesisVideoProducer kinesisVideoProducer;
+    protected ServiceCallbacks serviceCallbacks;
 
     protected void reset() {
         stopCalled_ = false;
@@ -164,12 +166,53 @@ public class ProducerTestBase {
         storageCallbacks = new TestStorageCallbacks(this);
         streamCallbacks = new TestStreamCallBacks(this);
 
-        DefaultServiceCallbacksImpl defaultServiceCallbacks = new DefaultServiceCallbacksImpl(log, executor,
+        serviceCallbacks = new DefaultServiceCallbacksImpl(log, executor,
                 configuration, serviceClient);
         kinesisVideoClient = new NativeKinesisVideoClient(log,
                 authCallbacks,
                 storageCallbacks,
-                defaultServiceCallbacks,
+                serviceCallbacks,
+                streamCallbacks);
+        try {
+            kinesisVideoProducer = kinesisVideoClient.initializeNewKinesisVideoProducer(deviceInfo);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
+    }
+
+    /**
+     * This method is used to create a KinesisVideoProducer which is used by the later methods
+     */
+    protected void createCachedProducer(DeviceInfo deviceInfo) {
+
+        reset(); // reset all flags to initial values so that they can be modified by the stream and storage callbacks
+
+        executor = Executors.newScheduledThreadPool(NUMBER_OF_THREADS_IN_POOL,
+                new ThreadFactoryBuilder().setNameFormat("KVS-JavaClientExecutor-%d").build());
+
+        awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
+        configuration = KinesisVideoClientConfiguration.builder()
+                .withRegion(Regions.US_WEST_2.getName())
+                .withCredentialsProvider(JavaCredentialsFactory.createKinesisVideoCredentialsProvider(awsCredentialsProvider))
+                .build();
+
+        serviceClient = new JavaKinesisVideoServiceClient(log);
+        authCallbacks = new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
+                executor,
+                log);
+        // use TestStorageCallbacks and TestStreamCallbacks to override the callbacks to update the flags in case of
+        // overflow, errors and other events. The current ProducerTestBase object is passed to their constructors so
+        // that they can access the flags to be updated
+        storageCallbacks = new TestStorageCallbacks(this);
+        streamCallbacks = new TestStreamCallBacks(this);
+
+        serviceCallbacks = new CachedInfoMultiAuthServiceCallbacksImpl(log, executor,
+                configuration, serviceClient);
+        kinesisVideoClient = new NativeKinesisVideoClient(log,
+                authCallbacks,
+                storageCallbacks,
+                serviceCallbacks,
                 streamCallbacks);
         try {
             kinesisVideoProducer = kinesisVideoClient.initializeNewKinesisVideoProducer(deviceInfo);

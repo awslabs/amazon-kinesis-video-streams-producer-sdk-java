@@ -19,6 +19,7 @@ import com.amazonaws.kinesisvideo.producer.StreamDescription;
 import com.amazonaws.kinesisvideo.producer.Tag;
 import com.amazonaws.kinesisvideo.producer.Time;
 import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
@@ -53,6 +54,8 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RESOURCE_NOT_F
  */
 public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     private class CompletionCallback implements Consumer<Exception> {
+        private final Logger log = LogManager.getLogger(CompletionCallback.class);
+
         private final KinesisVideoProducerStream stream;
         private final long uploadHandle;
 
@@ -64,8 +67,14 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         }
 
         @Override
-        public void accept(@Nullable final Exception object) {
+        public synchronized void accept(@Nullable final Exception object) {
             final long streamHandle = stream.getStreamHandle();
+
+            if (object == null) {
+                log.info("{}: PutMedia with uploadHandle {} finished with 200", stream.getStreamInfo().getSummary(), uploadHandle);
+            } else {
+                log.error("{}: PutMedia with uploadHandle {} failed with {}", stream.getStreamInfo().getSummary(), uploadHandle, object);
+            }
 
             if (streamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE) {
                 // The exception can be null indicating successful completion

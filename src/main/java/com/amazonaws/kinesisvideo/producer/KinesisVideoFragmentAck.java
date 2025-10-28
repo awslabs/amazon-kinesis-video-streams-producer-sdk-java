@@ -3,6 +3,8 @@ package com.amazonaws.kinesisvideo.producer;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
 import com.amazonaws.kinesisvideo.util.StreamInfoConstants;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
@@ -41,6 +43,9 @@ import javax.annotation.concurrent.ThreadSafe;
 @Immutable
 @ThreadSafe
 public class KinesisVideoFragmentAck {
+
+    private static final Logger log = LogManager.getLogger(KinesisVideoFragmentAck.class);
+
     /**
      * The current version of the fragment acknowledgement struct in the native layer.
      */
@@ -131,7 +136,12 @@ public class KinesisVideoFragmentAck {
 
         Preconditions.checkArgument(ackType != null, "ackType cannot be null");
         Preconditions.checkArgument(sequenceNumber != null, "sequenceNumber cannot be null");
-        Preconditions.checkArgument(!sequenceNumber.isEmpty(), "sequenceNumber cannot be empty");
+
+        // Some error acks don't come with a sequence number (e.g. INVALID_MKV_DATA)
+        if (sequenceNumber.isEmpty()) {
+            log.warn("Received empty sequence number! AckType: {}, Timestamp: {}, Result: {}",
+                    ackType, timestamp, result);
+        }
 
         this.ackType = ackType;
         this.timestamp = timestamp;
