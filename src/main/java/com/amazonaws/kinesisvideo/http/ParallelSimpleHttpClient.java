@@ -20,6 +20,7 @@ import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -141,8 +142,9 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
     private void sendPayloadInBackground() {
         if (mBuilder.mSender != null) {
-            payloadSender = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Sending-" + mBuilder.mStreamName).build());
-            payloadSender.execute(new LoggedExitRunnable("PutMedia-Sending-" + mBuilder.mStreamName) {
+            final String postfix = computeThreadNamePostfix();
+            payloadSender = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Sending" + postfix).build());
+            payloadSender.execute(new LoggedExitRunnable("PutMedia-Sending-" + postfix) {
                 @Override
                 public void execute() {
                     Exception storedException = null;
@@ -168,8 +170,9 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
     private void receiveResponseInBackground() {
         if (mBuilder.mReceiver != null) {
-            responseReceiver = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Receiving-" + mBuilder.mStreamName).build());
-            responseReceiver.execute(new LoggedExitRunnable("PutMedia-Receiving-" + mBuilder.mStreamName) {
+            final String postfix = computeThreadNamePostfix();
+            responseReceiver = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Receiving" + postfix).build());
+            responseReceiver.execute(new LoggedExitRunnable("PutMedia-Receiving" + postfix) {
                 @Override
                 public void execute() {
                     Exception storedException = null;
@@ -188,6 +191,40 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                 }
             });
         }
+    }
+
+    /**
+     * Intended to be immediately concatenated to the end of the PutMedia-Sender and PutMedia-Receiver thread names.
+     * The purpose is to make it easier to identify and troubleshoot a particular PutMedia connection.
+     * This always includes the dash at the beginning.
+     *
+     * @return {
+     *  <ol>
+     *      <li>"-{streamName}-{sessionId}" if both are present</li>
+     *      <li>"-{streamName}" if only streamName is present</li>
+     *      <li>"-{sessionId}" if only sessionId is present</li>
+     *      <li>"-{UUID}" if neither are present</li>
+     *  </ol>
+     *  }
+     */
+    private String computeThreadNamePostfix() {
+        final StringBuilder builder = new StringBuilder();
+        if (mBuilder.mStreamName != null && !mBuilder.mStreamName.isEmpty()) {
+            builder.append("-");
+            builder.append(mBuilder.mStreamName);
+        }
+
+        if (mBuilder.mSessionId != null && !mBuilder.mSessionId.isEmpty()) {
+            builder.append("-");
+            builder.append(mBuilder.mSessionId);
+        }
+
+        if (builder.length() == 0) {
+            builder.append("-");
+            builder.append(UUID.randomUUID());
+        }
+
+        return builder.toString();
     }
 
     public void closeSocket() {
@@ -222,6 +259,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         private IPVersionFilter mIPVersionFilter;
         private Consumer<Exception> mCompletion;
         private String mStreamName = "";
+        private String mSessionId = "";
         // TODO: Set to correct output channel
 
         private Builder() {
@@ -277,6 +315,11 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
         public Builder setStreamName(final String streamName) {
             mStreamName = streamName;
+            return this;
+        }
+
+        public Builder setSessionId(final String sessionId) {
+            mSessionId = sessionId;
             return this;
         }
 

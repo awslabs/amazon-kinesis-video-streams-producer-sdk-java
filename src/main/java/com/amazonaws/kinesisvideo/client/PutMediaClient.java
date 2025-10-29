@@ -78,6 +78,7 @@ public final class PutMediaClient {
         clientBuilder.setSenderCallback(sender);
         clientBuilder.setStreamName(mBuilder.mStreamName);
         clientBuilder.setIPVersionFilter(mBuilder.mIPVersionFilter);
+        clientBuilder.setSessionId(mBuilder.sessionId);
         // Timeout if no response is received from the server for put(i.e., acks)
         // Socket will/should be closed by the consumer by throwing the SocketTimeoutException
         clientBuilder.setTimeout(mBuilder.mReceiveTimeout);
@@ -220,6 +221,7 @@ public final class PutMediaClient {
         private boolean mLogUsedBandwidth;
         private String mFileOutputPath;
         private Long upstreamKbps;
+        private String sessionId = "";
         private Consumer<Exception> mCompletion;
         // TODO: Set to correct output channel
         private Map<String, String> unsignedHeaders;
@@ -295,6 +297,11 @@ public final class PutMediaClient {
 
         public Builder ipVersionFilter(final IPVersionFilter ipVersionFilter) {
             mIPVersionFilter = ipVersionFilter;
+            return this;
+        }
+
+        public Builder sessionId(final String sessionId) {
+            this.sessionId = sessionId;
             return this;
         }
 
