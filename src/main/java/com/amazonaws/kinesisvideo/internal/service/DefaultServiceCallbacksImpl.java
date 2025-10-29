@@ -67,7 +67,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         }
 
         @Override
-        public synchronized void accept(@Nullable final Exception object) {
+        public void accept(@Nullable final Exception object) {
             final long streamHandle = stream.getStreamHandle();
 
             if (object == null) {

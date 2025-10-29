@@ -77,7 +77,6 @@ public final class PutMediaClient {
         clientBuilder.completionCallback(mBuilder.mCompletion);
         clientBuilder.setSenderCallback(sender);
         clientBuilder.setStreamName(mBuilder.mStreamName);
-        clientBuilder.setID(mBuilder.id);
         clientBuilder.setIPVersionFilter(mBuilder.mIPVersionFilter);
         // Timeout if no response is received from the server for put(i.e., acks)
         // Socket will/should be closed by the consumer by throwing the SocketTimeoutException
@@ -212,7 +211,6 @@ public final class PutMediaClient {
     public static class Builder {
         private URI mUri;
         private String mStreamName;
-        private String id;
         private InputStream mMkvStream;
         private long mTimestamp;
         private Consumer<InputStream> mAcksReceiver;
@@ -297,11 +295,6 @@ public final class PutMediaClient {
 
         public Builder ipVersionFilter(final IPVersionFilter ipVersionFilter) {
             mIPVersionFilter = ipVersionFilter;
-            return this;
-        }
-
-        public Builder id(final String id) {
-            this.id = id;
             return this;
         }
 

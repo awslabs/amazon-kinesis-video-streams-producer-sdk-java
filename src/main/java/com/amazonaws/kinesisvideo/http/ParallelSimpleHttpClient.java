@@ -141,18 +141,18 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
     private void sendPayloadInBackground() {
         if (mBuilder.mSender != null) {
-            payloadSender = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Sending-" + mBuilder.mStreamName + "-" + mBuilder.mId).build());
-            payloadSender.execute(new LoggedExitRunnable("PutMedia-Sending-" + mBuilder.mStreamName + "-" + mBuilder.mId) {
+            payloadSender = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Sending-" + mBuilder.mStreamName).build());
+            payloadSender.execute(new LoggedExitRunnable("PutMedia-Sending-" + mBuilder.mStreamName) {
                 @Override
                 public void execute() {
                     Exception storedException = null;
                     try {
                         // This is needed to get the thread Id.
-                        log.debug("[{}-{}] Start sending data.", mBuilder.mStreamName, mBuilder.mId);
+                        log.debug("[{}] Start sending data.", mBuilder.mStreamName);
                         mBuilder.mSender.accept(mOutputStream);
-                        log.debug("[{}-{}] End sending data. Sent all data, close.", mBuilder.mStreamName, mBuilder.mId);
+                        log.debug("[{}] End sending data. Sent all data, close.", mBuilder.mStreamName);
                     } catch (final Exception e) {
-                        log.error("[{}-{}] Exception thrown on sending thread", mBuilder.mStreamName, mBuilder.mId, e);
+                        log.error("[{}] Exception thrown on sending thread", mBuilder.mStreamName, e);
                         storedException = e;
                     } finally {
                         //Only call completion if there is an exception, otherwise sender will call completion
@@ -168,8 +168,8 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
     private void receiveResponseInBackground() {
         if (mBuilder.mReceiver != null) {
-            responseReceiver = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Receiving-" + mBuilder.mStreamName + "-" + mBuilder.mId).build());
-            responseReceiver.execute(new LoggedExitRunnable("PutMedia-Receiving-" + mBuilder.mStreamName + "-" + mBuilder.mId) {
+            responseReceiver = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Receiving-" + mBuilder.mStreamName).build());
+            responseReceiver.execute(new LoggedExitRunnable("PutMedia-Receiving-" + mBuilder.mStreamName) {
                 @Override
                 public void execute() {
                     Exception storedException = null;
@@ -222,7 +222,6 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         private IPVersionFilter mIPVersionFilter;
         private Consumer<Exception> mCompletion;
         private String mStreamName = "";
-        private String mId = "";
         // TODO: Set to correct output channel
 
         private Builder() {
@@ -278,11 +277,6 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
         public Builder setStreamName(final String streamName) {
             mStreamName = streamName;
-            return this;
-        }
-
-        public Builder setID(final String ID) {
-            mId = ID;
             return this;
         }
 

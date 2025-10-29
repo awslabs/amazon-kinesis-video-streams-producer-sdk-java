@@ -257,7 +257,7 @@ public class DontRecoverOnErrorTest extends ProducerTestBase {
         );
 
         try {
-            kinesisVideoProducerStream = this.kinesisVideoProducer.createStreamSync(streamInfo, this.streamCallbacks);
+            kinesisVideoProducerStream = this.kinesisVideoProducer.createStream(streamInfo, this.streamCallbacks);
         } catch (final Exception e) {
             log.error("Failed to create the stream: {}", finalStreamName, e);
             fail();
