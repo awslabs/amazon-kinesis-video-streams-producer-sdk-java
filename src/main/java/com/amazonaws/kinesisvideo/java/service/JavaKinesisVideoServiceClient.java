@@ -521,13 +521,15 @@ public final class JavaKinesisVideoServiceClient implements KinesisVideoServiceC
                 .putMediaDestinationUri(putMediaUri)
                 .ipVersionFilter(clientConfiguration.getIpVersionFilter());
 
+        final int index = handleIndexes.getOrDefault(streamName, 0);
+        handleIndexes.put(streamName, index + 1);
+        putMediaClientBuilder.sessionId(Integer.toString(index));
+
         if (mkvDumpDir != null) {
             // A rolling window deletion mechanism for MKV dump files
             // Each stream maintains its most recent MKV dumps up to DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM
             // Files are named as streamName_index.mkv where index increments with each new PutMedia call
-            final int index = handleIndexes.getOrDefault(streamName, 0);
             putMediaClientBuilder.fileOutputPath(mkvDumpDir.resolve(streamName + "_" + index + ".mkv").toString());
-            handleIndexes.put(streamName, index + 1);
 
             // When the number of files exceeds the limit, the oldest file is automatically deleted
             // For example, with DEFAULT_MKV_DUMP_MAX_FILE_COUNT_PER_STREAM = 2:
