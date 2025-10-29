@@ -537,10 +537,10 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     @SuppressWarnings("ConstantConditions")
     public void awaitReady(@Nonnull final Set<Long> readyStreamHandles) throws ProducerException
     {
-        Preconditions.checkArgument(readyStreamHandles != null, "streamHandlesReadyEarly cannot be null");
+        Preconditions.checkArgument(readyStreamHandles != null, "readyStreamHandles cannot be null");
 
-        // Block until client is ready or it times out.
-        // Check if the stream is ready (fencepost)
+        // Block until stream is ready or it times out.
+        // Check if the stream is ready in the native side (fencepost)
         if (readyStreamHandles.remove(this.mStreamHandle)) {
             mLog.info("Stream {} (handle=0x{}) is already ready", this.mStreamInfo.getSummary(), Long.toHexString(this.mStreamHandle));
             mReadyLatch.countDown();
