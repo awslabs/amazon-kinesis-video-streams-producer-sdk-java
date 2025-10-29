@@ -266,6 +266,7 @@ public class MissingFramesIntegTest extends ProducerTestBase {
         );
 
         try {
+            // Note: Using createStream (not sync version)
             kinesisVideoProducerStream = this.kinesisVideoProducer.createStream(streamInfo, this.streamCallbacks);
         } catch (final Exception e) {
             log.error("Failed to create the stream: {}", finalStreamName, e);
@@ -276,21 +277,21 @@ public class MissingFramesIntegTest extends ProducerTestBase {
     }
 
     /**
-     * Tests that the producer correctly handles and reports {@code KMS_KEY_INVALID_STATE} error when streaming
-     * to a stream configured with a marked for deletion KMS key.
+     * Tests that the producer correctly handles missing frames from one track and recovers
+     * when the track resumes producing frames.
      *
      * <p><strong>Test Flow:</strong></p>
      * <ol>
-     *   <li>Setup 1 stream with 2 audio tracks</li>
-     *   <li>Use the caching provider</li>
-     *   <li>Stream normally for 40s</li>
-     *   <li>One track is missing for 45s</li>
-     *   <li>Stream normally again for 40s</li>
+     *   <li>Setup 1 stream with 2 audio tracks and RECOVER_ON_ERROR enabled</li>
+     *   <li>Stream normally for 5 seconds with both tracks</li>
+     *   <li>Stop sending frames for track 2 for 45 seconds, causing FRAMES_MISSING_FOR_TRACK errors</li>
+     *   <li>Resume streaming normally with both tracks for 20 seconds</li>
      * </ol>
      *
      * <p><strong>Expected Behavior:</strong></p>
      * <ul>
-     *   <li>The stream should recover after both tracks return</li>
+     *   <li>The stream should receive FRAMES_MISSING_FOR_TRACK error ACKs during the missing frames period</li>
+     *   <li>The stream should recover and receive PERSISTED ACKs after both tracks resume</li>
      * </ul>
      */
     @Test

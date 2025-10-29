@@ -57,7 +57,7 @@ import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 /**
- * Integration test for a MediaSource that has a flaky 2nd track (inconsistently produces frames).
+ * Integration test that verifies the producer behavior when RECOVER_ON_ERROR is disabled.
  * <p>
  * This test configures the stream using the RECOVER_ON_ERROR setting to be false, meaning that
  * after PutMedia completes with an error, it doesn't respawn a new PutMedia anymore.
@@ -257,6 +257,7 @@ public class DontRecoverOnErrorTest extends ProducerTestBase {
         );
 
         try {
+            // Note: Using createStream (not sync version)
             kinesisVideoProducerStream = this.kinesisVideoProducer.createStream(streamInfo, this.streamCallbacks);
         } catch (final Exception e) {
             log.error("Failed to create the stream: {}", finalStreamName, e);
@@ -267,21 +268,21 @@ public class DontRecoverOnErrorTest extends ProducerTestBase {
     }
 
     /**
-     * Tests that the producer correctly handles and reports {@code KMS_KEY_INVALID_STATE} error when streaming
-     * to a stream configured with a marked for deletion KMS key.
+     * Tests that when RECOVER_ON_ERROR is disabled, the producer stops streaming after encountering
+     * a track timestamp delta error and does not attempt to recover.
      *
      * <p><strong>Test Flow:</strong></p>
      * <ol>
-     *   <li>Setup 1 stream with 2 audio tracks</li>
-     *   <li>Use the caching provider</li>
-     *   <li>Stream normally for 40s</li>
-     *   <li>One track is missing for 45s</li>
-     *   <li>Stream normally again for 40s</li>
+     *   <li>Setup 1 stream with 2 audio tracks and RECOVER_ON_ERROR disabled</li>
+     *   <li>Stream normally for 5 seconds with both tracks</li>
+     *   <li>Stop sending frames for track 2, causing timestamp delta errors for 40s</li>
+     *   <li>Resume sending frames for both tracks for 20s</li>
      * </ol>
      *
      * <p><strong>Expected Behavior:</strong></p>
      * <ul>
-     *   <li>The stream should recover after both tracks return</li>
+     *   <li>The stream should not recover and no new PutMedia session should be created</li>
+     *   <li>ACKs should only be received for the initial streaming period</li>
      * </ul>
      */
     @Test
