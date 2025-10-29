@@ -29,7 +29,7 @@ import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.chec
 
 public final class ParallelSimpleHttpClient implements HttpClient {
 
-    private static final int AWAIT_THREAD_TERMINATE_SECS = 1;
+    private static final int AWAIT_THREAD_TERMINATE_SECS = 3;
 
     private static final String SPACE = " ";
     private static final String CLRF = "\r\n";
@@ -269,7 +269,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         }
 
         try {
-            if (responseReceiver.awaitTermination(AWAIT_THREAD_TERMINATE_SECS, TimeUnit.SECONDS)) {
+            if (!responseReceiver.awaitTermination(AWAIT_THREAD_TERMINATE_SECS, TimeUnit.SECONDS)) {
                 log.error("{}: Response receiver couldn't shutdown within {} seconds", mBuilder.mStreamName, AWAIT_THREAD_TERMINATE_SECS);
             }
         } catch (final InterruptedException e) {
