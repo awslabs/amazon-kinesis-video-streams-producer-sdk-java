@@ -365,6 +365,15 @@ public class ProducerTestBase {
         }
     }
 
+    protected void stopStreams() {
+        try {
+            kinesisVideoProducer.stopStreams();
+        } catch (ProducerException e) {
+            log.error("Failed to stop streams", e);
+            fail();
+        }
+    }
+
     /**
      * This method is used to free all the streams associated with the producer
      */

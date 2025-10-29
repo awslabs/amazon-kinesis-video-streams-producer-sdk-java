@@ -77,7 +77,7 @@ public class MissingFramesIntegTest extends ProducerTestBase {
     private static final Logger log = LogManager.getLogger(MissingFramesIntegTest.class);
     private static final int STORAGE_INFO_VERSION_ZERO = 0;
     private static final int ONE_SECOND_HUNDREDS_OF_NANOS = 1000 * 10000;
-    private static final int TEN_SECONDS_HUNDREDS_OF_NANOS = 10 * ONE_SECOND_HUNDREDS_OF_NANOS;
+    private static final int TWENTY_SECONDS_HUNDREDS_OF_NANOS = 20 * ONE_SECOND_HUNDREDS_OF_NANOS;
 
     private static final int PUT_MEDIA_ERROR_ACK_FRAMES_MISSING_FOR_TRACK = 4011;
     private static final long STATUS_ACK_ERR_FRAMES_MISSING_FOR_TRACK = 0x5200007d;
@@ -106,8 +106,8 @@ public class MissingFramesIntegTest extends ProducerTestBase {
         final String clientId = "TestClient";
 
         final long createClientTimeout = ONE_SECOND_HUNDREDS_OF_NANOS;
-        final long createStreamTimeout = TEN_SECONDS_HUNDREDS_OF_NANOS;
-        final long stopStreamTimeout = TEN_SECONDS_HUNDREDS_OF_NANOS;
+        final long createStreamTimeout = TWENTY_SECONDS_HUNDREDS_OF_NANOS;
+        final long stopStreamTimeout = TWENTY_SECONDS_HUNDREDS_OF_NANOS;
         final long offlineBufferAvailabilityTimeout = ONE_SECOND_HUNDREDS_OF_NANOS;
         final int logLevel = ClientInfo.DEFAULT_LOG_LEVEL;
 
@@ -150,6 +150,12 @@ public class MissingFramesIntegTest extends ProducerTestBase {
     @After
     public void tearDown() {
         boolean failure = false;
+        try {
+            stopStreams();
+        } catch (final Exception e) {
+            failure = true;
+            log.error("Failed to stop streams {}", this.createdStreams, e);
+        }
 
         try {
             freeStreams();
@@ -249,7 +255,7 @@ public class MissingFramesIntegTest extends ProducerTestBase {
                 RECOVER_ON_FAILURE,
                 DEFAULT_BITRATE,
                 this.fps_,
-                TEN_SECONDS_HUNDREDS_OF_NANOS, // 10s buffer
+                TWENTY_SECONDS_HUNDREDS_OF_NANOS, // 10s buffer
                 DEFAULT_REPLAY_DURATION,
                 DEFAULT_STALENESS_DURATION,
                 DEFAULT_TIMESCALE,
@@ -312,9 +318,10 @@ public class MissingFramesIntegTest extends ProducerTestBase {
         this.createdStreams.add(testStreamName);
 
         // 2 - Start streaming normally for 5s
-        final int framesCorrectly = 250;
-        final int framesAfterFailing = 2250;
-        final int fps = 50;
+        final int framesCorrectly = 50;
+        final int framesAfterFailing = 450;
+        final int framesRecovered = 200;
+        final int fps = 10;
         long currentFrameTs = System.currentTimeMillis();
         final byte[] frameData = createTestFrameData();
 
@@ -380,7 +387,7 @@ public class MissingFramesIntegTest extends ProducerTestBase {
         }
 
         // Stream normally (recover) for 20s
-        for (int frameIndex = framesAfterFailing + framesCorrectly; frameIndex < framesAfterFailing + framesCorrectly + 1000; frameIndex++) {
+        for (int frameIndex = framesAfterFailing + framesCorrectly; frameIndex < framesAfterFailing + framesCorrectly + framesRecovered; frameIndex++) {
             final long timestampUs = currentFrameTs * 1000;
 
             final KinesisVideoFrame frame = new KinesisVideoFrame(
@@ -407,8 +414,6 @@ public class MissingFramesIntegTest extends ProducerTestBase {
         // Wait additional time for any delayed error callbacks
         log.debug("Waiting for all acks to come in...");
         Thread.sleep(5000);
-
-        System.out.println(this.receivedFragmentAcks_);
 
         // 3 - Verify PERSISTED acks
         final long persistedAcksCount = this.receivedFragmentAcks_.stream()

@@ -143,6 +143,13 @@ public class DontRecoverOnErrorTest extends ProducerTestBase {
         boolean failure = false;
 
         try {
+            stopStreams();
+        } catch (final Exception e) {
+            failure = true;
+            log.error("Failed to stop streams {}", this.createdStreams, e);
+        }
+
+        try {
             freeStreams();
         } catch (final Exception e) {
             failure = true;
