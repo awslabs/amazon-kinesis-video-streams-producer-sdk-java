@@ -21,10 +21,10 @@ jobs:
 #        TODO: re-enable later. Not currently passing
 #          - sanitizer: ADDRESS_SANITIZER
 #            lib_name: libasan.so
-          - sanitizer: THREAD_SANITIZER
-            lib_name: libtsan.so
-#          - sanitizer: UNDEFINED_BEHAVIOR_SANITIZER
-#            lib_name: libubsan.so
+#          - sanitizer: THREAD_SANITIZER
+#            lib_name: libtsan.so
+          - sanitizer: UNDEFINED_BEHAVIOR_SANITIZER
+            lib_name: libubsan.so
       fail-fast: false
 
     env:
