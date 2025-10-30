@@ -6,6 +6,7 @@ import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsFactory;
+import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
 import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
@@ -107,16 +108,27 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
             final KinesisVideoProducerStream stream) throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
+        final long delay = calculateRelativeServiceCallAfter(callAfter);
         final DescribeStreamResult streamInfo = streamInfoMap.get(streamName);
+
         if (streamInfo == null) {
             throw new ProducerException("Stream Description is not given for stream " + streamName, 0);
         }
+
         final StreamDescription streamDescription = toStreamDescription(streamInfo);
-        try {
-            kinesisVideoProducer.describeStreamResult(stream, streamHandle, streamDescription, HTTP_OK);
-        } catch (final ProducerException e) {
-            throw new RuntimeException(e);
-        }
+        final Runnable task = new LoggedExitRunnable("describeStream-" + streamName) {
+            @Override
+            public void execute() {
+                try {
+                    kinesisVideoProducer.describeStreamResult(stream, streamHandle, streamDescription, HTTP_OK);
+                } catch (final ProducerException e) {
+                    log.error("[{}] Encountered an issue notifying PIC the cached result of the DescribeStream API call.", streamName, e);
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+
+        executor.schedule(task, delay, TimeUnit.NANOSECONDS);
     }
 
     @Override
@@ -131,14 +143,26 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
             final KinesisVideoProducerStream stream) throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
-
-        String endpoint = endpointMap.get(streamName);
+        final long delay = calculateRelativeServiceCallAfter(callAfter);
+        final String endpoint = endpointMap.get(streamName);
 
         if (endpoint == null) {
             throw new ProducerException("Streaming Endpoint is not given for stream " + streamName, 0);
         }
 
-        kinesisVideoProducer.getStreamingEndpointResult(stream, streamHandle, endpoint, HTTP_OK);
+        final Runnable task = new LoggedExitRunnable("getStreamingEndpoint-" + streamName) {
+            @Override
+            public void execute() {
+                try {
+                    kinesisVideoProducer.getStreamingEndpointResult(stream, streamHandle, endpoint, HTTP_OK);
+                } catch (final ProducerException e) {
+                    log.error("[{}] Encountered an issue notifying PIC the cached result of the GetDataEndpoint API call.", streamName, e);
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+
+        executor.schedule(task, delay, TimeUnit.NANOSECONDS);
     }
 
     @Override
@@ -152,50 +176,59 @@ public class CachedInfoMultiAuthServiceCallbacksImpl extends DefaultServiceCallb
             final KinesisVideoProducerStream stream) throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
-
+        final long delay = calculateRelativeServiceCallAfter(callAfter);
         final KinesisVideoCredentialsProvider kvsCredentialsProvider = credentialsProviderMap.get(streamName);
 
-        // Stores the serialized credentials as a streaming token
-        byte[] serializedCredentials = null;
-        long expiration = 0;
+        if (kvsCredentialsProvider == null) {
+            throw new ProducerException("Credentials Provider is not given for stream " + streamName, 0);
+        }
 
-        final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        try {
-            final KinesisVideoCredentials credentials = kvsCredentialsProvider.getUpdatedCredentials();
+        final Runnable task = new LoggedExitRunnable("GetStreamingToken-" + streamName) {
+            @Override
+            public void execute() {
+                // Stores the serialized credentials as a streaming token
+                byte[] serializedCredentials = null;
+                long expiration = 0;
 
-            // Serialize the credentials
-            expiration = credentials.getExpiration().getTime() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
+                final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                try {
+                    final KinesisVideoCredentials credentials = kvsCredentialsProvider.getUpdatedCredentials();
 
-            // Serialize the credentials as streaming token
-            final ObjectOutput outputStream = new ObjectOutputStream(byteArrayOutputStream);
-            outputStream.writeObject(credentials);
-            outputStream.flush();
-            serializedCredentials = byteArrayOutputStream.toByteArray();
-            outputStream.close();
-        } catch (final IOException e) {
-            log.error(e);
-        } catch (final KinesisVideoException e) {
-            log.error(e);
-        } finally {
-            try {
-                byteArrayOutputStream.close();
-            } catch (final IOException ex) {
-                // Do nothing
+                    // Serialize the credentials
+                    expiration = credentials.getExpiration().getTime() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
+
+                    // Serialize the credentials as streaming token
+                    final ObjectOutput outputStream = new ObjectOutputStream(byteArrayOutputStream);
+                    outputStream.writeObject(credentials);
+                    outputStream.flush();
+                    serializedCredentials = byteArrayOutputStream.toByteArray();
+                    outputStream.close();
+                } catch (final IOException e) {
+                    log.error(e);
+                } catch (final KinesisVideoException e) {
+                    log.error(e);
+                } finally {
+                    try {
+                        byteArrayOutputStream.close();
+                    } catch (final IOException ex) {
+                        // Do nothing
+                    }
+                }
+
+                try {
+                    kinesisVideoProducer.getStreamingTokenResult(
+                            stream,
+                            streamHandle,
+                            serializedCredentials,
+                            expiration,
+                            HTTP_OK);
+                } catch (final ProducerException e) {
+                    throw new RuntimeException(e);
+                }
             }
-        }
+        };
 
-        final int statusCode = HTTP_OK;
-
-        try {
-            kinesisVideoProducer.getStreamingTokenResult(
-                    stream,
-                    streamHandle,
-                    serializedCredentials,
-                    expiration,
-                    statusCode);
-        } catch (final ProducerException e) {
-            throw new RuntimeException(e);
-        }
+        executor.schedule(task, delay, TimeUnit.NANOSECONDS);
     }
 
     @Override
