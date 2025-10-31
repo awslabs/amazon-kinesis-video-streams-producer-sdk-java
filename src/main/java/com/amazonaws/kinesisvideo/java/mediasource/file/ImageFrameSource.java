@@ -33,7 +33,6 @@ import static com.amazonaws.kinesisvideo.producer.Time.NANOS_IN_A_MILLISECOND;
  */
 @NotThreadSafe
 public class ImageFrameSource {
-    public static final int METADATA_INTERVAL = 8;
     private static final long FRAME_DURATION_20_MS = 20L;
     @Nonnull
     private final ExecutorService executor;
@@ -101,8 +100,9 @@ public class ImageFrameSource {
 
         while (isRunning.get()) {
             if (mkvDataAvailableCallback != null) {
-                mkvDataAvailableCallback.onFrameDataAvailable(createKinesisVideoFrameFromImage(frameCounter, currentFrameTimestampMs));
-                if (isMetadataReady()) {
+                final KinesisVideoFrame frame = createKinesisVideoFrameFromImage(frameCounter, currentFrameTimestampMs);
+                mkvDataAvailableCallback.onFrameDataAvailable(frame);
+                if (frame.getFlags() == FRAME_FLAG_KEY_FRAME) {
                     mkvDataAvailableCallback.onFragmentMetadataAvailable(metadataName + metadataCount,
                             Integer.toString(metadataCount++), false);
                 }
@@ -123,9 +123,6 @@ public class ImageFrameSource {
         }
     }
 
-    private boolean isMetadataReady() {
-        return frameCounter % METADATA_INTERVAL == 0;
-    }
 
     private KinesisVideoFrame createKinesisVideoFrameFromImage(final long index, final long timestampMs) {
         final String filename = String.format(
