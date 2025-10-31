@@ -94,6 +94,8 @@ public final class DemoAppMain {
         } catch (final KinesisVideoException | InterruptedException e) {
             throw new RuntimeException(e);
         }
+
+        System.exit(0);
     }
 
     /**
