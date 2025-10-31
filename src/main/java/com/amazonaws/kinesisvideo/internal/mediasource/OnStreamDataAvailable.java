@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.internal.mediasource;
 
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
+import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 
 import javax.annotation.Nonnull;
@@ -26,6 +27,9 @@ public interface OnStreamDataAvailable {
 
     default void onFragmentMetadataAvailable(@Nonnull final String metadataName, @Nonnull final String metadataValue,
                                              final boolean persistent) throws KinesisVideoException {
+        // no-op
+    }
+    default void onEventMetadataAvailable(final int event, final StreamEventMetadata streamEventMetadata) throws KinesisVideoException {
         // no-op
     }
 }
