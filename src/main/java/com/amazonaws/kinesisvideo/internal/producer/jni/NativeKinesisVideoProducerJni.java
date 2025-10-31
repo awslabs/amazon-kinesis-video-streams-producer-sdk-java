@@ -476,7 +476,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * Put a frame.
      *
      * @param streamHandle the handle of the stream
-     * @param kinesisVideoFrame  an KinesisVideoFrame object
+     * @param kinesisVideoFrame an KinesisVideoFrame object
      * @throws ProducerException
      */
     public void putFrame(final long streamHandle, final @Nonnull KinesisVideoFrame kinesisVideoFrame) throws ProducerException
@@ -491,9 +491,9 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
      * Put a fragment metadata.
      *
      * @param streamHandle the handle of the stream
-     * @param metadataName  metadata name
-     * @param metadataValue  metadata value
-     * @param persistent  whether this is persistent metadata or not
+     * @param metadataName metadata name
+     * @param metadataValue metadata value
+     * @param persistent whether this is persistent metadata or not
      * @throws ProducerException
      */
     public void putFragmentMetadata(final long streamHandle, final @Nonnull String metadataName, @Nonnull final String metadataValue,
@@ -504,6 +504,25 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkNotNull(metadataValue);
 
         putKinesisVideoFragmentMetadata(mClientHandle, streamHandle, metadataName, metadataValue, persistent);
+    }
+
+    /**
+     * Put an event metadata.
+     *
+     * @param streamHandle  The handle of the stream.
+     * @param event  The type of event(s), a value from the StreamEventType enum.
+ *                   If you want to submit multiple events in one call it is suggested to use bit-wise
+ *                   OR combination from StreamEventType enum.
+     * @param streamEventMetadata  Optional metadata. This metadata will be applied
+ *                                 to all events included in THIS function call.
+     * @throws ProducerException
+     */
+    public void putEventMetadata(final long streamHandle, final int event, final @Nullable StreamEventMetadata streamEventMetadata)
+        throws ProducerException
+    {
+        Preconditions.checkState(isInitialized());
+        Preconditions.checkArgument(event >= 0);
+        putKinesisVideoEventMetadata(mClientHandle, streamHandle, event, streamEventMetadata);
     }
 
     /**
@@ -1304,18 +1323,33 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             throws ProducerException;
 
     /**
-     * Puts a Metadata into the native producer.
+     * Puts a fragment Metadata into the native producer.
      *
      * @param clientHandle Client handle
      * @param streamHandle Stream handle
-     * @param metadataName  metadata name
-     * @param metadataValue  metadata value
-     * @param persistent  whether this is persistent metadata or not
+     * @param metadataName metadata name
+     * @param metadataValue metadata value
+     * @param persistent whether this is persistent metadata or not
      * @throws ProducerException
      */
     private native void putKinesisVideoFragmentMetadata(long clientHandle, long streamHandle,
                                                         final @Nonnull String metadataName,
                                                         final @Nonnull String metadataValue, boolean persistent)
+            throws ProducerException;
+
+    /**
+     * Puts an event Metadata into the native producer.
+     *
+     * @param clientHandle The client handle.
+     * @param streamHandle The handle of the stream.
+     * @param event The type of event(s), a value from the StreamEventType enum.
+ *                  If you want to submit multiple events in one call it is suggested to use bit-wise
+ *                  OR combination from StreamEventType enum.
+     * @param streamEventMetadata Optional metadata. This metadata will be applied
+ *                                to all events included in THIS function call.
+     * @throws ProducerException
+     */
+    private native void putKinesisVideoEventMetadata(long clientHandle, long streamHandle, final int event, final StreamEventMetadata streamEventMetadata)
             throws ProducerException;
 
     /**
