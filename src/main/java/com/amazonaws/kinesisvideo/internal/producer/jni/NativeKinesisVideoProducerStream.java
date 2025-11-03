@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -182,6 +183,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         }
     }
 
+    private static final long STREAM_READY_POLLING_INTERVAL_MS = 100;
     private static final int SERVICE_CALL_RESULT_OK = 200;
     private final NativeKinesisVideoProducerJni mKinesisVideoProducerJni;
     private volatile long mStreamHandle;
@@ -519,6 +521,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         streamTerminated(ReadResult.INVALID_UPLOAD_HANDLE_VALUE, SERVICE_CALL_RESULT_OK);
     }
 
+    @Deprecated
     public void awaitReady() throws ProducerException
     {
         // Block until client is ready or it times out.
@@ -528,6 +531,47 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
             }
         } catch (final InterruptedException e) {
             throw new ProducerException(e);
+        }
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    public void awaitReady(@Nonnull final Set<Long> readyStreamHandles) throws ProducerException
+    {
+        Preconditions.checkArgument(readyStreamHandles != null, "readyStreamHandles cannot be null");
+
+        // Block until stream is ready or it times out.
+        // Check if the stream is ready in the native side (fencepost)
+        if (readyStreamHandles.remove(this.mStreamHandle)) {
+            mLog.info("Stream {} (handle=0x{}) is already ready", this.mStreamInfo.getSummary(), Long.toHexString(this.mStreamHandle));
+            mReadyLatch.countDown();
+            if (mStreamCallbacks != null) {
+                mStreamCallbacks.streamReady();
+            }
+            return;
+        }
+
+        final long endTime = System.currentTimeMillis() + READY_TIMEOUT_IN_MILLISECONDS;
+
+        try {
+            while (!mReadyLatch.await(STREAM_READY_POLLING_INTERVAL_MS, TimeUnit.MILLISECONDS)) {
+                if (System.currentTimeMillis() > endTime) {
+                    // Best-effort abort of a half-constructed stream; ignore failures.
+                    throw new ProducerException(
+                            this.mStreamInfo.getSummary() + ": KinesisVideo producer stream creation time out",
+                            ProducerException.STATUS_OPERATION_TIMED_OUT);
+                }
+                if (readyStreamHandles.remove(this.mStreamHandle)) {
+                    mLog.info("Stream {} (handle=0x{}) became already ready", this.mStreamInfo.getSummary(), Long.toHexString(this.mStreamHandle));
+                    mReadyLatch.countDown();
+                    if (mStreamCallbacks != null) {
+                        mStreamCallbacks.streamReady();
+                    }
+                    return;
+                }
+            }
+        } catch (final InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new ProducerException(ie);
         }
     }
 

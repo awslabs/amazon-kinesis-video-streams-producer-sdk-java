@@ -105,8 +105,7 @@ public final class DemoAppCachedInfo {
             final MediaSource mediaSource1 = createImageFileMediaSource(streamName1);
 
             // register media source with Kinesis Video Client
-            // NOTE: CachedInfoMultiAuthServiceCallbacksImpl can be used with registerMediaSourceAsync only now
-            kinesisVideoClient.registerMediaSourceAsync(mediaSource1);
+            kinesisVideoClient.registerMediaSource(mediaSource1);
 
             // start streaming
             mediaSource1.start();
@@ -115,7 +114,7 @@ public final class DemoAppCachedInfo {
 
             // register media source with Kinesis Video Client
             // NOTE: CachedInfoMultiAuthServiceCallbacksImpl can be used with registerMediaSourceAsync only now
-            kinesisVideoClient.registerMediaSourceAsync(mediaSource2);
+            kinesisVideoClient.registerMediaSource(mediaSource2);
 
             // start streaming
             mediaSource2.start();
