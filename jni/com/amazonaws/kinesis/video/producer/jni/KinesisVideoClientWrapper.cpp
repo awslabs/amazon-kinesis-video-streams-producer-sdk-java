@@ -14,6 +14,21 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
     std::pair<size_t, int32_t> clientRegistryInfo;
     CHECK(env != NULL && thiz != NULL && deviceInfo != NULL);
 
+    // Double-checked locking pattern to prevent race condition in globalCustomLogPrintFn assignment
+    // The first successful client will set the global logPrintFn in PIC's inputValidator to this static logPrintFunc
+    static std::mutex clientCreationMutex;
+    static volatile bool firstClientCreated = false;
+    
+    // Fast path: if first client already created, proceed without locking
+    std::unique_lock<std::mutex> lock(clientCreationMutex, std::defer_lock);
+    if (!firstClientCreated) {
+        lock.lock(); // Lock entire constructor until first client succeeds
+        // Note: std::unique_lock follows RAII so it will automatically be unlocked
+        // at the end of the function
+    }
+    
+    bool isFirstClient = !firstClientCreated;
+
     // Get and store the JVM so the callbacks can use it later
     if (env->GetJavaVM(&mJVMContext.jvm) != 0 || mJVMContext.jvm == NULL) {
         CHECK_EXT(FALSE, "Couldn't retrieve the JavaVM reference.");
@@ -22,7 +37,7 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
     mJVMContext.clientId = clientRegistryInfo.second;
 
     // Set the callbacks
-    if (!setCallbacks(env, thiz)) {
+    if (!setCallbacks(env, thiz, isFirstClient)) {
         throwNativeException(env, EXCEPTION_NAME, "Failed to set the callbacks.", STATUS_INVALID_ARG);
         ClientRegistry::getInstance().removeClient(this);
         return;
@@ -38,6 +53,9 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
 
     // Creating the client object might return an error as well so freeing potentially allocated tags right after the call.
     retStatus = createKinesisVideoClient(&mDeviceInfo, &mClientCallbacks, &mClientHandle);
+    if (STATUS_SUCCEEDED(retStatus) && isFirstClient) {
+        firstClientCreated = true;
+    }
     releaseTags(mDeviceInfo.tags);
     if (STATUS_FAILED(retStatus)) {
         throwNativeException(env, EXCEPTION_NAME, "Failed to create Kinesis Video client.", retStatus);
@@ -1007,7 +1025,7 @@ void KinesisVideoClientWrapper::deviceCertToTokenResult(jlong clientHandle, jint
     }
 }
 
-BOOL KinesisVideoClientWrapper::setCallbacks(JNIEnv* env, jobject thiz)
+BOOL KinesisVideoClientWrapper::setCallbacks(JNIEnv* env, jobject thiz, bool isFirstClient)
 {
     CHECK(env != NULL && thiz != NULL);
 
@@ -1054,7 +1072,14 @@ BOOL KinesisVideoClientWrapper::setCallbacks(JNIEnv* env, jobject thiz)
     mClientCallbacks.clientReadyFn = clientReadyFunc;
     mClientCallbacks.createDeviceFn = createDeviceFunc;
     mClientCallbacks.deviceCertToTokenFn = deviceCertToTokenFunc;
-    mClientCallbacks.logPrintFn = logPrintFunc;
+    
+    // Set log function only for first client to prevent race condition in globalCustomLogPrintFn.
+    // Subsequent clients use NULL so the global pointer is never reassigned after initial setup.
+    if (isFirstClient) {
+        mClientCallbacks.logPrintFn = logPrintFunc;
+    } else {
+        mClientCallbacks.logPrintFn = NULL;
+    }
 
     // TODO: Currently we set the shutdown callbacks to NULL.
     // We need to expose these in the near future
