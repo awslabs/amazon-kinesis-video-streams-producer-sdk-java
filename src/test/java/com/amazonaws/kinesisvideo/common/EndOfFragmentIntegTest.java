@@ -24,6 +24,7 @@ import org.junit.runners.Parameterized;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -90,6 +91,18 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
     private static final int KEYFRAME_INTERVAL = 5;
 
     /**
+     * Names of the threads that exist before the test.
+     */
+    private List<String> threadsBefore;
+
+    /**
+     * List of thread names to ignore.
+     */
+    private List<String> threadsToIgnore = Arrays.asList(
+            "java-sdk-http-connection-reaper" // Owned by AWS SDK Java
+    );
+
+    /**
      * List of streams created during tests that need to be cleaned up.
      */
     private final List<KinesisVideoProducerStream> createdStreams = new ArrayList<>();
@@ -112,6 +125,14 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
 
         assumeTrue("You need to increase the number of streams the client is configured for before starting the test!",
                 NUMBER_OF_STREAMS_PER_ITERATION <= NUMBER_OF_STREAMS);
+
+        // Capture baseline thread state
+        this.threadsBefore = Thread.getAllStackTraces().keySet()
+                .stream()
+                .map(Thread::getName)
+                .collect(Collectors.toList());
+
+        threadsBefore.sort(String.CASE_INSENSITIVE_ORDER);
 
         createProducer();
     }
@@ -150,6 +171,20 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
         this.createdStreams.clear();
 
         assertFalse("An exception happened during cleanup!", failure);
+
+        freeProducer();
+
+        final List<String> threadsAfter = Thread.getAllStackTraces().keySet()
+                .stream()
+                .map(Thread::getName)
+                .collect(Collectors.toList());
+
+        threadsAfter.sort(String.CASE_INSENSITIVE_ORDER);
+
+        this.threadsBefore.removeAll(threadsToIgnore);
+        threadsAfter.removeAll(threadsToIgnore);
+
+        assertEquals("There was a thread that wasn't cleaned up properly!", this.threadsBefore, threadsAfter);
     }
 
     // Using this as a way to repeat the test multiple times
@@ -278,6 +313,8 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
                 .count();
 
         assertTrue("Didn't receive any PERSISTED ACKs. Received: " + this.receivedFragmentAcks_, persistedAcksCount > 0);
+
+        executorService.shutdownNow();
     }
 
     /**
