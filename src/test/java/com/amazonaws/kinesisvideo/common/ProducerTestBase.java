@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni.PRODUCER_NATIVE_LIBRARY_NAME;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -179,6 +181,24 @@ public class ProducerTestBase {
         }
     }
 
+    protected void freeProducer() {
+        try {
+            this.kinesisVideoProducer.free();
+        } catch (ProducerException e) {
+            log.error("Failed to free the producer", e);
+            fail(e.getMessage());
+        }
+
+        this.executor.shutdownNow();
+        try {
+            assertTrue("Didn't shutdown the executor service in time!",
+                    this.executor.awaitTermination(5, TimeUnit.SECONDS));
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Interrupted while waiting for executor to terminate", e);
+        }
+    }
+
     /**
      * This method is used to create a stream with the specified information using the producer created as a part of
      * the createProducer method
@@ -306,6 +326,8 @@ public class ProducerTestBase {
                 }
             }
         }
+
+        kvs.shutdown();
     }
 
     /**
