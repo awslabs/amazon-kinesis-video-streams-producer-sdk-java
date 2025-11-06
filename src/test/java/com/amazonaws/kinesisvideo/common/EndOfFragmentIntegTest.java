@@ -184,8 +184,18 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
 
             threadsNow.sort(String.CASE_INSENSITIVE_ORDER);
             threadsNow.removeAll(threadsToIgnore);
+            log.info("Cleanup iteration {}/() ms - Current thread count: {}, Expected: {}",
+                    i, SHUTDOWN_TIMEOUT_MS, threadsNow.size(), this.threadsBefore.size());
+            
             if (threadsNow.equals(this.threadsBefore)) {
                 break; // threads are cleaned up
+            } else {
+                //if threads are not clearned up yet
+                List<String> extraThreads = new ArrayList<>(threadsNow);
+                extraThreads.removeAll(this.threadsBefore);
+                if(!extraThreads.isEmpty()) {
+                    log.warn("extra threads are still running: {}", extraThreads);
+                }
             }
 
             if (i + INTERVAL_MS >= SHUTDOWN_TIMEOUT_MS) {
