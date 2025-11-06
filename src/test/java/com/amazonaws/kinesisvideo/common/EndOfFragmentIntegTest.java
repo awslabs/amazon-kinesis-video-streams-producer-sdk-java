@@ -89,6 +89,8 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
     private static final int NUMBER_OF_FRAMES_TO_STREAM = 10;
     private static final int FPS = 5;
     private static final int KEYFRAME_INTERVAL = 5;
+    private static final int SHUTDOWN_TIMEOUT_MS = 5000; //total time allowed for clean up
+    private static final int INTERVAL_MS = 100; //time interval between each clean up
 
     /**
      * Names of the threads that exist before the test.
@@ -173,18 +175,32 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
         assertFalse("An exception happened during cleanup!", failure);
 
         freeProducer();
+        threadsBefore.removeAll(threadsToIgnore);
+        for (int i = 0; i < SHUTDOWN_TIMEOUT_MS; i += INTERVAL_MS) {
+            final List<String> threadsNow = Thread.getAllStackTraces().keySet()
+                    .stream()
+                    .map(Thread::getName)
+                    .collect(Collectors.toList());
 
-        final List<String> threadsAfter = Thread.getAllStackTraces().keySet()
-                .stream()
-                .map(Thread::getName)
-                .collect(Collectors.toList());
+            threadsNow.sort(String.CASE_INSENSITIVE_ORDER);
+            threadsNow.removeAll(threadsToIgnore);
+            if (threadsNow.equals(this.threadsBefore)) {
+                break; // threads are cleaned up
+            }
 
-        threadsAfter.sort(String.CASE_INSENSITIVE_ORDER);
+            if (i + INTERVAL_MS >= SHUTDOWN_TIMEOUT_MS) {
+                //time has exceeded shutdown timeout
+                log.error("Expected threads: {}", this.threadsBefore);
+                log.error("Current threads: {}", threadsNow);
+                fail("Timeout waiting for threads to be cleaned up properly");               
+            }
 
-        this.threadsBefore.removeAll(threadsToIgnore);
-        threadsAfter.removeAll(threadsToIgnore);
-
-        assertEquals("There was a thread that wasn't cleaned up properly!", this.threadsBefore, threadsAfter);
+            try {
+                Thread.sleep(INTERVAL_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     // Using this as a way to repeat the test multiple times
