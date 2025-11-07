@@ -165,10 +165,43 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
 
         assertFalse("An exception happened during cleanup!", failure);
 
-        free();
+        freeProducer();
+        threadsBefore.removeAll(threadsToIgnore);
+        for (int i = 0; i < SHUTDOWN_TIMEOUT_MS; i += INTERVAL_MS) {
+            final List<String> threadsNow = Thread.getAllStackTraces().keySet()
+                    .stream()
+                    .map(Thread::getName)
+                    .collect(Collectors.toList());
 
-        // Verify that all the threads are shut down and there are no thread leaks
-        this.threadWatcher.close();
+            threadsNow.sort(String.CASE_INSENSITIVE_ORDER);
+            threadsNow.removeAll(threadsToIgnore);
+            log.info("Cleanup iteration {}/{} ms - Current thread count: {}, Expected: {}",
+                    i, SHUTDOWN_TIMEOUT_MS, threadsNow.size(), this.threadsBefore.size());
+            
+            if (threadsNow.equals(this.threadsBefore)) {
+                break; // threads are cleaned up
+            } else {
+                //if threads are not clearned up yet
+                List<String> extraThreads = new ArrayList<>(threadsNow);
+                extraThreads.removeAll(this.threadsBefore);
+                if(!extraThreads.isEmpty()) {
+                    log.warn("extra threads are still running: {}", extraThreads);
+                }
+            }
+
+            if (i + INTERVAL_MS >= SHUTDOWN_TIMEOUT_MS) {
+                //time has exceeded shutdown timeout
+                log.error("Expected threads: {}", this.threadsBefore);
+                log.error("Current threads: {}", threadsNow);
+                fail("Timeout waiting for threads to be cleaned up properly");               
+            }
+
+            try {
+                Thread.sleep(INTERVAL_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     // Using this as a way to repeat the test multiple times

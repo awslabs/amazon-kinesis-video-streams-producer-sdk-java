@@ -1,8 +1,11 @@
 package com.amazonaws.kinesisvideo.internal.mediasource;
 
+import javax.annotation.Nullable;
+
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceSink;
+import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 
 import javax.annotation.Nonnull;
@@ -39,5 +42,11 @@ public class DefaultOnStreamDataAvailable implements OnStreamDataAvailable {
         Preconditions.checkArgument(metadataName != null, "Metadata name cannot be null");
         Preconditions.checkArgument(metadataValue != null, "Metadata value cannot be null");
         this.mediaSourceSink.onFragmentMetadata(metadataName, metadataValue, persistent);
+    }
+
+    @Override
+    public void onEventMetadataAvailable(final int event, @Nullable final StreamEventMetadata streamEventMetadata)
+            throws KinesisVideoException {
+        mediaSourceSink.onEventMetadata(event, streamEventMetadata);
     }
 }

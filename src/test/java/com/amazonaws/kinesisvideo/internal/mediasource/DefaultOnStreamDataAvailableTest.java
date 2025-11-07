@@ -56,6 +56,11 @@ public class DefaultOnStreamDataAvailableTest {
         }
 
         @Override
+        public void onEventMetadata(final int event, final com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata streamEventMetadata) throws KinesisVideoException {
+            // Mock implementation
+        }
+
+        @Override
         public KinesisVideoProducerStream getProducerStream() {
             return null;
         }

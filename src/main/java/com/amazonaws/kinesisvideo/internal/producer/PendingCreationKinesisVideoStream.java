@@ -84,6 +84,11 @@ public class PendingCreationKinesisVideoStream implements KinesisVideoProducerSt
     }
 
     @Override
+    public void putEventMetadata(final int event, @Nullable final StreamEventMetadata streamEventMetadata) throws ProducerException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void fragmentAck(final long uploadHandle, @Nonnull final KinesisVideoFragmentAck kinesisVideoFragmentAck) throws ProducerException {
         throw new UnsupportedOperationException();
     }
