@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -19,13 +20,18 @@ import java.io.Writer;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 
@@ -57,7 +63,34 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private OutputStream mOutputStream;
     private ExecutorService payloadSender;
     private ExecutorService responseReceiver;
-    private AtomicInteger completionCallbackCounter = new AtomicInteger(0);
+    private List<ExitResult> exitHistory = new ArrayList<>();
+
+    private enum Caller {
+        SENDER,
+        RECEIVER,
+        CLOSE
+    }
+
+    private class ExitResult {
+        @Nonnull
+        private Caller caller;
+
+        @Nullable
+        private Exception exception;
+
+        ExitResult(@Nonnull final Caller caller, @Nullable final Exception exception) {
+            this.caller = caller;
+            this.exception = exception;
+        }
+
+        @Override
+        public String toString() {
+            return "ExitResult{" +
+                    "caller=" + caller +
+                    ", exception=" + exception +
+                    '}';
+        }
+    }
 
     private ParallelSimpleHttpClient(final Builder builder) {
         mBuilder = builder;
@@ -164,10 +197,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                         log.error("[{}] Exception thrown on sending thread", mBuilder.mStreamName, e);
                         storedException = e;
                     } finally {
-                        //Only call completion if there is an exception, otherwise sender will call completion
-                        if (storedException != null) {
-                            notifyCompletionCallback(storedException);
-                        }
+                        notifyCompletionCallback(new ExitResult(Caller.SENDER, storedException));
                         payloadSender.shutdownNow();
                     }
                 }
@@ -191,7 +221,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                         log.error("[{}] Exception thrown on receiving thread", mBuilder.mStreamName, e);
                         storedException = e;
                     } finally {
-                        notifyCompletionCallback(storedException);
+                        notifyCompletionCallback(new ExitResult(Caller.RECEIVER, storedException));
                         responseReceiver.shutdownNow();
                         closeSocket();
                     }
@@ -255,7 +285,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
         awaitTryShutdownThreads();
 
-        notifyCompletionCallback(null);
+        notifyCompletionCallback(new ExitResult(Caller.CLOSE, null));
     }
 
     // This is used to synchronize the 3 threads which call the completion callback:
@@ -264,15 +294,43 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     // - Thread calling close()
     // Only the first invocation goes through. The assumption is that the thread that exits first (sender or receiver),
     // will be the one that ran into the error (if applicable). Then it should trigger the other to shut down.
-    private void notifyCompletionCallback(@Nullable final Exception exception) {
+    private void notifyCompletionCallback(@Nonnull final ExitResult exitResult) {
         // Note: the thread name should already have the stream name + connection handle # in it
-        log.debug("CompletionCallback with exception: {}", exception == null ? "null" : exception.getClass().getSimpleName(), exception);
+        log.debug("Received: {}", exitResult);
+
         if (mBuilder.mCompletion != null) {
-            final int invocation = completionCallbackCounter.incrementAndGet();
-            if (invocation == 1) {
-                mBuilder.mCompletion.accept(exception);
-            } else {
-                log.debug("Multiple completions (#{}), ignoring", invocation);
+
+            if (exitResult.caller == Caller.CLOSE) {
+                mBuilder.mCompletion.accept(null);
+                return;
+            }
+
+            Exception exceptionToNotify = null;
+            boolean notify = false;
+            synchronized (this.exitHistory) {
+                this.exitHistory.add(exitResult);
+
+                if (this.exitHistory.size() == 2 &&
+                        ((this.exitHistory.get(0).caller == Caller.SENDER && this.exitHistory.get(1).caller == Caller.RECEIVER) ||
+                        (this.exitHistory.get(0).caller == Caller.RECEIVER && this.exitHistory.get(1).caller == Caller.SENDER))
+                ) {
+                    // Check if either one of them exited with an exception
+                    // If so, propagate it. If both of them terminated normally, notify with null
+                    notify = true;
+
+                    // prioritize the exception that came first
+                    exceptionToNotify = this.exitHistory.get(0).exception;
+                    if (exceptionToNotify == null) {
+                        exceptionToNotify = this.exitHistory.get(1).exception;
+                    }
+                } else {
+                    log.debug("Not notifying this time");
+                }
+            }
+
+            if (notify) {
+                log.debug("[{}] notifying completion callback with {}", mBuilder.mStreamName, exceptionToNotify);
+                mBuilder.mCompletion.accept(exceptionToNotify);
             }
         }
     }

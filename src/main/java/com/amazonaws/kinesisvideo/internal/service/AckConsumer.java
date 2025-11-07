@@ -25,6 +25,7 @@ class AckConsumer implements Consumer<InputStream> {
     private final Logger log;
     private final long uploadHandle;
     private volatile boolean closed = false;
+    private volatile boolean seenErrorAck = false;
 
     public AckConsumer(final long uploadHandle,
                        @Nonnull final KinesisVideoProducerStream stream,
@@ -72,6 +73,11 @@ class AckConsumer implements Consumer<InputStream> {
                     closed = true;
                 } else if (bytesRead != 0) {
                     log.debug("Received ACK bits: {}", bytesString);
+
+                    if (bytesString.contains("ERROR")) {
+                        seenErrorAck = true;
+                    }
+
                     try {
                         stream.parseFragmentAck(uploadHandle, bytesString);
                     } catch (final ProducerException e) {
@@ -88,6 +94,10 @@ class AckConsumer implements Consumer<InputStream> {
         } finally {
             stoppedLatch.countDown();
         }
+    }
+
+    public boolean seenErrorAck() {
+        return this.seenErrorAck;
     }
 
     public void close() throws ProducerException {

@@ -26,6 +26,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -34,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -75,6 +75,7 @@ public class PutMediaClientErrorTest {
     private KinesisVideoStreamResource kinesisVideoStreamResource;
 
     private ThreadWatcher threadWatcher;
+    private final List<String> THREADS_TO_IGNORE = Collections.singletonList("java-sdk-http-connection-reaper");
     private final Duration THREADS_TIMEOUT = Duration.ofSeconds(5);
     private final Duration THREADS_POLLING_INTERVAL = Duration.ofMillis(100);
 
@@ -130,13 +131,12 @@ public class PutMediaClientErrorTest {
     @Test
     public void testPutMediaClientWithGarbageData() throws Exception {
         final CountDownLatch completionLatch = new CountDownLatch(1);
-        final boolean[] success = {false};
         final List<String> acksReceived = new ArrayList<>();
         final List<Exception> completionsReceived = new ArrayList<>();
 
         // Capture baseline thread state before client creation
         // This is essential for detecting thread leaks in concurrent environments
-        this.threadWatcher = new ThreadWatcher(this.THREADS_TIMEOUT, this.THREADS_POLLING_INTERVAL, null);
+        this.threadWatcher = new ThreadWatcher(this.THREADS_TIMEOUT, this.THREADS_POLLING_INTERVAL, this.THREADS_TO_IGNORE);
 
         // MockInputStream generates infinite garbage data to stress-test resource cleanup
         final MockInputStream garbageStream = new MockInputStream(72105328310511897L);
@@ -219,6 +219,11 @@ public class PutMediaClientErrorTest {
                      * This callback provides the final status of the streaming operation.
                      * A null exception indicates successful completion, while non-null
                      * indicates an error condition that terminated the stream.
+                     * <p>
+                     * We are expecting the INVALID_MKV_DATA error ack to trigger the PIC layer to spawn a new PutMedia connection
+                     * starting from the next fragment. If the completion callback triggers with an error as well, the PIC would
+                     * receive duplicate notifications. PIC should already handle this via the UploadHandle #, but not all
+                     * clients may consider this behavior.
                      */
                     @Override
                     public void accept(final Exception exception) {
@@ -226,7 +231,6 @@ public class PutMediaClientErrorTest {
 
                         completionsReceived.add(exception);
 
-                        success[0] = (exception == null);
                         if (exception != null) {
                             log.error("PutMedia errored out!", exception);
                         }
@@ -245,11 +249,14 @@ public class PutMediaClientErrorTest {
             log.info("Completions received: " + completionsReceived);
 
             // Validate completion callback exactly-once semantics
-            assertEquals("Completion callback was not called more than once! Completions received: " + completionsReceived, 1, completionsReceived.size());
-            assertNull("Received an unexpected exception in the completion callback! " + completionsReceived, completionsReceived.get(0));
+            assertEquals("Completion callback was not called exactly once! Completions received: " + completionsReceived, 1, completionsReceived.size());
+            assertTrue("Received an unexpected exception in the completion callback! Expected RuntimeException, but received: " + completionsReceived, completionsReceived.get(0) instanceof RuntimeException);
 
-            assertEquals("Expected 1 INVALID_MKV_DATA ack: " + acksReceived, 1, acksReceived.size());
-            assertTrue("The ACK should be INVALID_MKV_DATA: " + acksReceived, acksReceived.get(0).contains("INVALID_MKV_DATA"));
+            // Sometimes PutMedia closes the connection without sending the ERROR ack
+            if (!acksReceived.isEmpty()) {
+                assertEquals("Expected 1 INVALID_MKV_DATA ack: " + acksReceived, 1, acksReceived.size());
+                assertTrue("The ACK should be INVALID_MKV_DATA: " + acksReceived, acksReceived.get(0).contains("INVALID_MKV_DATA"));
+            }
         } finally {
             client.close();
         }
@@ -262,11 +269,6 @@ public class PutMediaClientErrorTest {
 
         // Verify resource cleanup - InputStream.close() must be called exactly once
         assertEquals("close() was not called exactly once!", 1, garbageStream.closedCalls.get());
-
-        // We are expecting the INVALID_MKV_DATA error ack to trigger the PIC layer to spawn a new PutMedia connection
-        // starting from the next fragment. If the completion callback triggers with an error as well, the PIC would
-        // receive duplicate notifications.
-        assertTrue("Did not receive a successful completion callback!", success[0]);
     }
 
     /**

@@ -4,6 +4,7 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.kinesisvideo.client.signing.KinesisVideoAWS4Signer;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
 import com.amazonaws.kinesisvideo.util.KinesisVideoStreamResource;
+import com.amazonaws.kinesisvideo.util.ThreadWatcher;
 import com.amazonaws.regions.DefaultAwsRegionProviderChain;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
@@ -25,6 +26,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,7 +34,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -88,8 +89,11 @@ public class PutMediaClientWithFilesTest {
     private KinesisVideoStreamResource kinesisVideoStreamResource;
     private final InputStream testMkvFile;
     private final List<String> expectedAcks;
-    private static final int SHUTDOWN_TIMEOUT_MS = 5000; //total time allowed for clean up
-    private static final int INTERVAL_MS = 100; //time interval between each clean up
+
+    private ThreadWatcher threadWatcher;
+    private final List<String> THREADS_TO_IGNORE = Collections.singletonList("java-sdk-http-connection-reaper");
+    private final Duration THREADS_TIMEOUT = Duration.ofSeconds(5);
+    private final Duration THREADS_POLLING_INTERVAL = Duration.ofMillis(100);
 
     @Before
     public void setUp() throws Exception {
@@ -200,16 +204,12 @@ public class PutMediaClientWithFilesTest {
     @Test
     public void testPutMediaClientWithMkvFile() throws Exception {
         final CountDownLatch completionLatch = new CountDownLatch(1);
-        final boolean[] success = {false};
         final List<String> acksReceived = new ArrayList<>();
         final List<Exception> completionsReceived = new ArrayList<>();
 
         // Capture baseline thread state for leak detection
         // Essential for validating proper cleanup in production environments
-        final List<String> threadsBefore = Thread.getAllStackTraces().keySet()
-                .stream()
-                .map(Thread::getName)
-                .collect(Collectors.toList());
+        this.threadWatcher = new ThreadWatcher(this.THREADS_TIMEOUT, this.THREADS_POLLING_INTERVAL, this.THREADS_TO_IGNORE);
 
         final PutMediaClient client = PutMediaClient.builder()
                 .putMediaDestinationUri(this.putMediaUri)
@@ -273,7 +273,6 @@ public class PutMediaClientWithFilesTest {
 
                         completionsReceived.add(exception);
 
-                        success[0] = (exception == null);
                         if (exception != null) {
                             log.error("PutMedia errored out!", exception);
                         }
@@ -314,43 +313,7 @@ public class PutMediaClientWithFilesTest {
         // Thread leak detection
         // Compares thread state before/after to ensure no background threads
         // are leaked by the PutMediaClient implementation
-
-        threadsBefore.sort(String.CASE_INSENSITIVE_ORDER);
-
-
-        for (int i = 0; i < SHUTDOWN_TIMEOUT_MS; i += INTERVAL_MS) {
-            final List<String> threadsNow = Thread.getAllStackTraces().keySet()
-                    .stream()
-                    .map(Thread::getName)
-                    .collect(Collectors.toList());
-
-            threadsNow.sort(String.CASE_INSENSITIVE_ORDER);
-            log.info("Cleanup iteration {}/{} ms - Current thread count: {}, Expected: {}",
-                    i, SHUTDOWN_TIMEOUT_MS, threadsNow.size(), threadsBefore.size());
-            
-            if (threadsNow.equals(threadsBefore)) {
-                break; // threads are cleaned up
-            } else {
-                //if threads are not clearned up yet
-                List<String> extraThreads = new ArrayList<>(threadsNow);
-                extraThreads.removeAll(threadsBefore);
-                if(!extraThreads.isEmpty()) {
-                    log.warn("extra threads are still running: {}", extraThreads);
-                }
-            }
-
-            if (i + INTERVAL_MS >= SHUTDOWN_TIMEOUT_MS) {
-                //time has exceeded shutdown timeout
-                log.error("Expected threads: {}", threadsBefore);
-                log.error("Current threads: {}", threadsNow);
-                fail("Timeout waiting for threads to be cleaned up properly");               
-            }
-
-            try {
-                Thread.sleep(INTERVAL_MS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
+        this.threadWatcher.close();
+        this.threadWatcher = null;
     }
 }
