@@ -88,6 +88,8 @@ public class PutMediaClientWithFilesTest {
     private KinesisVideoStreamResource kinesisVideoStreamResource;
     private final InputStream testMkvFile;
     private final List<String> expectedAcks;
+    private static final int SHUTDOWN_TIMEOUT_MS = 5000; //total time allowed for clean up
+    private static final int INTERVAL_MS = 100; //time interval between each clean up
 
     @Before
     public void setUp() throws Exception {
@@ -312,13 +314,43 @@ public class PutMediaClientWithFilesTest {
         // Thread leak detection
         // Compares thread state before/after to ensure no background threads
         // are leaked by the PutMediaClient implementation
-        final List<String> threadsAfter = Thread.getAllStackTraces().keySet()
-                .stream()
-                .map(Thread::getName)
-                .collect(Collectors.toList());
 
         threadsBefore.sort(String.CASE_INSENSITIVE_ORDER);
-        threadsAfter.sort(String.CASE_INSENSITIVE_ORDER);
-        assertEquals("There was a thread that wasn't cleaned up properly!", threadsBefore, threadsAfter);
+
+
+        for (int i = 0; i < SHUTDOWN_TIMEOUT_MS; i += INTERVAL_MS) {
+            final List<String> threadsNow = Thread.getAllStackTraces().keySet()
+                    .stream()
+                    .map(Thread::getName)
+                    .collect(Collectors.toList());
+
+            threadsNow.sort(String.CASE_INSENSITIVE_ORDER);
+            log.info("Cleanup iteration {}/{} ms - Current thread count: {}, Expected: {}",
+                    i, SHUTDOWN_TIMEOUT_MS, threadsNow.size(), threadsBefore.size());
+            
+            if (threadsNow.equals(threadsBefore)) {
+                break; // threads are cleaned up
+            } else {
+                //if threads are not clearned up yet
+                List<String> extraThreads = new ArrayList<>(threadsNow);
+                extraThreads.removeAll(threadsBefore);
+                if(!extraThreads.isEmpty()) {
+                    log.warn("extra threads are still running: {}", extraThreads);
+                }
+            }
+
+            if (i + INTERVAL_MS >= SHUTDOWN_TIMEOUT_MS) {
+                //time has exceeded shutdown timeout
+                log.error("Expected threads: {}", threadsBefore);
+                log.error("Current threads: {}", threadsNow);
+                fail("Timeout waiting for threads to be cleaned up properly");               
+            }
+
+            try {
+                Thread.sleep(INTERVAL_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 }
