@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 
@@ -55,6 +57,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private OutputStream mOutputStream;
     private ExecutorService payloadSender;
     private ExecutorService responseReceiver;
+    private AtomicInteger completionCallbackCounter = new AtomicInteger(0);
 
     private ParallelSimpleHttpClient(final Builder builder) {
         mBuilder = builder;
@@ -163,7 +166,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                     } finally {
                         //Only call completion if there is an exception, otherwise sender will call completion
                         if (storedException != null) {
-                            mBuilder.mCompletion.accept(storedException);
+                            notifyCompletionCallback(storedException);
                         }
                         payloadSender.shutdownNow();
                     }
@@ -188,7 +191,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                         log.error("[{}] Exception thrown on receiving thread", mBuilder.mStreamName, e);
                         storedException = e;
                     } finally {
-                        mBuilder.mCompletion.accept(storedException);
+                        notifyCompletionCallback(storedException);
                         responseReceiver.shutdownNow();
                         closeSocket();
                     }
@@ -252,7 +255,26 @@ public final class ParallelSimpleHttpClient implements HttpClient {
 
         awaitTryShutdownThreads();
 
-        mBuilder.mCompletion.accept(null);
+        notifyCompletionCallback(null);
+    }
+
+    // This is used to synchronize the 3 threads which call the completion callback:
+    // - Sender thread
+    // - Receiving ACKs thread
+    // - Thread calling close()
+    // Only the first invocation goes through. The assumption is that the thread that exits first (sender or receiver),
+    // will be the one that ran into the error (if applicable). Then it should trigger the other to shut down.
+    private void notifyCompletionCallback(@Nullable final Exception exception) {
+        // Note: the thread name should already have the stream name + connection handle # in it
+        log.debug("CompletionCallback with exception: {}", exception == null ? "null" : exception.getClass().getSimpleName(), exception);
+        if (mBuilder.mCompletion != null) {
+            final int invocation = completionCallbackCounter.incrementAndGet();
+            if (invocation == 1) {
+                mBuilder.mCompletion.accept(exception);
+            } else {
+                log.debug("Multiple completions (#{}), ignoring", invocation);
+            }
+        }
     }
 
     // Wait for the threads to terminate

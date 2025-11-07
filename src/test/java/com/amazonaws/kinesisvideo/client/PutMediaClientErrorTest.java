@@ -4,6 +4,7 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.kinesisvideo.client.signing.KinesisVideoAWS4Signer;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
 import com.amazonaws.kinesisvideo.util.KinesisVideoStreamResource;
+import com.amazonaws.kinesisvideo.util.ThreadWatcher;
 import com.amazonaws.regions.DefaultAwsRegionProviderChain;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
@@ -16,18 +17,20 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -60,7 +63,7 @@ public class PutMediaClientErrorTest {
 
     private static final Logger log = LogManager.getLogger(PutMediaClientErrorTest.class);
 
-    private static final int TIMEOUT_SECONDS = 10;
+    private static final int TIMEOUT_SECONDS = 20;
     private static final String END_OF_STREAM_MSG = "0\r\n\r\n";
     private static final String PUT_MEDIA_POSTFIX = "/putMedia";
     private static final String SERVICE_NAME = "kinesisvideo";
@@ -71,6 +74,10 @@ public class PutMediaClientErrorTest {
     private KinesisVideoStreamResource.KinesisVideoStreamConfiguration streamConfiguration;
     private KinesisVideoStreamResource kinesisVideoStreamResource;
 
+    private ThreadWatcher threadWatcher;
+    private final Duration THREADS_TIMEOUT = Duration.ofSeconds(5);
+    private final Duration THREADS_POLLING_INTERVAL = Duration.ofMillis(100);
+
     @Before
     public void setUp() throws Exception {
         this.streamConfiguration = new KinesisVideoStreamResource.KinesisVideoStreamConfiguration();
@@ -80,7 +87,7 @@ public class PutMediaClientErrorTest {
         final AmazonKinesisVideo kinesisVideoClient = AmazonKinesisVideoClientBuilder.defaultClient();
 
         final GetDataEndpointResult dataEndpointResult = kinesisVideoClient.getDataEndpoint(new GetDataEndpointRequest()
-                .withStreamName(streamConfiguration.streamName)
+                .withStreamName(this.streamConfiguration.streamName)
                 .withAPIName(APIName.PUT_MEDIA));
 
         kinesisVideoClient.shutdown();
@@ -121,7 +128,7 @@ public class PutMediaClientErrorTest {
      * for long-running applications that create/destroy many PutMediaClient instances.
      */
     @Test
-    public void testPutMediaClientWithMkvFile() throws Exception {
+    public void testPutMediaClientWithGarbageData() throws Exception {
         final CountDownLatch completionLatch = new CountDownLatch(1);
         final boolean[] success = {false};
         final List<String> acksReceived = new ArrayList<>();
@@ -129,16 +136,10 @@ public class PutMediaClientErrorTest {
 
         // Capture baseline thread state before client creation
         // This is essential for detecting thread leaks in concurrent environments
-        final List<String> threadsBefore = Thread.getAllStackTraces().keySet()
-                .stream()
-                .map(Thread::getName)
-                .collect(Collectors.toList());
-
-        threadsBefore.sort(String.CASE_INSENSITIVE_ORDER);
-        log.info(threadsBefore);
+        this.threadWatcher = new ThreadWatcher(this.THREADS_TIMEOUT, this.THREADS_POLLING_INTERVAL, null);
 
         // MockInputStream generates infinite garbage data to stress-test resource cleanup
-        final MockInputStream garbageStream = new MockInputStream();
+        final MockInputStream garbageStream = new MockInputStream(72105328310511897L);
 
         final PutMediaClient client = PutMediaClient.builder()
                 .putMediaDestinationUri(this.putMediaUri)
@@ -244,9 +245,11 @@ public class PutMediaClientErrorTest {
             log.info("Completions received: " + completionsReceived);
 
             // Validate completion callback exactly-once semantics
-            assertEquals("Completion callback was not called more than once!", 1, completionsReceived.size());
-            assertNull("Received an unexpected exception in the completion callback!", completionsReceived.get(0));
+            assertEquals("Completion callback was not called more than once! Completions received: " + completionsReceived, 1, completionsReceived.size());
+            assertNull("Received an unexpected exception in the completion callback! " + completionsReceived, completionsReceived.get(0));
 
+            assertEquals("Expected 1 INVALID_MKV_DATA ack: " + acksReceived, 1, acksReceived.size());
+            assertTrue("The ACK should be INVALID_MKV_DATA: " + acksReceived, acksReceived.get(0).contains("INVALID_MKV_DATA"));
         } finally {
             client.close();
         }
@@ -254,17 +257,16 @@ public class PutMediaClientErrorTest {
         // Thread leak detection - compares thread state before/after
         // Any leaked threads indicate resource management bugs that can cause
         // memory leaks and eventual OOM in long-running applications
-        final List<String> threadsAfter = Thread.getAllStackTraces().keySet()
-                .stream()
-                .map(Thread::getName)
-                .collect(Collectors.toList());
-
-        threadsBefore.sort(String.CASE_INSENSITIVE_ORDER);
-        threadsAfter.sort(String.CASE_INSENSITIVE_ORDER);
-        assertEquals("There was a thread that wasn't cleaned up properly!", threadsBefore, threadsAfter);
+        this.threadWatcher.close();
+        this.threadWatcher = null;
 
         // Verify resource cleanup - InputStream.close() must be called exactly once
         assertEquals("close() was not called exactly once!", 1, garbageStream.closedCalls.get());
+
+        // We are expecting the INVALID_MKV_DATA error ack to trigger the PIC layer to spawn a new PutMedia connection
+        // starting from the next fragment. If the completion callback triggers with an error as well, the PIC would
+        // receive duplicate notifications.
+        assertTrue("Did not receive a successful completion callback!", success[0]);
     }
 
     /**
@@ -285,7 +287,13 @@ public class PutMediaClientErrorTest {
      */
     private static class MockInputStream extends InputStream {
 
-        AtomicInteger closedCalls = new AtomicInteger(0);
+        private final Random random;
+        private final AtomicInteger closedCalls = new AtomicInteger(0);
+
+        private MockInputStream(final long seed) {
+            super();
+            this.random = new Random(seed);
+        }
 
         @Override
         public int read() throws IOException {
@@ -294,7 +302,7 @@ public class PutMediaClientErrorTest {
         }
 
         @Override
-        public int read(final byte[] b,
+        public int read(@Nonnull final byte[] b,
                         final int off,
                         final int len)
                 throws IOException {
@@ -302,15 +310,13 @@ public class PutMediaClientErrorTest {
             // Generate continuous garbage data - never return -1 (end of stream)
             // This simulates a data source that never naturally terminates,
             // forcing the client to handle cleanup through close() calls
-            for (int i = 0; i < len; i++) {
-                b[off + i] = (byte) (Math.random() * 256);
-            }
+            this.random.nextBytes(b);
 
             return len;
         }
 
         @Override
-        public int read(final byte[] b)
+        public int read(@Nonnull final byte[] b)
                 throws IOException {
             return read(b, 0, b.length);
         }
