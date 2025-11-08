@@ -204,8 +204,8 @@ public class PutMediaClientWithFilesTest {
     @Test
     public void testPutMediaClientWithMkvFile() throws Exception {
         final CountDownLatch completionLatch = new CountDownLatch(1);
-        final List<String> acksReceived = new ArrayList<>();
-        final List<Exception> completionsReceived = new ArrayList<>();
+        final List<String> acksReceived = Collections.synchronizedList(new ArrayList<>());
+        final List<Exception> completionsReceived = Collections.synchronizedList(new ArrayList<>());
 
         // Capture baseline thread state for leak detection
         // Essential for validating proper cleanup in production environments

@@ -62,7 +62,7 @@ public final class ThreadWatcher implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        verityThreadShutdown(this.threadsBefore, this.timeoutMs, this.pollingIntervalMs);
+        verifyThreadShutdown(this.threadsBefore, this.timeoutMs, this.pollingIntervalMs);
     }
 
     /**
@@ -74,7 +74,7 @@ public final class ThreadWatcher implements AutoCloseable {
      * @throws AssertionError if the timeout is exceeded
      */
     @SuppressWarnings("ConstantConditions")
-    public void verityThreadShutdown(@Nonnull final List<String> expectedThreads,
+    public void verifyThreadShutdown(@Nonnull final List<String> expectedThreads,
                                      final long timeoutMs,
                                      final long pollingIntervalMs) {
         Preconditions.checkArgument(expectedThreads != null, "expectedThreads cannot be null");
@@ -90,14 +90,23 @@ public final class ThreadWatcher implements AutoCloseable {
             log.info("Cleanup iteration {}/{} ms - Current thread count: {}, Expected: {}",
                     i, timeoutMs, threadsNow.size(), expectedThreads.size());
 
-            if (threadsNow.equals(expectedThreads)) {
-                break; // Threads are cleaned up
+            // Consider it a success when the current threads are a subset of (or equal to) the expected baseline threads
+            if (expectedThreads.containsAll(threadsNow)) {
+
+                // Log when there were extra threads during the baseline that are no longer here
+                if (expectedThreads.size() != threadsNow.size()) {
+                    final List<String> extraThreads = new ArrayList<>(expectedThreads);
+                    extraThreads.removeAll(threadsNow);
+                    log.info("Extra threads that were at the start: {}", extraThreads);
+                }
+
+                break;
             } else {
                 // Threads are not cleaned up yet
                 final List<String> extraThreads = new ArrayList<>(threadsNow);
                 extraThreads.removeAll(this.threadsBefore);
                 if (!extraThreads.isEmpty()) {
-                    log.warn("extra threads are still running: {}", extraThreads);
+                    log.warn("Extra threads are still running: {}", extraThreads);
                 }
             }
 

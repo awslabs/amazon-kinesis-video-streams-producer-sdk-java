@@ -131,8 +131,8 @@ public class PutMediaClientErrorTest {
     @Test
     public void testPutMediaClientWithGarbageData() throws Exception {
         final CountDownLatch completionLatch = new CountDownLatch(1);
-        final List<String> acksReceived = new ArrayList<>();
-        final List<Exception> completionsReceived = new ArrayList<>();
+        final List<String> acksReceived = Collections.synchronizedList(new ArrayList<>());
+        final List<Exception> completionsReceived = Collections.synchronizedList(new ArrayList<>());
 
         // Capture baseline thread state before client creation
         // This is essential for detecting thread leaks in concurrent environments
