@@ -26,6 +26,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -64,7 +65,8 @@ public class PutMediaClientErrorTest {
     private static final Logger log = LogManager.getLogger(PutMediaClientErrorTest.class);
 
     private static final int TIMEOUT_SECONDS = 20;
-    private static final String END_OF_STREAM_MSG = "0\r\n\r\n";
+    private static final String DELIMITER = "\r\n\r\n";
+    private static final String END_OF_STREAM_MSG = "0" + DELIMITER;
     private static final String PUT_MEDIA_POSTFIX = "/putMedia";
     private static final String SERVICE_NAME = "kinesisvideo";
 
@@ -200,8 +202,10 @@ public class PutMediaClientErrorTest {
                                 }
 
                                 if (!response.isEmpty()) {
-                                    log.info("Received ack: " + response);
-                                    acksReceived.add(response);
+                                    // There could more than one ack inside of this message
+                                    Arrays.stream(response.split(DELIMITER))
+                                            .peek(ackStr -> log.info("Received ack: {}", response))
+                                            .forEach(acksReceived::add);
                                 }
                             }
                             // bytesRead == -1 indicates connection closed by service

@@ -75,7 +75,8 @@ public class PutMediaClientWithFilesTest {
 
     private static final Logger log = LogManager.getLogger(PutMediaClientWithFilesTest.class);
 
-    private static final String END_OF_STREAM_MSG = "0\r\n\r\n";
+    private static final String DELIMITER = "\r\n\r\n";
+    private static final String END_OF_STREAM_MSG = "0" + DELIMITER;
     private static final String PUT_MEDIA_POSTFIX = "/putMedia";
     private static final String SERVICE_NAME = "kinesisvideo";
     private static final int BUFFER_SIZE = 1024;
@@ -175,6 +176,8 @@ public class PutMediaClientWithFilesTest {
      * @param expectedAcks     List of strings expected to appear in service ACK responses
      */
     public PutMediaClientWithFilesTest(@Nonnull final String resourceFilePath, @Nonnull final List<String> expectedAcks) {
+        log.info("Starting PutMediaClientWithFilesTest with resource file path: {}", resourceFilePath);
+
         // Load test MKV file from classpath resources
         this.testMkvFile = PutMediaClientWithFilesTest.class.getClassLoader().getResourceAsStream(resourceFilePath);
         assertNotNull("Could not load: " + resourceFilePath, this.testMkvFile);
@@ -254,8 +257,10 @@ public class PutMediaClientWithFilesTest {
                                 }
 
                                 if (!response.isEmpty()) {
-                                    log.info("Received ack: " + response);
-                                    acksReceived.add(response);
+                                    // There could more than one ack inside of this message
+                                    Arrays.stream(response.split(DELIMITER))
+                                            .peek(ackStr -> log.info("Received ack: {}", response))
+                                            .forEach(acksReceived::add);
                                 }
                             }
                             // bytesRead == -1 = connection closed by service
