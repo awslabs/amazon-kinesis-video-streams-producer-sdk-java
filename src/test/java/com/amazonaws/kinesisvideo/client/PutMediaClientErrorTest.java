@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -252,14 +253,22 @@ public class PutMediaClientErrorTest {
             log.info("Acks received: " + acksReceived);
             log.info("Completions received: " + completionsReceived);
 
-            // Validate completion callback exactly-once semantics
-            assertEquals("Completion callback was not called exactly once! Completions received: " + completionsReceived, 1, completionsReceived.size());
-            assertTrue("Received an unexpected exception in the completion callback! Expected RuntimeException, but received: " + completionsReceived, completionsReceived.get(0) instanceof RuntimeException);
-
             // Sometimes PutMedia closes the connection without sending the ERROR ack
+            // - If PutMedia closed with an ERROR ack, the completionCallback should have a null (success)
+            //   since parseFragmentAck() in the receiver thread will notify PIC.
+            // - If PutMedia closed without any ERROR ack, we need the completionCallback with an exception
+            //   to notify PIC.
             if (!acksReceived.isEmpty()) {
+                // Note: In this case, we are not expecting any BUFFERING acks
                 assertEquals("Expected 1 INVALID_MKV_DATA ack: " + acksReceived, 1, acksReceived.size());
                 assertTrue("The ACK should be INVALID_MKV_DATA: " + acksReceived, acksReceived.get(0).contains("INVALID_MKV_DATA"));
+
+                assertEquals("Completion callback was not called exactly once! Completions received: " + completionsReceived, 1, completionsReceived.size());
+                assertNull("Received an unexpected exception in the completion callback! Expected null, but received: " + completionsReceived, completionsReceived.get(0));
+            } else {
+                // Validate completion callback exactly-once semantics
+                assertEquals("Completion callback was not called exactly once! Completions received: " + completionsReceived, 1, completionsReceived.size());
+                assertTrue("Received an unexpected exception in the completion callback! Expected RuntimeException, but received: " + completionsReceived, completionsReceived.get(0) instanceof RuntimeException);
             }
         } finally {
             client.close();
