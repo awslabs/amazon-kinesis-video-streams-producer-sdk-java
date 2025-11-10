@@ -140,6 +140,11 @@ public class PutMediaClientWithFilesTest {
      * Each test case consists of:
      * 1. Resource file path - MKV file in src/test/resources/samples/
      * 2. Expected ACK patterns - List of strings that should appear in service ACKs
+     * <p>
+     * If you want to check the MKV files, use the {@code mkvinfo} utility:
+     * <pre>
+     *     mkvinfo -v -X &lt;fileName&gt;
+     * </pre>
      */
     @Parameterized.Parameters(name = "{index}: {0}, {1}")
     public static Collection<Object[]> data() {
@@ -295,6 +300,9 @@ public class PutMediaClientWithFilesTest {
             log.info("Acks received: " + acksReceived);
             log.info("Completions received: " + completionsReceived);
             assertEquals("Completion callback was not called " + EXPECTED_COMPLETION_CALLBACKS + " times", EXPECTED_COMPLETION_CALLBACKS, completionsReceived.size());
+
+            // Note: Since the entire file was already uploaded, we are expecting the connection to close normally (receive null).
+            // Even though the service closed the connection, we didn't try sending more data after.
             assertNull("Received an unexpected exception in the completion callback!", completionsReceived.get(0));
 
             // ACK validation with tolerance for service-side buffering variations

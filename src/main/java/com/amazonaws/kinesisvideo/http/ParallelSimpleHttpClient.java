@@ -21,17 +21,13 @@ import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 
@@ -63,7 +59,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private OutputStream mOutputStream;
     private ExecutorService payloadSender;
     private ExecutorService responseReceiver;
-    private List<ExitResult> exitHistory = new ArrayList<>();
+    private final List<ExitResult> exitHistory = new ArrayList<>();
 
     private enum Caller {
         SENDER,
@@ -71,7 +67,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         CLOSE
     }
 
-    private class ExitResult {
+    private static class ExitResult {
         @Nonnull
         private Caller caller;
 
@@ -292,8 +288,9 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     // - Sender thread
     // - Receiving ACKs thread
     // - Thread calling close()
-    // Only the first invocation goes through. The assumption is that the thread that exits first (sender or receiver),
-    // will be the one that ran into the error (if applicable). Then it should trigger the other to shut down.
+    // If close() is called, it will immediately invoke the completion callback with success.
+    // Otherwise, it will wait for both sender and receiver threads to exit before notifying.
+    // If applicable, the thread that threw the exception first's result will be propagated.
     private void notifyCompletionCallback(@Nonnull final ExitResult exitResult) {
         // Note: the thread name should already have the stream name + connection handle # in it
         log.debug("Received: {}", exitResult);
@@ -324,7 +321,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                         exceptionToNotify = this.exitHistory.get(1).exception;
                     }
                 } else {
-                    log.debug("Not notifying this time");
+                    log.debug("Not notifying this time, caller history: {}", this.exitHistory);
                 }
             }
 

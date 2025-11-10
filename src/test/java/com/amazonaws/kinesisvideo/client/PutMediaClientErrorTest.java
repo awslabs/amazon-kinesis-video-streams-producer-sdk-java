@@ -22,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.SocketException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -36,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -258,18 +259,24 @@ public class PutMediaClientErrorTest {
             //   since parseFragmentAck() in the receiver thread will notify PIC.
             // - If PutMedia closed without any ERROR ack, we need the completionCallback with an exception
             //   to notify PIC.
+            // PutMedia's receiveCompletion will throw an exception if there was still stuff to send in the buffer
+            // but the service already closed the connection.
+            // The logic to handle this is in the DefaultServiceCallbacksImpl's CompletionCallback, where it synchronizes
+            // the ack receiver's seenErrorAck().
             if (!acksReceived.isEmpty()) {
                 // Note: In this case, we are not expecting any BUFFERING acks
                 assertEquals("Expected 1 INVALID_MKV_DATA ack: " + acksReceived, 1, acksReceived.size());
                 assertTrue("The ACK should be INVALID_MKV_DATA: " + acksReceived, acksReceived.get(0).contains("INVALID_MKV_DATA"));
-
-                assertEquals("Completion callback was not called exactly once! Completions received: " + completionsReceived, 1, completionsReceived.size());
-                assertNull("Received an unexpected exception in the completion callback! Expected null, but received: " + completionsReceived, completionsReceived.get(0));
-            } else {
-                // Validate completion callback exactly-once semantics
-                assertEquals("Completion callback was not called exactly once! Completions received: " + completionsReceived, 1, completionsReceived.size());
-                assertTrue("Received an unexpected exception in the completion callback! Expected RuntimeException, but received: " + completionsReceived, completionsReceived.get(0) instanceof RuntimeException);
             }
+
+            // Validate completion callback exactly-once semantics
+            // Expecting an exception to be propagated since there is still more data to be sent
+            assertEquals("Completion callback was not called exactly once! Completions received: " + completionsReceived, 1, completionsReceived.size());
+            assertTrue("Received an unexpected exception in the completion callback! Expected RuntimeException, but received: " + completionsReceived, completionsReceived.get(0) instanceof RuntimeException);
+
+            // Expecting the cause to be java.net.SocketException: "Connection or outbound has been closed"
+            assertNotNull("Expected a cause in the exception " + completionsReceived.get(0), completionsReceived.get(0).getCause());
+            assertTrue("Expected the cause to be a socket exception: " + completionsReceived.get(0).getCause(), completionsReceived.get(0).getCause() instanceof SocketException);
         } finally {
             client.close();
         }
