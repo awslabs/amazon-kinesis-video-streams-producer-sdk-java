@@ -61,7 +61,7 @@ public final class ThreadWatcher implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         verifyThreadShutdown(this.threadsBefore, this.timeoutMs, this.pollingIntervalMs);
     }
 
