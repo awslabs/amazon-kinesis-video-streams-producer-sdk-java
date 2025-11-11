@@ -232,7 +232,7 @@ CleanUp:
     {
         ENTERS();
 
-        DLOGS("Putting Kinesis Video metadata for stream 0x%016" PRIx64 ".", streamHandle);
+        DLOGS("Putting Kinesis Video fragment metadata for stream 0x%016" PRIx64 ".", streamHandle);
         CHECK(env != NULL && thiz != NULL);
 
         KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
@@ -243,6 +243,26 @@ CleanUp:
 
         LEAVES();
     }
+
+    /**
+     * Puts an event metadata in to the frame buffer
+     */
+    PUBLIC_API void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_putKinesisVideoEventMetadata(JNIEnv* env, jobject thiz, jlong handle, jlong streamHandle, jint event, jobject streamEventMetadata)
+    {
+        ENTERS();
+
+        DLOGS("Putting Kinesis Video event metadata for stream 0x%016" PRIx64 ".", streamHandle);
+        CHECK(env != NULL && thiz != NULL);
+
+        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        if (pWrapper != NULL) {
+            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            pWrapper->putKinesisVideoEventMetadata(streamHandle, event, streamEventMetadata);
+        }
+
+        LEAVES();
+    }
+
 
     PUBLIC_API void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_kinesisVideoStreamFragmentAck(JNIEnv* env, jobject thiz, jlong handle, jlong streamHandle, jlong uploadHandle, jobject fragmentAck)
     {
