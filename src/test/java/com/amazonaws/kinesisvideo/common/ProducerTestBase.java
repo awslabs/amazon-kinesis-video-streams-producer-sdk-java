@@ -316,6 +316,7 @@ public class ProducerTestBase {
 
                     final DescribeStreamResult describeStreamResult = kvs.describeStream(describeStreamRequest);
                     log.debug("Stream exists now. ARN: {}", describeStreamResult.getStreamInfo().getStreamARN());
+                    break;
                 } catch (final Exception e) {
                     log.info("Stream is still creating... {}/{}", i, 3, e);
                     try {

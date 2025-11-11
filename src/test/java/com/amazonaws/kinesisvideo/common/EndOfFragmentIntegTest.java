@@ -6,6 +6,7 @@ import com.amazonaws.kinesisvideo.producer.KinesisVideoFragmentAck;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.kinesisvideo.producer.Time;
+import com.amazonaws.kinesisvideo.util.ThreadWatcher;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClient;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
@@ -25,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -89,20 +91,14 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
     private static final int NUMBER_OF_FRAMES_TO_STREAM = 10;
     private static final int FPS = 5;
     private static final int KEYFRAME_INTERVAL = 5;
-    private static final int SHUTDOWN_TIMEOUT_MS = 5000; //total time allowed for clean up
-    private static final int INTERVAL_MS = 100; //time interval between each clean up
 
     /**
-     * Names of the threads that exist before the test.
+     * ThreadWatcher configuration
      */
-    private List<String> threadsBefore;
-
-    /**
-     * List of thread names to ignore.
-     */
-    private List<String> threadsToIgnore = Arrays.asList(
-            "java-sdk-http-connection-reaper" // Owned by AWS SDK Java
-    );
+    private ThreadWatcher threadWatcher;
+    private final List<String> THREADS_TO_IGNORE = Collections.singletonList("java-sdk-http-connection-reaper");
+    private final Duration THREADS_TIMEOUT = Duration.ofSeconds(5);
+    private final Duration THREADS_POLLING_INTERVAL = Duration.ofMillis(100);
 
     /**
      * List of streams created during tests that need to be cleaned up.
@@ -129,12 +125,7 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
                 NUMBER_OF_STREAMS_PER_ITERATION <= NUMBER_OF_STREAMS);
 
         // Capture baseline thread state
-        this.threadsBefore = Thread.getAllStackTraces().keySet()
-                .stream()
-                .map(Thread::getName)
-                .collect(Collectors.toList());
-
-        threadsBefore.sort(String.CASE_INSENSITIVE_ORDER);
+        this.threadWatcher = new ThreadWatcher(THREADS_TIMEOUT, THREADS_POLLING_INTERVAL, THREADS_TO_IGNORE);
 
         createProducer();
     }
@@ -175,42 +166,9 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
         assertFalse("An exception happened during cleanup!", failure);
 
         freeProducer();
-        threadsBefore.removeAll(threadsToIgnore);
-        for (int i = 0; i < SHUTDOWN_TIMEOUT_MS; i += INTERVAL_MS) {
-            final List<String> threadsNow = Thread.getAllStackTraces().keySet()
-                    .stream()
-                    .map(Thread::getName)
-                    .collect(Collectors.toList());
 
-            threadsNow.sort(String.CASE_INSENSITIVE_ORDER);
-            threadsNow.removeAll(threadsToIgnore);
-            log.info("Cleanup iteration {}/() ms - Current thread count: {}, Expected: {}",
-                    i, SHUTDOWN_TIMEOUT_MS, threadsNow.size(), this.threadsBefore.size());
-            
-            if (threadsNow.equals(this.threadsBefore)) {
-                break; // threads are cleaned up
-            } else {
-                //if threads are not clearned up yet
-                List<String> extraThreads = new ArrayList<>(threadsNow);
-                extraThreads.removeAll(this.threadsBefore);
-                if(!extraThreads.isEmpty()) {
-                    log.warn("extra threads are still running: {}", extraThreads);
-                }
-            }
-
-            if (i + INTERVAL_MS >= SHUTDOWN_TIMEOUT_MS) {
-                //time has exceeded shutdown timeout
-                log.error("Expected threads: {}", this.threadsBefore);
-                log.error("Current threads: {}", threadsNow);
-                fail("Timeout waiting for threads to be cleaned up properly");               
-            }
-
-            try {
-                Thread.sleep(INTERVAL_MS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
+        // Verify that all the threads are shut down and there are no thread leaks
+        this.threadWatcher.close();
     }
 
     // Using this as a way to repeat the test multiple times

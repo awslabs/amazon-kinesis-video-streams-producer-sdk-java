@@ -3,12 +3,15 @@ package com.amazonaws.kinesisvideo.http;
 import com.amazonaws.kinesisvideo.client.IPVersionFilter;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfigurationDefaults;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
+import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.socket.SocketFactory;
 import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,15 +21,21 @@ import java.io.Writer;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static com.amazonaws.kinesisvideo.common.preconditions.Preconditions.checkNotNull;
 
 public final class ParallelSimpleHttpClient implements HttpClient {
+
+    private static final int AWAIT_THREAD_TERMINATE_SECS = 3;
+
     private static final String SPACE = " ";
     private static final String CLRF = "\r\n";
     private static final String HTTP_1_1 = "HTTP/1.1";
@@ -51,6 +60,34 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     private OutputStream mOutputStream;
     private ExecutorService payloadSender;
     private ExecutorService responseReceiver;
+    private final List<ExitResult> exitHistory = new ArrayList<>();
+
+    private enum Caller {
+        SENDER,
+        RECEIVER,
+        CLOSE
+    }
+
+    private static class ExitResult {
+        @Nonnull
+        private Caller caller;
+
+        @Nullable
+        private Exception exception;
+
+        ExitResult(@Nonnull final Caller caller, @Nullable final Exception exception) {
+            this.caller = caller;
+            this.exception = exception;
+        }
+
+        @Override
+        public String toString() {
+            return "ExitResult{" +
+                    "caller=" + caller +
+                    ", exception=" + exception +
+                    '}';
+        }
+    }
 
     private ParallelSimpleHttpClient(final Builder builder) {
         mBuilder = builder;
@@ -157,10 +194,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                         log.error("[{}] Exception thrown on sending thread", mBuilder.mStreamName, e);
                         storedException = e;
                     } finally {
-                        //Only call completion if there is an exception, otherwise sender will call completion
-                        if (storedException != null) {
-                            mBuilder.mCompletion.accept(storedException);
-                        }
+                        notifyCompletionCallback(new ExitResult(Caller.SENDER, storedException));
                         payloadSender.shutdownNow();
                     }
                 }
@@ -184,7 +218,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                         log.error("[{}] Exception thrown on receiving thread", mBuilder.mStreamName, e);
                         storedException = e;
                     } finally {
-                        mBuilder.mCompletion.accept(storedException);
+                        notifyCompletionCallback(new ExitResult(Caller.RECEIVER, storedException));
                         responseReceiver.shutdownNow();
                         closeSocket();
                     }
@@ -245,7 +279,83 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         payloadSender.shutdownNow();
         responseReceiver.shutdownNow();
         closeSocket();
-        mBuilder.mCompletion.accept(null);
+
+        awaitTryShutdownThreads();
+
+        notifyCompletionCallback(new ExitResult(Caller.CLOSE, null));
+    }
+
+    // This is used to synchronize the 3 threads which call the completion callback:
+    // - Sender thread
+    // - Receiving ACKs thread
+    // - Thread calling close()
+    // If close() is called, it will immediately invoke the completion callback with success.
+    // Otherwise, it will wait for both sender and receiver threads to exit before notifying.
+    // If applicable, the thread that threw the exception first's result will be propagated.
+    private void notifyCompletionCallback(@Nonnull final ExitResult exitResult) {
+        // Note: the thread name should already have the stream name + connection handle # in it
+        log.debug("Received: {}", exitResult);
+
+        if (mBuilder.mCompletion != null) {
+
+            if (exitResult.caller == Caller.CLOSE) {
+                mBuilder.mCompletion.accept(null);
+                return;
+            }
+
+            Exception exceptionToNotify = null;
+            boolean notify = false;
+            synchronized (this.exitHistory) {
+                this.exitHistory.add(exitResult);
+
+                if (this.exitHistory.size() == 2 &&
+                        ((this.exitHistory.get(0).caller == Caller.SENDER && this.exitHistory.get(1).caller == Caller.RECEIVER) ||
+                        (this.exitHistory.get(0).caller == Caller.RECEIVER && this.exitHistory.get(1).caller == Caller.SENDER))
+                ) {
+                    // Check if either one of them exited with an exception
+                    // If so, propagate it. If both of them terminated normally, notify with null
+                    notify = true;
+
+                    // prioritize the exception that came first
+                    exceptionToNotify = this.exitHistory.get(0).exception;
+                    if (exceptionToNotify == null) {
+                        exceptionToNotify = this.exitHistory.get(1).exception;
+                    }
+                } else {
+                    log.debug("Not notifying this time, caller history: {}", this.exitHistory);
+                }
+            }
+
+            if (notify) {
+                log.debug("[{}] notifying completion callback with {}", mBuilder.mStreamName, exceptionToNotify);
+                mBuilder.mCompletion.accept(exceptionToNotify);
+            }
+        }
+    }
+
+    // Wait for the threads to terminate
+    // If the threads are not alive, returns immediately
+    // Expecting these to be near instantaneous
+    private void awaitTryShutdownThreads() {
+        awaitTermination(this.payloadSender, "payload sender", AWAIT_THREAD_TERMINATE_SECS);
+        awaitTermination(this.responseReceiver, "response receiver", AWAIT_THREAD_TERMINATE_SECS);
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    private void awaitTermination(@Nonnull final ExecutorService executor, @Nonnull final String id,
+                                  final int threadTerminateTimeoutSeconds) {
+        Preconditions.checkArgument(executor != null, "Executor cannot be null");
+        Preconditions.checkArgument(id != null, "ID cannot be null");
+        Preconditions.checkArgument(threadTerminateTimeoutSeconds >= 0, "ThreadTerminateTimeoutSeconds must be positive");
+
+        try {
+            if (!executor.awaitTermination(AWAIT_THREAD_TERMINATE_SECS, TimeUnit.SECONDS)) {
+                log.error("{}: {} couldn't shutdown within {} seconds", mBuilder.mStreamName, id, AWAIT_THREAD_TERMINATE_SECS);
+            }
+        } catch (final InterruptedException e) {
+            log.error("{}: Interrupted while waiting for {} shutdown", mBuilder.mStreamName, id, e);
+            Thread.currentThread().interrupt();
+        }
     }
 
 

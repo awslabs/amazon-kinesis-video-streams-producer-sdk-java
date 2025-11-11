@@ -33,13 +33,10 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
     if (env->GetJavaVM(&mJVMContext.jvm) != 0 || mJVMContext.jvm == NULL) {
         CHECK_EXT(FALSE, "Couldn't retrieve the JavaVM reference.");
     }
-    clientRegistryInfo = ClientRegistry::getInstance().addClient(this); // Note: 'this' cannot be null
-    mJVMContext.clientId = clientRegistryInfo.second;
 
     // Set the callbacks
     if (!setCallbacks(env, thiz, isFirstClient)) {
         throwNativeException(env, EXCEPTION_NAME, "Failed to set the callbacks.", STATUS_INVALID_ARG);
-        ClientRegistry::getInstance().removeClient(this);
         return;
     }
 
@@ -47,7 +44,6 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
     MEMSET(&mDeviceInfo, 0x00, SIZEOF(DeviceInfo));
     if (!setDeviceInfo(env, deviceInfo, &mDeviceInfo)) {
         throwNativeException(env, EXCEPTION_NAME, "Failed to set the DeviceInfo structure.", STATUS_INVALID_ARG);
-        ClientRegistry::getInstance().removeClient(this);
         return;
     }
 
@@ -55,11 +51,12 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
     retStatus = createKinesisVideoClient(&mDeviceInfo, &mClientCallbacks, &mClientHandle);
     if (STATUS_SUCCEEDED(retStatus) && isFirstClient) {
         firstClientCreated = true;
+        clientRegistryInfo = ClientRegistry::getInstance().addClient(this); // Note: 'this' cannot be null
+        mJVMContext.clientId = clientRegistryInfo.second;
     }
     releaseTags(mDeviceInfo.tags);
     if (STATUS_FAILED(retStatus)) {
         throwNativeException(env, EXCEPTION_NAME, "Failed to create Kinesis Video client.", retStatus);
-        ClientRegistry::getInstance().removeClient(this);
         return;
     }
 

@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Implementation of {@link KinesisVideoProducerStream}
@@ -37,7 +38,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         /**
          * Whether the stream has been closed
          */
-        private volatile boolean mStreamClosed = false;
+        private AtomicBoolean mStreamClosed = new AtomicBoolean(false);
 
         // Set the notification values
         private final Object mMonitor = new Object();
@@ -62,7 +63,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                         final int off,
                         final int len)
                 throws IOException {
-            if (mStreamClosed) {
+            if (mStreamClosed.get()) {
                 mLog.warn("Stream {} with uploadHandle {} has been closed", mStreamInfo.getName(), mUploadHandle);
             }
 
@@ -71,9 +72,9 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
             // is handled by simply spin-locking until the data is available.
             int bytesRead = -1;
 
-            while (!mStreamClosed) {
+            while (!mStreamClosed.get()) {
                 synchronized (mMonitor) {
-                    while (!mDataAvailable && !mStreamClosed) {
+                    while (!mDataAvailable && !mStreamClosed.get()) {
                         try {
                             mLog.debug("no data for stream {} with uploadHandle {}, waiting", mStreamInfo.getName(),
                                     mUploadHandle);
@@ -86,7 +87,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
 
                     // Clear the availability indicator for now
                     mDataAvailable = false;
-                    if (mStreamClosed) {
+                    if (mStreamClosed.get()) {
                         // Indicate the EOS
                         bytesRead = -1;
                         mLog.debug("Being notified to close stream {} with uploadHandle {}",
@@ -107,7 +108,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                                 mStreamInfo.getName(), mUploadHandle);
 
                         // Set the flag so the stream is not valid any longer
-                        mStreamClosed = true;
+                        mStreamClosed.set(true);
 
                         if (0 == bytesRead) {
                             // Indicate the EOS
@@ -153,11 +154,11 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         public void close()
                 throws IOException
         {
-            // Set the stream to stopped state
-            mStreamClosed = true;
-
-            // Notify the awaiting thread
-            notifyReaderThread(0, 0);
+            // Set the stream to stopped state only once
+            if (mStreamClosed.compareAndSet(false, true)) {
+                // Notify the awaiting thread
+                notifyReaderThread(0, 0);
+            }
         }
 
         protected void notifyReaderThread(final long duration, final long availableSize) {
@@ -177,7 +178,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
             // Unblock the awaiting reading code block
             synchronized (mMonitor) {
                 mDataAvailable = true;
-                mStreamClosed = true;
+                mStreamClosed.set(true);
                 mMonitor.notify();
             }
         }
