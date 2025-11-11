@@ -105,6 +105,8 @@ public final class PutMediaClient {
 
     private Consumer<OutputStream> sendChunkEncodedMvkStream(final int fragmentThrottle) {
         return new Consumer<OutputStream>() {
+
+            // Note: The thread name should already have the streamName + uploadHandle
             @Override
             public void accept(final OutputStream rawOutputStream) {
                 FileOutputStream outputFileStream = null;
@@ -143,9 +145,11 @@ public final class PutMediaClient {
 
                     if (mBuilder.mMkvStream != null) {
                         try {
+                            log.trace("Closing mkv stream");
                             mBuilder.mMkvStream.close();
+                            log.trace("Closed the mkv stream");
                         } catch (final IOException e) {
-                            log.error(e.getMessage());
+                            log.error("Failed to close the MKV stream", e);
                         }
                     }
                 }

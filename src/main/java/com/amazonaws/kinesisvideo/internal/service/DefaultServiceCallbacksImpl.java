@@ -66,6 +66,26 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
             this.uploadHandle = uploadHandle;
         }
 
+        // Scenarios:
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        //       Sender thread        | Receiving Thread Acks | Result To PIC
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 1: No exception   | No error acks         | completionCallback(null) --> PIC 200 (no streamTerminatedEvent)
+        //                            |                       | this is the success case, PIC will send end of stream (-1) to the
+        //                            |                       | sender thread to close the connection
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 2: No exception   | ERROR ACK             | parseErrorAck(errAck) --> PIC calls streamTerminatedEvent
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 3: SocketClosedEx | NONE (endOfStream)    | completionCallback(Ex) --> PIC 400
+        //                            | or late error acks    | SocketClosedEx occurs when there is more data to send but the
+        //                            |                       | connection was already closed. This thread exits once it
+        //                            |                       | receives end of stream (\r\n\r\n) from the service
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 4: SocketClosedEx | ERROR ACK             | parseErrorAck(errAck) + completionCallback(Ex) --> parseErrorAck
+        //                            |                       | occurs first, so completionCallback result is ignored.
+        //                            |                       | SocketClosedEx cannot come first since the ack is being received
+        //                            |                       | from the socket
+        // ---------------------------+-----------------------+----------------------------------------------------------
         @Override
         public void accept(@Nullable final Exception object) {
             final long streamHandle = stream.getStreamHandle();

@@ -3,6 +3,7 @@ package com.amazonaws.kinesisvideo.http;
 import com.amazonaws.kinesisvideo.client.IPVersionFilter;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfigurationDefaults;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
+import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.socket.SocketFactory;
 import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -336,21 +337,23 @@ public final class ParallelSimpleHttpClient implements HttpClient {
     // If the threads are not alive, returns immediately
     // Expecting these to be near instantaneous
     private void awaitTryShutdownThreads() {
-        try {
-            if (!payloadSender.awaitTermination(AWAIT_THREAD_TERMINATE_SECS, TimeUnit.SECONDS)) {
-                log.error("{}: Payload sender couldn't shutdown within {} seconds", mBuilder.mStreamName, AWAIT_THREAD_TERMINATE_SECS);
-            }
-        } catch (final InterruptedException e) {
-            log.error("{}: Interrupted while waiting for payload sender shutdown", mBuilder.mStreamName, e);
-            Thread.currentThread().interrupt();
-        }
+        awaitTermination(this.payloadSender, "payload sender", AWAIT_THREAD_TERMINATE_SECS);
+        awaitTermination(this.responseReceiver, "response receiver", AWAIT_THREAD_TERMINATE_SECS);
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    private void awaitTermination(@Nonnull final ExecutorService executor, @Nonnull final String id,
+                                  final int threadTerminateTimeoutSeconds) {
+        Preconditions.checkArgument(executor != null, "Executor cannot be null");
+        Preconditions.checkArgument(id != null, "ID cannot be null");
+        Preconditions.checkArgument(threadTerminateTimeoutSeconds >= 0, "ThreadTerminateTimeoutSeconds must be positive");
 
         try {
-            if (!responseReceiver.awaitTermination(AWAIT_THREAD_TERMINATE_SECS, TimeUnit.SECONDS)) {
-                log.error("{}: Response receiver couldn't shutdown within {} seconds", mBuilder.mStreamName, AWAIT_THREAD_TERMINATE_SECS);
+            if (!executor.awaitTermination(AWAIT_THREAD_TERMINATE_SECS, TimeUnit.SECONDS)) {
+                log.error("{}: {} couldn't shutdown within {} seconds", mBuilder.mStreamName, id, AWAIT_THREAD_TERMINATE_SECS);
             }
         } catch (final InterruptedException e) {
-            log.error("{}: Interrupted while waiting for response receiver shutdown", mBuilder.mStreamName, e);
+            log.error("{}: Interrupted while waiting for {} shutdown", mBuilder.mStreamName, id, e);
             Thread.currentThread().interrupt();
         }
     }
