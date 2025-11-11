@@ -104,7 +104,7 @@ JNIEXPORT void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_Nat
  * Signature: (JJLjava/lang/String;Ljava/lang/String;Z)V
  */
 JNIEXPORT void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_putKinesisVideoFragmentMetadata
-  (JNIEnv*, jobject, jlong, jlong, jstring, jstring, jboolean);
+  (JNIEnv *, jobject, jlong, jlong, jstring, jstring, jboolean);
 
 /*
  * Class:     com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni
@@ -226,6 +226,13 @@ JNIEXPORT void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_Nat
 JNIEXPORT jlong JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_getCurrentAllocationBytes
   (JNIEnv *, jobject);
 
+/*
+* Class:     com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni
+* Method:    putKinesisVideoEventMetadata
+* Signature: (JILcom/amazonaws/kinesisvideo/internal/producer/StreamEventMetadata)V
+*/
+JNIEXPORT void JNICALL Java_com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni_putKinesisVideoEventMetadata
+  (JNIEnv *, jobject, jlong, jlong, jint, jobject);
 #ifdef __cplusplus
 }
 #endif
