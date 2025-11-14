@@ -67,6 +67,7 @@ public class PutMediaClientErrorTest {
     private static final Logger log = LogManager.getLogger(PutMediaClientErrorTest.class);
 
     private static final int TIMEOUT_SECONDS = 20;
+    private static final String DELIMITER_WITHOUT_LF = "\n\r\n";
     private static final String DELIMITER = "\r\n\r\n";
     private static final String END_OF_STREAM_MSG = "0" + DELIMITER;
     private static final String PUT_MEDIA_POSTFIX = "/putMedia";
@@ -205,7 +206,7 @@ public class PutMediaClientErrorTest {
 
                                 if (!response.isEmpty()) {
                                     // There could more than one ack inside of this message
-                                    Arrays.stream(response.split(DELIMITER))
+                                    Arrays.stream(response.split(DELIMITER_WITHOUT_LF))
                                             .peek(ackStr -> log.info("Received ack: {}", response))
                                             .forEach(acksReceived::add);
                                 }
