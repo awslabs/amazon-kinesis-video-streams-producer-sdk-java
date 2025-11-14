@@ -75,7 +75,7 @@ public class PutMediaClientWithFilesTest {
 
     private static final Logger log = LogManager.getLogger(PutMediaClientWithFilesTest.class);
 
-    private static final String DELIMITER_WITHOUT_CR = "\n\r\n";
+    private static final String DELIMITER_WITHOUT_LF = "\n\r\n";
     private static final String DELIMITER = "\r\n\r\n";
     private static final String END_OF_STREAM_MSG = "0" + DELIMITER;
     private static final String PUT_MEDIA_POSTFIX = "/putMedia";
@@ -264,7 +264,7 @@ public class PutMediaClientWithFilesTest {
 
                                 if (!response.isEmpty()) {
                                     // There could more than one ack inside of this message
-                                    Arrays.stream(response.split(DELIMITER_WITHOUT_CR))
+                                    Arrays.stream(response.split(DELIMITER_WITHOUT_LF))
                                             .peek(ackStr -> log.info("Received ack: {}", response))
                                             .forEach(acksReceived::add);
                                 }
