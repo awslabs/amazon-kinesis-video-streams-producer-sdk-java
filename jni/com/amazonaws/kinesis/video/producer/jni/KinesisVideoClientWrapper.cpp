@@ -17,8 +17,8 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
     // Double-checked locking pattern to prevent race condition in globalCustomLogPrintFn assignment
     // The first successful client will set the global logPrintFn in PIC's inputValidator to this static logPrintFunc
     static std::mutex clientCreationMutex;
-    static volatile bool firstClientCreated = false;
-    
+    bool firstClientCreated = ClientRegistry::getInstance().getCurrentNumberClients() > 0;
+
     // Fast path: if first client already created, proceed without locking
     std::unique_lock<std::mutex> lock(clientCreationMutex, std::defer_lock);
     if (!firstClientCreated) {
@@ -50,7 +50,6 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
     // Creating the client object might return an error as well so freeing potentially allocated tags right after the call.
     retStatus = createKinesisVideoClient(&mDeviceInfo, &mClientCallbacks, &mClientHandle);
     if (STATUS_SUCCEEDED(retStatus) && isFirstClient) {
-        firstClientCreated = true;
         clientRegistryInfo = ClientRegistry::getInstance().addClient(this); // Note: 'this' cannot be null
         mJVMContext.clientId = clientRegistryInfo.second;
     }
@@ -74,6 +73,7 @@ KinesisVideoClientWrapper::~KinesisVideoClientWrapper()
 {
     STATUS retStatus = STATUS_SUCCESS;
     JNIEnv *env = NULL;
+    SIZE_T clientsLeft;
 
     if (this->getJVM() == NULL) {
         return;
@@ -93,7 +93,7 @@ KinesisVideoClientWrapper::~KinesisVideoClientWrapper()
     }
 
     // 2. Remove from registry (this will block if logging is in progress)
-    ClientRegistry::getInstance().removeClient(this);
+    clientsLeft = ClientRegistry::getInstance().removeClient(this);
 
     // 3. Clean up reference to NativeKinesisVideoProducerJni java object
     if (mJVMContext.javaObjectRef != NULL) {

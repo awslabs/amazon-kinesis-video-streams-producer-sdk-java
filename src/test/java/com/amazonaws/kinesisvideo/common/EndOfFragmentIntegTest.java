@@ -165,7 +165,7 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
 
         assertFalse("An exception happened during cleanup!", failure);
 
-        freeProducer();
+        free();
 
         // Verify that all the threads are shut down and there are no thread leaks
         this.threadWatcher.close();

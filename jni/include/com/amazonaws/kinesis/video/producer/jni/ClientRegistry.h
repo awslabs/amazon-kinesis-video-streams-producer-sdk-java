@@ -19,6 +19,9 @@ public:
     /// Returns the singleton instance
     static ClientRegistry& getInstance();
 
+    /// Thread-safe retrieval of the number of clients currently in the registry
+    SIZE_T getCurrentNumberClients();
+
     /// Thread-safe addition of a client to the registry
     /// Return: the number of clients in the registry after the addition and the client number
     std::pair<SIZE_T, UINT32> addClient(KinesisVideoClientWrapper* client);

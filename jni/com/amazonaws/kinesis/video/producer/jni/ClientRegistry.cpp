@@ -5,6 +5,11 @@ ClientRegistry& ClientRegistry::getInstance() {
     return instance;
 }
 
+SIZE_T ClientRegistry::getCurrentNumberClients() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return clients_.size();
+}
+
 std::pair<SIZE_T, UINT32> ClientRegistry::addClient(KinesisVideoClientWrapper* client) {
     std::lock_guard<std::mutex> lock(mutex_);
     clients_.push_back(client);
