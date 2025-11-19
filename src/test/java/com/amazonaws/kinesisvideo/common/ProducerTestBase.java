@@ -212,7 +212,7 @@ public class ProducerTestBase {
         }
     }
 
-    protected void freeProducer() {
+    protected void free() {
         try {
             this.kinesisVideoProducer.free();
         } catch (ProducerException e) {

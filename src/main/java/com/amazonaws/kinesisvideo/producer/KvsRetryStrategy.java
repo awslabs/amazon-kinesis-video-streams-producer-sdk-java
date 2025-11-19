@@ -12,7 +12,8 @@ import javax.annotation.Nullable;
  * <p>
  * <strong>NOTE:</strong> RetryStrategy only gives control over the retry wait times.
  * The "which errors to retry" and "how many times to retry" is handled
- * by the PIC state machine.
+ * by the PIC state machine. PIC considers it a retry only when moving
+ * from one state into the same state (e.g. DescribeStream->DescribeStream).
  * </p>
  */
 public class KvsRetryStrategy {

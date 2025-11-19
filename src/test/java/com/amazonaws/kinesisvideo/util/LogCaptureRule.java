@@ -94,6 +94,9 @@ public class LogCaptureRule extends ExternalResource {
      * Sets up log capture for testing
      */
     private void setupLogCapture() {
+        // Clean up any existing appender first
+        cleanupLogCapture();
+        
         this.testLogAppender = new TestLogAppender();
         this.testLogAppender.start();
 

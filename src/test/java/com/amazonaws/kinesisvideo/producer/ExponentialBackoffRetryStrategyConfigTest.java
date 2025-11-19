@@ -80,7 +80,7 @@ public class ExponentialBackoffRetryStrategyConfigTest {
                         .retryFactorTimeMs(retryFactorTimeMs)
                         .minTimeToResetRetryStateMs(minTimeToResetRetryStateMs)
                         .fixedJitter()
-                        .jitterFactor(jitterFactor)
+                        .jitterFactorMillis(jitterFactor)
                         .build();
 
         // Then
@@ -276,7 +276,7 @@ public class ExponentialBackoffRetryStrategyConfigTest {
                     .retryFactorTimeMs(MIN_KVS_RETRY_TIME_FACTOR_MILLISECONDS)
                     .minTimeToResetRetryStateMs(MIN_KVS_MIN_TIME_TO_RESET_RETRY_STATE_MILLISECONDS)
                     .fixedJitter()
-                    .jitterFactor(belowMinimumJitterFactor);
+                    .jitterFactorMillis(belowMinimumJitterFactor);
 
             // Then
             fail("Expected IllegalArgumentException for jitterFactor below minimum");
@@ -299,7 +299,7 @@ public class ExponentialBackoffRetryStrategyConfigTest {
                     .retryFactorTimeMs(MIN_KVS_RETRY_TIME_FACTOR_MILLISECONDS)
                     .minTimeToResetRetryStateMs(MIN_KVS_MIN_TIME_TO_RESET_RETRY_STATE_MILLISECONDS)
                     .fixedJitter()
-                    .jitterFactor(aboveLimitJitterFactor);
+                    .jitterFactorMillis(aboveLimitJitterFactor);
 
             // Then
             fail("Expected IllegalArgumentException for jitterFactor above limit");
@@ -319,7 +319,7 @@ public class ExponentialBackoffRetryStrategyConfigTest {
                         .retryFactorTimeMs(MIN_KVS_RETRY_TIME_FACTOR_MILLISECONDS)
                         .minTimeToResetRetryStateMs(MIN_KVS_MIN_TIME_TO_RESET_RETRY_STATE_MILLISECONDS)
                         .fixedJitter()
-                        .jitterFactor(MIN_KVS_JITTER_FACTOR_MILLISECONDS)
+                        .jitterFactorMillis(MIN_KVS_JITTER_FACTOR_MILLISECONDS)
                         .build();
 
         // When - Test maximum boundary values
@@ -330,7 +330,7 @@ public class ExponentialBackoffRetryStrategyConfigTest {
                         .retryFactorTimeMs(LIMIT_KVS_RETRY_TIME_FACTOR_MILLISECONDS)
                         .minTimeToResetRetryStateMs(LIMIT_KVS_MIN_TIME_TO_RESET_RETRY_STATE_MILLISECONDS)
                         .fixedJitter()
-                        .jitterFactor(LIMIT_KVS_JITTER_FACTOR_MILLISECONDS)
+                        .jitterFactorMillis(LIMIT_KVS_JITTER_FACTOR_MILLISECONDS)
                         .build();
 
         // Then
@@ -357,7 +357,7 @@ public class ExponentialBackoffRetryStrategyConfigTest {
                         .retryFactorTimeMs(ExponentialBackoffRetryStrategyConfig.USE_PIC_DEFAULT)
                         .minTimeToResetRetryStateMs(ExponentialBackoffRetryStrategyConfig.USE_PIC_DEFAULT)
                         .fixedJitter()
-                        .jitterFactor(ExponentialBackoffRetryStrategyConfig.USE_PIC_DEFAULT)
+                        .jitterFactorMillis(ExponentialBackoffRetryStrategyConfig.USE_PIC_DEFAULT)
                         .build();
 
         // Then
@@ -410,7 +410,7 @@ public class ExponentialBackoffRetryStrategyConfigTest {
                         .retryFactorTimeMs(MIN_KVS_RETRY_TIME_FACTOR_MILLISECONDS)
                         .minTimeToResetRetryStateMs(MIN_KVS_MIN_TIME_TO_RESET_RETRY_STATE_MILLISECONDS)
                         .fixedJitter()
-                        .jitterFactor(MIN_KVS_JITTER_FACTOR_MILLISECONDS)
+                        .jitterFactorMillis(MIN_KVS_JITTER_FACTOR_MILLISECONDS)
                         .build();
 
         final ExponentialBackoffRetryStrategyConfig defaultsConfig =
@@ -471,7 +471,7 @@ public class ExponentialBackoffRetryStrategyConfigTest {
                         .retryFactorTimeMs(retryFactorTimeMs)
                         .minTimeToResetRetryStateMs(minTimeToResetRetryStateMs)
                         .fixedJitter()
-                        .jitterFactor(jitterFactor)
+                        .jitterFactorMillis(jitterFactor)
                         .build();
 
         // When

@@ -41,7 +41,7 @@ public class ExponentialBackoffRetryStrategyConfig {
         /**
          * jitter = random number between {@code [0, jitter factor)}
          *
-         * @see #jitterFactor
+         * @see #jitterFactorMs
          */
         FIXED_JITTER(0x02),
         /**
@@ -118,7 +118,7 @@ public class ExponentialBackoffRetryStrategyConfig {
      * Jitter will be between {@code [0, jitterFactor)}.
      * This parameter is only valid for jitter type {@link JitterType#FIXED_JITTER}
      */
-    private final long jitterFactor;
+    private final long jitterFactorMs;
 
     // Values from PIC, see Include.h
     public static final long MIN_KVS_JITTER_FACTOR_MILLISECONDS = 50L;
@@ -133,7 +133,7 @@ public class ExponentialBackoffRetryStrategyConfig {
         this.retryFactorTimeMs = builder.retryFactorTimeMs;
         this.minTimeToResetRetryStateMs = builder.minTimeToResetRetryStateMs;
         this.jitterType = builder.jitterType;
-        this.jitterFactor = builder.jitterFactor;
+        this.jitterFactorMs = builder.jitterFactor;
     }
 
     @CalledByNativeCode
@@ -168,7 +168,7 @@ public class ExponentialBackoffRetryStrategyConfig {
 
     @CalledByNativeCode
     public long getJitterFactor() {
-        return this.jitterFactor;
+        return this.jitterFactorMs;
     }
 
     @Override
@@ -179,7 +179,7 @@ public class ExponentialBackoffRetryStrategyConfig {
                 ", retryFactorTimeMs=" + (this.retryFactorTimeMs == USE_PIC_DEFAULT ? "PIC_DEFAULT" : this.retryFactorTimeMs) +
                 ", minTimeToResetRetryStateMs=" + (this.minTimeToResetRetryStateMs == USE_PIC_DEFAULT ? "PIC_DEFAULT" : this.minTimeToResetRetryStateMs) +
                 ", jitterType=" + (this.jitterType == null ? "PIC_DEFAULT" : this.jitterType) +
-                ", jitterFactor=" + (this.jitterFactor == USE_PIC_DEFAULT ? "PIC_DEFAULT" : this.jitterFactor) +
+                ", jitterFactor=" + (this.jitterFactorMs == USE_PIC_DEFAULT ? "PIC_DEFAULT" : this.jitterFactorMs) +
                 '}';
     }
 
@@ -208,7 +208,7 @@ public class ExponentialBackoffRetryStrategyConfig {
     }
 
     public interface JitterFactorStep {
-        ExponentialBackoffRetryStrategyConfigBuilder jitterFactor(final long jitterFactor);
+        ExponentialBackoffRetryStrategyConfigBuilder jitterFactorMillis(final long jitterFactor);
     }
 
     public static class ExponentialBackoffRetryStrategyConfigBuilder implements MaxRetryCountStep, MaxRetryWaitTimeStep,
@@ -243,7 +243,7 @@ public class ExponentialBackoffRetryStrategyConfig {
         }
 
         /**
-         * Maximum retry wait time. Once the retry wait time reaches this value,
+         * Maximum retry wait time in milliseconds. Once the retry wait time reaches this value,
          * subsequent retries will wait for maxRetryWaitTime (plus jitter).
          */
         @Override
@@ -254,7 +254,7 @@ public class ExponentialBackoffRetryStrategyConfig {
         }
 
         /**
-         * Base factor for computing the exponential backoff wait time.
+         * Base factor for computing the exponential backoff wait time in milliseconds.
          * The formula is: {@code retryFactorTime * 2^retryCount + jitter}
          */
         @Override
@@ -265,8 +265,8 @@ public class ExponentialBackoffRetryStrategyConfig {
         }
 
         /**
-         * The minimum time between two consecutive retries after which retry state will be reset i.e. retries
-         * will start from initial retry state.
+         * The minimum time, in milliseconds, between two consecutive retries after which retry state will be reset
+         * i.e. retries will start from initial retry state.
          */
         @Override
         public JitterTypeStep minTimeToResetRetryStateMs(final long minTimeToResetRetryStateMs) {
@@ -306,10 +306,11 @@ public class ExponentialBackoffRetryStrategyConfig {
         }
 
         /**
+         * Specify jitterFactor in milliseconds.
          * Jitter will be between {@code [0, jitterFactor)}.
          */
         @Override
-        public ExponentialBackoffRetryStrategyConfigBuilder jitterFactor(final long jitterFactor) {
+        public ExponentialBackoffRetryStrategyConfigBuilder jitterFactorMillis(final long jitterFactor) {
             checkInRange(jitterFactor, MIN_KVS_JITTER_FACTOR_MILLISECONDS, LIMIT_KVS_JITTER_FACTOR_MILLISECONDS);
             this.jitterFactor = jitterFactor;
             return this;
