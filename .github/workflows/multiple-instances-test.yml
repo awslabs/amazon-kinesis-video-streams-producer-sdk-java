@@ -12,7 +12,6 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}
-  cancel-in-progress: true
 
 jobs:
   spawn-multiple-instances:
@@ -52,7 +51,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake ..
+          cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
           make -j
           echo "JNI_FOLDER=`pwd`" >> $GITHUB_ENV
 

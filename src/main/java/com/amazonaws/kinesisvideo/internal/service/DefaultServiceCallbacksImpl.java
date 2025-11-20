@@ -54,18 +54,48 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RESOURCE_NOT_F
 public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     private class CompletionCallback implements Consumer<Exception> {
         private final KinesisVideoProducerStream stream;
+        private final AckConsumer ackConsumer;
         private final long uploadHandle;
 
         public CompletionCallback(@Nonnull final KinesisVideoProducerStream stream,
+                                  @Nonnull final AckConsumer ackConsumer,
                                   final long uploadHandle) {
 
             this.stream = Preconditions.checkNotNull(stream);
+            this.ackConsumer = Preconditions.checkNotNull(ackConsumer);
             this.uploadHandle = uploadHandle;
         }
 
+        // Scenarios:
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        //       Sender thread        | Receiving Thread Acks | Result To PIC
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 1: No exception   | No error acks         | completionCallback(null) --> PIC 200 (no streamTerminatedEvent)
+        //                            |                       | this is the success case, PIC will send end of stream (-1) to the
+        //                            |                       | sender thread to close the connection
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 2: No exception   | ERROR ACK             | parseErrorAck(errAck) --> PIC calls streamTerminatedEvent
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 3: SocketClosedEx | NONE (endOfStream)    | completionCallback(Ex) --> PIC 400
+        //                            | or late error acks    | SocketClosedEx occurs when there is more data to send but the
+        //                            |                       | connection was already closed. This thread exits once it
+        //                            |                       | receives end of stream (\r\n\r\n) from the service
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 4: SocketClosedEx | ERROR ACK             | parseErrorAck(errAck) + completionCallback(Ex) --> parseErrorAck
+        //                            |                       | occurs first, so completionCallback result is ignored.
+        //                            |                       | SocketClosedEx cannot come first since the ack is being received
+        //                            |                       | from the socket
+        // ---------------------------+-----------------------+----------------------------------------------------------
         @Override
         public void accept(@Nullable final Exception object) {
             final long streamHandle = stream.getStreamHandle();
+
+            // Do not fire streamTerminated because an ERROR ack in parseFragmentAck()
+            // would have fired streamTerminated already
+            if (ackConsumer.seenErrorAck()) {
+                log.debug("Seen error ack already, ignoring");
+                return;
+            }
 
             if (streamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE) {
                 // The exception can be null indicating successful completion
@@ -433,6 +463,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     final BlockingAckConsumer blockingAckConsumer = new BlockingAckConsumer(ackConsumer, log,
                             kinesisVideoProducerStream);
                     final CompletionCallback completionCallback = new CompletionCallback(kinesisVideoProducerStream,
+                            ackConsumer,
                             clientUploadHandle);
 
                     // This will kick-off a long running operation
@@ -582,7 +613,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     }
 
     @Override
-    public synchronized void removeStream(@Nonnull KinesisVideoProducerStream kinesisVideoProducerStream) {
+    public synchronized void removeStream(@Nonnull final KinesisVideoProducerStream kinesisVideoProducerStream) {
         StreamingInfo streamingInfoToBeRemoved = null;
         for (final StreamingInfo streamingInfo : mStreams) {
             if (streamingInfo.getStream() == kinesisVideoProducerStream) {
@@ -622,7 +653,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
      * @since 3.0 Changed signature from isBlank(String) to isBlank(CharSequence)
      */
     private static boolean isBlank(final CharSequence cs) {
-        int strLen;
+        final int strLen;
         if (cs == null || (strLen = cs.length()) == 0) {
             return true;
         }

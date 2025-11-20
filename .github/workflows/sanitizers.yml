@@ -1,0 +1,132 @@
+name: Sanitizers
+
+on:
+  push:
+    branches:
+      - develop
+      - master
+  pull_request:
+    branches:
+      - develop
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}
+
+jobs:
+  sanitizes:
+    strategy:
+      matrix:
+        include:
+#        TODO: re-enable later. Not currently passing
+#          - sanitizer: ADDRESS_SANITIZER
+#            lib_name: libasan.so
+#          - sanitizer: THREAD_SANITIZER
+#            lib_name: libtsan.so
+          - sanitizer: UNDEFINED_BEHAVIOR_SANITIZER
+            lib_name: libubsan.so
+      fail-fast: false
+
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      STREAM_NAME: producer-java-ubuntu-22-${{ matrix.sanitizer }}-ci
+      TEST_STREAMS_PREFIX: producer-java-ubuntu-22-${{ matrix.sanitizer }}-ci
+      JNI_FOLDER: ${{ github.workspace }}/build
+
+    name: ${{ matrix.sanitizer }}
+    runs-on: ubuntu-latest
+    container:
+      image: public.ecr.aws/ubuntu/ubuntu:22.04
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.x'
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y git build-essential pkg-config clang maven jq unzip curl
+          clang --version
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+
+      - name: Install AWS CLI v2
+        run: |
+          # https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          ./aws/install
+
+      - name: Build JNI with ${{ matrix.sanitizer }}
+        run: |
+          # Note: GCC does not support memory sanitizer, using Clang instead
+          export CC=clang
+          export CXX=clang++
+          mkdir build
+          cd build
+          cmake .. -D${{ matrix.sanitizer }}=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          make -j
+
+      - name: Build with Maven
+        run: mvn clean compile assembly:single
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Create the stream (DemoAppMain)
+        working-directory: scripts
+        run: |
+          ./prepareStream.sh "$STREAM_NAME"
+
+        shell: bash
+
+      - name: Run DemoAppMain with ${{ matrix.sanitizer }}
+        run: |
+          JAR_FILE=$(find target -name '*jar-with-dependencies.jar' | head -n 1)
+
+          # Dynamically find sanitizer library
+          SANITIZER_LIB=$(find /usr/lib/x86_64-linux-gnu /usr/lib/clang/*/lib/linux -name "${{ matrix.lib_name }}*" 2>/dev/null | head -n 1)
+
+          if [ -z "$JAR_FILE" ]; then
+            echo "Error: JAR file not found!"
+            exit 1
+          fi
+
+          echo "Using JAR file: $JAR_FILE"
+          
+          if [ -n "$SANITIZER_LIB" ]; then
+            echo "Found sanitizer library: $SANITIZER_LIB"
+            export LD_PRELOAD="$SANITIZER_LIB"
+          else
+            echo "Warning: Sanitizer library not found for ${{ matrix.lib_name }}"
+          fi
+
+          java -classpath "$JAR_FILE" \
+            -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
+            -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
+            -Daws.sessionToken=${AWS_SESSION_TOKEN} \
+            -Djava.library.path=${JNI_FOLDER} \
+            -Dkvs-stream=${STREAM_NAME} \
+            -Dlog4j.configurationFile=.github/log4j2.xml \
+            com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+
+        shell: bash

@@ -203,7 +203,7 @@ public:
     void kinesisVideoStreamFragmentAck(jlong streamHandle, jlong uploadHandle, jobject fragmentAck);
     void kinesisVideoStreamParseFragmentAck(jlong streamHandle, jlong uploadHandle, jstring ack);
 private:
-    BOOL setCallbacks(JNIEnv* env, jobject thiz);
+    BOOL setCallbacks(JNIEnv* env, jobject thiz, bool isFirstClient);
 };
 
 #endif // __KINESIS_VIDEO_PRODUCER_CLIENT_WRAPPER_H__

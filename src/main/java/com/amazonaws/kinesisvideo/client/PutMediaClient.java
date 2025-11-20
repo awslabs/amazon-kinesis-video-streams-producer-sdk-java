@@ -105,6 +105,8 @@ public final class PutMediaClient {
 
     private Consumer<OutputStream> sendChunkEncodedMvkStream(final int fragmentThrottle) {
         return new Consumer<OutputStream>() {
+
+            // Note: The thread name should already have the streamName + uploadHandle
             @Override
             public void accept(final OutputStream rawOutputStream) {
                 FileOutputStream outputFileStream = null;
@@ -136,10 +138,20 @@ public final class PutMediaClient {
                     rawOutputStream.flush();
                     log.debug("Data sent. counter: {}", counter);
                 } catch (final Exception e) {
-                    log.debug("Exception while sending data.", e);
-                    throw new RuntimeException("Exception while sending encoded chunk in MKV stream ! ", e);
+                    log.debug(mBuilder.mStreamName + ": Exception while sending data.", e);
+                    throw new RuntimeException(mBuilder.mStreamName + ": Exception while sending encoded chunk in MKV stream ! ", e);
                 } finally {
                     tryCloseOutputFileStream(outputFileStream);
+
+                    if (mBuilder.mMkvStream != null) {
+                        try {
+                            log.trace("Closing mkv stream");
+                            mBuilder.mMkvStream.close();
+                            log.trace("Closed the mkv stream");
+                        } catch (final IOException e) {
+                            log.error("Failed to close the MKV stream", e);
+                        }
+                    }
                 }
             }
         };

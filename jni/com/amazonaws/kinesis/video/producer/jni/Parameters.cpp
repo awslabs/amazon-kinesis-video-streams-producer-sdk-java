@@ -20,18 +20,22 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
         CHK(FALSE, STATUS_INVALID_OPERATION);
     }
 
+    // Null-initialize the DeviceInfo (and ClientInfo) structs embedded within it
+    MEMSET(pDeviceInfo, 0x00, SIZEOF(DeviceInfo));
+
     // Retrieve the methods and call it
     methodId = env->GetMethodID(cls, "getVersion", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getVersion");
+        DLOGW("Couldn't find method id getVersion. Configuration incomplete! Using default.");
     } else {
         pDeviceInfo->version = env->CallIntMethod(deviceInfo, methodId);
+        DLOGI("Using DeviceInfo version %d", pDeviceInfo->version);
         CHK_JVM_EXCEPTION(env);
     }
 
     methodId = env->GetMethodID(cls, "getName", "()Ljava/lang/String;");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getName");
+        DLOGW("Couldn't find method id getName. Configuration incomplete! Using default.");
     } else {
         jstring retString = (jstring) env->CallObjectMethod(deviceInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -51,7 +55,7 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
 
     methodId = env->GetMethodID(cls, "getStreamCount", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getStreamCount");
+        DLOGW("Couldn't find method id getStreamCount. Configuration incomplete! Using default.");
     } else {
         pDeviceInfo->streamCount = env->CallIntMethod(deviceInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -59,7 +63,7 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
 
     methodId = env->GetMethodID(cls, "getStorageInfoVersion", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getStorageInfoVersion");
+        DLOGW("Couldn't find method id getStorageInfoVersion. Configuration incomplete! Using default.");
     } else {
         pDeviceInfo->storageInfo.version = env->CallIntMethod(deviceInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -67,7 +71,7 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
 
     methodId = env->GetMethodID(cls, "getDeviceStorageType", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getDeviceStorageType");
+        DLOGW("Couldn't find method id getDeviceStorageType. Configuration incomplete! Using default.");
     } else {
         pDeviceInfo->storageInfo.storageType = (DEVICE_STORAGE_TYPE) env->CallIntMethod(deviceInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -75,7 +79,7 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
 
     methodId = env->GetMethodID(cls, "getSpillRatio", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getSpillRatio");
+        DLOGW("Couldn't find method id getSpillRatio. Configuration incomplete! Using default.");
     } else {
         pDeviceInfo->storageInfo.spillRatio = env->CallIntMethod(deviceInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -83,7 +87,7 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
 
     methodId = env->GetMethodID(cls, "getStorageSize", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getStorageSize");
+        DLOGW("Couldn't find method id getStorageSize. Configuration incomplete! Using default.");
     } else {
         pDeviceInfo->storageInfo.storageSize = env->CallLongMethod(deviceInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -91,7 +95,7 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
 
     methodId = env->GetMethodID(cls, "getRootDirectory", "()Ljava/lang/String;");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getRootDirectory");
+        DLOGW("Couldn't find method id getRootDirectory. Configuration incomplete! Using default.");
     } else {
         jstring retString = (jstring) env->CallObjectMethod(deviceInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -112,7 +116,7 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
     pDeviceInfo->tags = NULL;
     methodId = env->GetMethodID(cls, "getTags", "()[Lcom/amazonaws/kinesisvideo/producer/Tag;");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getTags");
+        DLOGW("Couldn't find method id getTags. Configuration incomplete! Using default.");
     } else {
         jobjectArray array = (jobjectArray) env->CallObjectMethod(deviceInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -122,9 +126,12 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
         }
     }
 
+    // V1 fields
+    CHK(pDeviceInfo->version >= 1, STATUS_SUCCESS);
+
     methodId = env->GetMethodID(cls, "getClientId", "()Ljava/lang/String;");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getClientId");
+        DLOGW("Couldn't find method id getClientId. Configuration incomplete! Using default.");
     } else {
         jstring retString = (jstring) env->CallObjectMethod(deviceInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -143,7 +150,7 @@ BOOL setDeviceInfo(JNIEnv *env, jobject deviceInfo, PDeviceInfo pDeviceInfo)
     // Set the client info to empty first
     methodId = env->GetMethodID(cls, "getClientInfo", "()Lcom/amazonaws/kinesisvideo/producer/ClientInfo;");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getClientInfo");
+        DLOGW("Couldn't find method id getClientInfo. Configuration incomplete! Using default.");
     } else {
         jobject clientInfo = (jobject) env->CallObjectMethod(deviceInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -161,6 +168,7 @@ BOOL setClientInfo(JNIEnv *env, jobject clientInfo, PClientInfo pClientInfo) {
     STATUS retStatus = STATUS_SUCCESS;
     jmethodID methodId = NULL;
     const char *retChars;
+    jobject kvsRetryStrategy = NULL;
 
     CHECK(env != NULL && clientInfo != NULL && pClientInfo != NULL);
 
@@ -174,15 +182,16 @@ BOOL setClientInfo(JNIEnv *env, jobject clientInfo, PClientInfo pClientInfo) {
     // Retrieve the methods and call it
     methodId = env->GetMethodID(cls, "getVersion", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getVersion");
+        DLOGW("Couldn't find method id getVersion. Configuration incomplete! Using default.");
     } else {
         pClientInfo->version = env->CallIntMethod(clientInfo, methodId);
+        DLOGI("Using ClientInfo version %d", pClientInfo->version);
         CHK_JVM_EXCEPTION(env);
     }
 
     methodId = env->GetMethodID(cls, "getCreateClientTimeout", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getCreateClientTimeout");
+        DLOGW("Couldn't find method id getCreateClientTimeout. Configuration incomplete! Using default.");
     } else {
         pClientInfo->createClientTimeout = env->CallLongMethod(clientInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -190,7 +199,7 @@ BOOL setClientInfo(JNIEnv *env, jobject clientInfo, PClientInfo pClientInfo) {
 
     methodId = env->GetMethodID(cls, "getCreateStreamTimeout", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getCreateStreamTimeout");
+        DLOGW("Couldn't find method id getCreateStreamTimeout. Configuration incomplete! Using default.");
     } else {
         pClientInfo->createStreamTimeout = env->CallLongMethod(clientInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -198,31 +207,15 @@ BOOL setClientInfo(JNIEnv *env, jobject clientInfo, PClientInfo pClientInfo) {
 
     methodId = env->GetMethodID(cls, "getStopStreamTimeout", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getStopStreamTimeout");
+        DLOGW("Couldn't find method id getStopStreamTimeout. Configuration incomplete! Using default.");
     } else {
         pClientInfo->stopStreamTimeout = env->CallLongMethod(clientInfo, methodId);
         CHK_JVM_EXCEPTION(env);
     }
 
-    methodId = env->GetMethodID(cls, "getServiceConnectionTimeout", "()J");
-    if (methodId == NULL) {
-        DLOGW("Couldn't find method id getServiceConnectionTimeout");
-    } else {
-        pClientInfo->serviceCallConnectionTimeout = env->CallLongMethod(clientInfo, methodId);
-        CHK_JVM_EXCEPTION(env);
-    }
-
-    methodId = env->GetMethodID(cls, "getServiceCompletionTimeout", "()J");
-    if (methodId == NULL) {
-        DLOGW("Couldn't find method id getServiceCompletionTimeout");
-    } else {
-        pClientInfo->serviceCallCompletionTimeout = env->CallLongMethod(clientInfo, methodId);
-        CHK_JVM_EXCEPTION(env);
-    }
-
     methodId = env->GetMethodID(cls, "getOfflineBufferAvailabilityTimeout", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getOfflineBufferAvailabilityTimeout");
+        DLOGW("Couldn't find method id getOfflineBufferAvailabilityTimeout. Configuration incomplete! Using default.");
     } else {
         pClientInfo->offlineBufferAvailabilityTimeout = env->CallLongMethod(clientInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -230,7 +223,7 @@ BOOL setClientInfo(JNIEnv *env, jobject clientInfo, PClientInfo pClientInfo) {
 
     methodId = env->GetMethodID(cls, "getLoggerLogLevel", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getLoggerLogLevel");
+        DLOGW("Couldn't find method id getLoggerLogLevel. Configuration incomplete! Using default.");
     } else {
         pClientInfo->loggerLogLevel = env->CallIntMethod(clientInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -238,17 +231,70 @@ BOOL setClientInfo(JNIEnv *env, jobject clientInfo, PClientInfo pClientInfo) {
 
     methodId = env->GetMethodID(cls, "getLogMetric", "()Z");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getLogMetric");
+        DLOGW("Couldn't find method id getLogMetric. Configuration incomplete! Using default.");
     } else {
         pClientInfo->logMetric = env->CallBooleanMethod(clientInfo, methodId);
         CHK_JVM_EXCEPTION(env);
     }
 
+    // V1 fields
+    CHK(pClientInfo->version >= 1, STATUS_SUCCESS);
+
+    methodId = env->GetMethodID(cls, "getMetricLoggingPeriod", "()J");
+    if (methodId == NULL) {
+        DLOGW("Couldn't find method id getMetricLoggingPeriod. Configuration incomplete! Using default.");
+    } else {
+        pClientInfo->metricLoggingPeriod = env->CallLongMethod(clientInfo, methodId);
+        CHK_JVM_EXCEPTION(env);
+    }
+
+    // V2 fields
+    CHK(pClientInfo->version >= 2, STATUS_SUCCESS);
+
     methodId = env->GetMethodID(cls, "getAutomaticStreamingFlags", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getAutomaticStreamingFlags");
+        DLOGW("Couldn't find method id getAutomaticStreamingFlags. Configuration incomplete! Using default.");
     } else {
         pClientInfo->automaticStreamingFlags = (AUTOMATIC_STREAMING_FLAGS) env->CallIntMethod(clientInfo, methodId);
+        CHK_JVM_EXCEPTION(env);
+    }
+
+    methodId = env->GetMethodID(cls, "getReservedCallbackPeriod", "()J");
+    if (methodId == NULL) {
+        DLOGW("Couldn't find method id getReservedCallbackPeriod. Configuration incomplete! Using default.");
+    } else {
+        pClientInfo->reservedCallbackPeriod = env->CallLongMethod(clientInfo, methodId);
+        CHK_JVM_EXCEPTION(env);
+    }
+
+    methodId = env->GetMethodID(cls, "getKvsRetryStrategy", "()Lcom/amazonaws/kinesisvideo/producer/KvsRetryStrategy;");
+    if (methodId == NULL) {
+        DLOGW("Couldn't find method id getKvsRetryStrategy. Configuration incomplete! Using default.");
+    } else {
+        kvsRetryStrategy = (jobject) env->CallObjectMethod(clientInfo, methodId);
+        CHK_JVM_EXCEPTION(env);
+
+        if (kvsRetryStrategy != NULL && !setKvsRetryStrategy(env, kvsRetryStrategy, &pClientInfo->kvsRetryStrategy, &pClientInfo->kvsRetryStrategyCallbacks)) {
+            DLOGW("Failed getting/setting KvsRetryStrategy.");
+        }
+    }
+
+    // V3 fields
+    CHK(pClientInfo->version >= 3, STATUS_SUCCESS);
+
+    methodId = env->GetMethodID(cls, "getServiceConnectionTimeout", "()J");
+    if (methodId == NULL) {
+        DLOGW("Couldn't find method id getServiceConnectionTimeout. Configuration incomplete! Using default.");
+    } else {
+        pClientInfo->serviceCallConnectionTimeout = env->CallLongMethod(clientInfo, methodId);
+        CHK_JVM_EXCEPTION(env);
+    }
+
+    methodId = env->GetMethodID(cls, "getServiceCompletionTimeout", "()J");
+    if (methodId == NULL) {
+        DLOGW("Couldn't find method id getServiceCompletionTimeout. Configuration incomplete! Using default.");
+    } else {
+        pClientInfo->serviceCallCompletionTimeout = env->CallLongMethod(clientInfo, methodId);
         CHK_JVM_EXCEPTION(env);
     }
 
@@ -258,6 +304,165 @@ CleanUp:
     return STATUS_FAILED(retStatus) ? FALSE : TRUE;
 }
 
+BOOL setKvsRetryStrategy(JNIEnv *env, jobject kvsRetryStrategy, PKvsRetryStrategy pKvsRetryStrategy,
+                         PKvsRetryStrategyCallbacks pCallbacks)
+{
+    STATUS retStatus = STATUS_SUCCESS;
+    jmethodID methodId = NULL;
+    jclass cls = NULL;
+    jobject exponentialBackoffConfig = NULL;
+    PExponentialBackoffRetryStrategyConfig pNativeConfig = NULL;
+
+    CHK(env != NULL && pKvsRetryStrategy != NULL, STATUS_NULL_ARG);
+    CHK_WARN(kvsRetryStrategy != NULL, STATUS_INVALID_OPERATION, "Failed to get Java kvsRetryStrategy class.");
+
+    cls = env->GetObjectClass(kvsRetryStrategy);
+    CHK_WARN(cls != NULL, STATUS_INVALID_OPERATION, "Failed to create Java kvsRetryStrategy class.");
+
+    // Get retry strategy type
+    methodId = env->GetMethodID(cls, "getRetryStrategyTypeValue", "()I");
+    if (methodId == NULL) {
+        DLOGW("Couldn't find method id getRetryStrategyTypeValue, setting retryStrategyType to EXPONENTIAL_BACKOFF_WAIT.");
+        pKvsRetryStrategy->retryStrategyType = KVS_RETRY_STRATEGY_EXPONENTIAL_BACKOFF_WAIT;
+    } else {
+        pKvsRetryStrategy->retryStrategyType = (KVS_RETRY_STRATEGY_TYPE) env->CallIntMethod(kvsRetryStrategy, methodId);
+        CHK_JVM_EXCEPTION(env);
+    }
+
+    // Get exponential backoff config (if strategy type is EXPONENTIAL_BACKOFF_WAIT)
+    if (pKvsRetryStrategy->retryStrategyType == KVS_RETRY_STRATEGY_EXPONENTIAL_BACKOFF_WAIT) {
+        methodId = env->GetMethodID(cls, "getExponentialBackoffConfig", "()Lcom/amazonaws/kinesisvideo/producer/ExponentialBackoffRetryStrategyConfig;");
+        if (methodId != NULL) {
+            exponentialBackoffConfig = env->CallObjectMethod(kvsRetryStrategy, methodId);
+            CHK_JVM_EXCEPTION(env);
+
+            if (exponentialBackoffConfig != NULL) {
+                // Allocate native config struct
+                pNativeConfig = (PExponentialBackoffRetryStrategyConfig) MEMCALLOC(1, SIZEOF(ExponentialBackoffRetryStrategyConfig));
+                CHK_WARN(pNativeConfig != NULL, STATUS_NOT_ENOUGH_MEMORY, "Failed to allocate native config");
+
+                // Convert Java config to native config
+                if (setExponentialBackoffRetryStrategyConfig(env, exponentialBackoffConfig, pNativeConfig)) {
+                    DLOGD("Successfully converted Java config to native config");
+                } else {
+                    DLOGW("Failed to convert Java config to native config. Configuration incomplete! Using default.");
+                    MEMFREE(pNativeConfig);
+                    pNativeConfig = NULL;
+                }
+            } else {
+                DLOGI("No custom config provided, PIC will use defaults");
+            }
+        } else {
+            DLOGW("Couldn't find getExponentialBackoffConfig method. Configuration incomplete! Using default.");
+        }
+    }
+
+    // Set the config pointer (NULL means use PIC defaults)
+    pKvsRetryStrategy->pRetryStrategyConfig = (PRetryStrategyConfig) pNativeConfig;
+    DLOGD("The retry stratgy config is: %p", pNativeConfig);
+
+    // PIC will handle setting pRetryStrategy when the strategy is created
+    pKvsRetryStrategy->pRetryStrategy = NULL;
+
+    pCallbacks->createRetryStrategyFn = exponentialBackoffRetryStrategyCreate;
+    pCallbacks->freeRetryStrategyFn = exponentialBackoffRetryStrategyFree;
+    pCallbacks->executeRetryStrategyFn = getExponentialBackoffRetryStrategyWaitTime;
+    pCallbacks->getCurrentRetryAttemptNumberFn = getExponentialBackoffRetryCount;
+
+    DLOGD("Successfully configured retry strategy: type=%d, config=%p",
+          pKvsRetryStrategy->retryStrategyType, pKvsRetryStrategy->pRetryStrategyConfig);
+
+CleanUp:
+    if (STATUS_FAILED(retStatus) && pNativeConfig != NULL) {
+        MEMFREE(pNativeConfig);
+    }
+    return STATUS_FAILED(retStatus) ? FALSE : TRUE;
+}
+
+BOOL setExponentialBackoffRetryStrategyConfig(JNIEnv *env, jobject exponentialBackoffConfig, PExponentialBackoffRetryStrategyConfig pConfig)
+{
+    STATUS retStatus = STATUS_SUCCESS;
+    jmethodID methodId = NULL;
+    jclass cls = NULL;
+
+    CHK(env != NULL && pConfig != NULL, STATUS_NULL_ARG);
+    CHK_WARN(exponentialBackoffConfig != NULL, STATUS_INVALID_OPERATION, "ExponentialBackoffRetryStrategyConfig is null");
+
+    cls = env->GetObjectClass(exponentialBackoffConfig);
+    CHK_WARN(cls != NULL, STATUS_INVALID_OPERATION, "Failed to get ExponentialBackoffRetryStrategyConfig class");
+
+    // Get maxRetryCount
+    methodId = env->GetMethodID(cls, "getMaxRetryCount", "()J");
+    if (methodId != NULL) {
+        pConfig->maxRetryCount = env->CallLongMethod(exponentialBackoffConfig, methodId);
+        CHK_JVM_EXCEPTION(env);
+    } else {
+        DLOGW("Couldn't find method id getMaxRetryCount. Configuration incomplete! Using default.");
+    }
+
+    // Get maxRetryWaitTime
+    methodId = env->GetMethodID(cls, "getMaxRetryWaitTimeMs", "()J");
+    if (methodId != NULL) {
+        long javaValue = env->CallLongMethod(exponentialBackoffConfig, methodId);
+        CHK_JVM_EXCEPTION(env);
+        pConfig->maxRetryWaitTime = (javaValue == 0) ?
+            (DEFAULT_KVS_MAX_WAIT_TIME_MILLISECONDS) :
+            ((UINT64) javaValue);
+    } else {
+        DLOGW("Couldn't find method id getMaxRetryWaitTimeMs, using PIC default");
+        pConfig->maxRetryWaitTime = DEFAULT_KVS_MAX_WAIT_TIME_MILLISECONDS * HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
+    }
+
+    // Get retryFactorTime (0 = use PIC default)
+    methodId = env->GetMethodID(cls, "getRetryFactorTimeMs", "()J");
+    if (methodId != NULL) {
+        long javaValue = env->CallLongMethod(exponentialBackoffConfig, methodId);
+        CHK_JVM_EXCEPTION(env);
+        pConfig->retryFactorTime = (javaValue == 0) ?
+            (DEFAULT_KVS_RETRY_TIME_FACTOR_MILLISECONDS) :
+            ((UINT64) javaValue);
+    } else {
+        DLOGW("Couldn't find method id getRetryFactorTimeMs, using PIC default");
+        pConfig->retryFactorTime = DEFAULT_KVS_RETRY_TIME_FACTOR_MILLISECONDS;
+    }
+
+    // Get minTimeToResetRetryState (0 = use PIC default)
+    methodId = env->GetMethodID(cls, "getMinTimeToResetRetryStateMs", "()J");
+    if (methodId != NULL) {
+        long javaValue = env->CallLongMethod(exponentialBackoffConfig, methodId);
+        CHK_JVM_EXCEPTION(env);
+        pConfig->minTimeToResetRetryState = (javaValue == 0) ?
+            (DEFAULT_KVS_MIN_TIME_TO_RESET_RETRY_STATE_MILLISECONDS) :
+            ((UINT64) javaValue);
+    } else {
+        DLOGW("Couldn't find method id getMinTimeToResetRetryStateMs, using PIC default");
+        pConfig->minTimeToResetRetryState = DEFAULT_KVS_MIN_TIME_TO_RESET_RETRY_STATE_MILLISECONDS;
+    }
+
+    methodId = env->GetMethodID(cls, "getJitterTypeValue", "()I");
+    if (methodId != NULL) {
+        int javaValue = env->CallIntMethod(exponentialBackoffConfig, methodId);
+        CHK_JVM_EXCEPTION(env);
+        pConfig->jitterType = (javaValue == 0) ? FULL_JITTER : (ExponentialBackoffJitterType) javaValue;
+    } else {
+        DLOGW("Couldn't find method id getJitterTypeValue. Configuration incomplete! Using default.");
+    }
+
+    methodId = env->GetMethodID(cls, "getJitterFactor", "()J");
+    if (methodId != NULL) {
+        // 0 is actually the PIC default for FULL_JITTER
+        pConfig->jitterFactor = (UINT32) env->CallLongMethod(exponentialBackoffConfig, methodId);
+        CHK_JVM_EXCEPTION(env);
+    } else {
+        DLOGW("Couldn't find method id getJitterFactor. Configuration incomplete! Using default.");
+    }
+
+    DLOGI("Successfully configured exponential backoff: maxRetryCount=%u, maxRetryWaitTime=%llu, retryFactorTime=%llu, jitterType=%u",
+          pConfig->maxRetryCount, pConfig->maxRetryWaitTime, pConfig->retryFactorTime, pConfig->jitterType);
+
+CleanUp:
+    return STATUS_FAILED(retStatus) ? FALSE : TRUE;
+}
 
 BOOL setTags(JNIEnv *env, jobjectArray tagArray, PTag* ppTags, PUINT32 pTagCount)
 {
@@ -377,15 +582,16 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
     // Retrieve the methods and call it
     methodId = env->GetMethodID(cls, "getVersion", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getVersion");
+        DLOGW("Couldn't find method id getVersion. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->version = env->CallIntMethod(streamInfo, methodId);
+        DLOGI("Using StreamInfo version %d", pStreamInfo->version);
         CHK_JVM_EXCEPTION(env);
     }
 
     methodId = env->GetMethodID(cls, "getName", "()Ljava/lang/String;");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getName");
+        DLOGW("Couldn't find method id getName. Configuration incomplete! Using default.");
     } else {
         jstring retString = (jstring) env->CallObjectMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -406,7 +612,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getStreamingType", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getStreamingType");
+        DLOGW("Couldn't find method id getStreamingType. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.streamingType = (STREAMING_TYPE) env->CallIntMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -414,7 +620,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getContentType", "()Ljava/lang/String;");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getContentType");
+        DLOGW("Couldn't find method id getContentType. Configuration incomplete! Using default.");
     } else {
         jstring retString = (jstring) env->CallObjectMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -432,7 +638,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getKmsKeyId", "()Ljava/lang/String;");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getKmsKeyId");
+        DLOGW("Couldn't find method id getKmsKeyId. Configuration incomplete! Using default.");
     } else {
         jstring retString = (jstring) env->CallObjectMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -450,7 +656,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getRetentionPeriod", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getRetentionPeriod");
+        DLOGW("Couldn't find method id getRetentionPeriod. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->retention = env->CallLongMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -458,7 +664,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "isAdaptive", "()Z");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id isAdaptive");
+        DLOGW("Couldn't find method id isAdaptive. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.adaptive = env->CallBooleanMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -466,7 +672,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "isAllowStreamCreation", "()Z");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id isAllowStreamCreation");
+        DLOGW("Couldn't find method id isAllowStreamCreation. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.allowStreamCreation = env->CallBooleanMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -475,7 +681,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getMaxLatency", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getMaxLatency");
+        DLOGW("Couldn't find method id getMaxLatency. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.maxLatency = env->CallLongMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -483,7 +689,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getFragmentDuration", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getFragmentDuration");
+        DLOGW("Couldn't find method id getFragmentDuration. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.fragmentDuration = env->CallLongMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -491,7 +697,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "isKeyFrameFragmentation", "()Z");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id isKeyFrameFragmentation");
+        DLOGW("Couldn't find method id isKeyFrameFragmentation. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.keyFrameFragmentation = env->CallBooleanMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -499,7 +705,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "isFrameTimecodes", "()Z");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id isFrameTimecodes");
+        DLOGW("Couldn't find method id isFrameTimecodes. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.frameTimecodes = env->CallBooleanMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -507,7 +713,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "isAbsoluteFragmentTimes", "()Z");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id isAbsoluteFragmentTimes");
+        DLOGW("Couldn't find method id isAbsoluteFragmentTimes. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.absoluteFragmentTimes = env->CallBooleanMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -515,7 +721,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "isFragmentAcks", "()Z");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id isFragmentAcks");
+        DLOGW("Couldn't find method id isFragmentAcks. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.fragmentAcks = env->CallBooleanMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -523,7 +729,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "isRecoverOnError", "()Z");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id isRecoverOnError");
+        DLOGW("Couldn't find method id isRecoverOnError. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.recoverOnError = env->CallBooleanMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -531,7 +737,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "isRecalculateMetrics", "()Z");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id isRecalculateMetrics");
+        DLOGW("Couldn't find method id isRecalculateMetrics. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.recalculateMetrics = env->CallBooleanMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -539,7 +745,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getNalAdaptationFlags", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getNalAdaptationFlags");
+        DLOGW("Couldn't find method id getNalAdaptationFlags. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.nalAdaptationFlags = env->CallIntMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -549,7 +755,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
     pStreamInfo->streamCaps.segmentUuid = NULL;
     methodId = env->GetMethodID(cls, "getSegmentUuidBytes", "()[B");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getSegmentUuidBytes");
+        DLOGW("Couldn't find method id getSegmentUuidBytes. Configuration incomplete! Using default.");
     } else {
         byteArray = (jbyteArray) env->CallObjectMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -576,7 +782,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getTrackInfoCount", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getTrackInfoCount");
+        DLOGW("Couldn't find method id getTrackInfoCount. Configuration incomplete! Using default.");
     } else {
         trackInfoCount = (UINT32) env->CallIntMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -590,7 +796,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getTrackInfoVersion", "(I)I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getTrackInfoVersion");
+        DLOGW("Couldn't find method id getTrackInfoVersion. Configuration incomplete! Using default.");
     } else {
         for(UINT32 i = 0; i < trackInfoCount; ++i) {
             pStreamInfo->streamCaps.trackInfoList[i].version = (UINT64) env->CallIntMethod(streamInfo, methodId, i);
@@ -600,7 +806,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getTrackName", "(I)Ljava/lang/String;");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getTrackName");
+        DLOGW("Couldn't find method id getTrackName. Configuration incomplete! Using default.");
     } else {
         for(UINT32 i = 0; i < trackInfoCount; ++i) {
             jstring retString = (jstring) env->CallObjectMethod(streamInfo, methodId, i);
@@ -620,7 +826,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getCodecId", "(I)Ljava/lang/String;");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getCodecId");
+        DLOGW("Couldn't find method id getCodecId. Configuration incomplete! Using default.");
     } else {
         for(UINT32 i = 0; i < trackInfoCount; ++i) {
             jstring retString = (jstring) env->CallObjectMethod(streamInfo, methodId, i);
@@ -640,7 +846,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getCodecPrivateData", "(I)[B");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getCodecPrivateData");
+        DLOGW("Couldn't find method id getCodecPrivateData. Configuration incomplete! Using default.");
     } else {
         for(UINT32 i = 0; i < trackInfoCount; ++i) {
             byteArray = (jbyteArray) env->CallObjectMethod(streamInfo, methodId, i);
@@ -670,7 +876,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getTrackInfoType", "(I)I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getTrackInfoType");
+        DLOGW("Couldn't find method id getTrackInfoType. Configuration incomplete! Using default.");
     } else {
         for(UINT32 i = 0; i < trackInfoCount; ++i) {
             pStreamInfo->streamCaps.trackInfoList[i].trackType = (MKV_TRACK_INFO_TYPE) env->CallIntMethod(streamInfo, methodId, i);
@@ -680,7 +886,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getTrackId", "(I)J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getTrackId");
+        DLOGW("Couldn't find method id getTrackId. Configuration incomplete! Using default.");
     } else {
         for(UINT32 i = 0; i < trackInfoCount; ++i) {
             pStreamInfo->streamCaps.trackInfoList[i].trackId = (UINT64) env->CallLongMethod(streamInfo, methodId, i);
@@ -690,7 +896,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getAvgBandwidthBps", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getAvgBandwidthBps");
+        DLOGW("Couldn't find method id getAvgBandwidthBps. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.avgBandwidthBps = env->CallIntMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -698,7 +904,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getFrameRate", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getFrameRate");
+        DLOGW("Couldn't find method id getFrameRate. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.frameRate = env->CallIntMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -706,7 +912,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getBufferDuration", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getBufferDuration");
+        DLOGW("Couldn't find method id getBufferDuration. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.bufferDuration = env->CallLongMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -714,7 +920,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getReplayDuration", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getReplayDuration");
+        DLOGW("Couldn't find method id getReplayDuration. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.replayDuration = env->CallLongMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -722,7 +928,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getConnectionStalenessDuration", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getConnectionStalenessDuration");
+        DLOGW("Couldn't find method id getConnectionStalenessDuration. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.connectionStalenessDuration = env->CallLongMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -730,7 +936,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getTimecodeScale", "()J");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getTimecodeScale");
+        DLOGW("Couldn't find method id getTimecodeScale. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.timecodeScale = env->CallLongMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -741,7 +947,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
     pStreamInfo->tags = NULL;
     methodId = env->GetMethodID(cls, "getTags", "()[Lcom/amazonaws/kinesisvideo/producer/Tag;");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getTags");
+        DLOGW("Couldn't find method id getTags. Configuration incomplete! Using default.");
     } else {
         jobjectArray array = (jobjectArray) env->CallObjectMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -753,7 +959,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getFrameOrderMode", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getFrameOrderMode");
+        DLOGW("Couldn't find method id getFrameOrderMode. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.frameOrderingMode = (FRAME_ORDER_MODE) env->CallIntMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);
@@ -761,7 +967,7 @@ BOOL setStreamInfo(JNIEnv* env, jobject streamInfo, PStreamInfo pStreamInfo)
 
     methodId = env->GetMethodID(cls, "getStorePressurePolicy", "()I");
     if (methodId == NULL) {
-        DLOGW("Couldn't find method id getStorePressurePolicy");
+        DLOGW("Couldn't find method id getStorePressurePolicy. Configuration incomplete! Using default.");
     } else {
         pStreamInfo->streamCaps.storePressurePolicy = (CONTENT_STORE_PRESSURE_POLICY) env->CallIntMethod(streamInfo, methodId);
         CHK_JVM_EXCEPTION(env);

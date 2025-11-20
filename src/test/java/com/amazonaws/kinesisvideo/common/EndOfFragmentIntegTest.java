@@ -6,6 +6,7 @@ import com.amazonaws.kinesisvideo.producer.KinesisVideoFragmentAck;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.kinesisvideo.producer.Time;
+import com.amazonaws.kinesisvideo.util.ThreadWatcher;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideo;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClient;
 import com.amazonaws.services.kinesisvideo.AmazonKinesisVideoClientBuilder;
@@ -24,6 +25,8 @@ import org.junit.runners.Parameterized;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -90,6 +93,14 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
     private static final int KEYFRAME_INTERVAL = 5;
 
     /**
+     * ThreadWatcher configuration
+     */
+    private ThreadWatcher threadWatcher;
+    private final List<String> THREADS_TO_IGNORE = Collections.singletonList("java-sdk-http-connection-reaper");
+    private final Duration THREADS_TIMEOUT = Duration.ofSeconds(5);
+    private final Duration THREADS_POLLING_INTERVAL = Duration.ofMillis(100);
+
+    /**
      * List of streams created during tests that need to be cleaned up.
      */
     private final List<KinesisVideoProducerStream> createdStreams = new ArrayList<>();
@@ -112,6 +123,9 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
 
         assumeTrue("You need to increase the number of streams the client is configured for before starting the test!",
                 NUMBER_OF_STREAMS_PER_ITERATION <= NUMBER_OF_STREAMS);
+
+        // Capture baseline thread state
+        this.threadWatcher = new ThreadWatcher(THREADS_TIMEOUT, THREADS_POLLING_INTERVAL, THREADS_TO_IGNORE);
 
         createProducer();
     }
@@ -150,6 +164,11 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
         this.createdStreams.clear();
 
         assertFalse("An exception happened during cleanup!", failure);
+
+        free();
+
+        // Verify that all the threads are shut down and there are no thread leaks
+        this.threadWatcher.close();
     }
 
     // Using this as a way to repeat the test multiple times
@@ -278,6 +297,8 @@ public class EndOfFragmentIntegTest extends ProducerTestBase {
                 .count();
 
         assertTrue("Didn't receive any PERSISTED ACKs. Received: " + this.receivedFragmentAcks_, persistedAcksCount > 0);
+
+        executorService.shutdownNow();
     }
 
     /**

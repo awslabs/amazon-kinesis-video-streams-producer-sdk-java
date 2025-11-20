@@ -36,7 +36,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      * This test creates a stream, stops it and frees it
      */
     @Test
-    public void startStopSyncTerminate() {
+    public void startStopSyncTerminate() throws ProducerException {
         final KinesisVideoProducerStream kinesisVideoProducerStream;
 
         storageInfo_ = new StorageInfo(0,
@@ -63,7 +63,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      * or any buffering acks that are not in sequence.
      */
     @Test
-    public void offlineUploadLimitedBufferDuration() {
+    public void offlineUploadLimitedBufferDuration() throws ProducerException {
         int flags;
         long currentTimeMs = 0;
         final byte[][] framesData = new byte[][]{
@@ -135,7 +135,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      */
     @Ignore
     @Test
-    public void offlineUploadLimitedStorage() {
+    public void offlineUploadLimitedStorage() throws ProducerException {
         int flags;
         long currentTimeMs = System.currentTimeMillis() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
         final byte[][] framesData = new byte[][]{
@@ -199,7 +199,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      * This test pauses on the last frame of each clip for pauseSeconds which is less than the timeout
      */
     @Test
-    public void intermittentFileUpload() {
+    public void intermittentFileUpload() throws ProducerException {
         int flags;
         long currentTimeMs = 0;
         final byte[][] framesData = new byte[][]{
@@ -285,7 +285,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      */
     @Ignore
     @Test
-    public void highFragmentRateFileUpload() {
+    public void highFragmentRateFileUpload() throws ProducerException {
         int flags;
         long currentTimeMs = 0;
         final byte[][] framesData = new byte[][]{
@@ -352,7 +352,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      */
     @Ignore
     @Test
-    public void offlineModeTokenRotationBlockOnSpace() {
+    public void offlineModeTokenRotationBlockOnSpace() throws ProducerException {
         final KinesisVideoProducerStream kinesisVideoProducerStream;
         KinesisVideoFrame frame;
 
@@ -419,7 +419,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      * The new session will not roll back as the previous one was closed with a persisted ACK received.
      */
     @Test
-    public void realtimeIntermittentNoLatencyPressureEofr() {
+    public void realtimeIntermittentNoLatencyPressureEofr() throws ProducerException {
         final KinesisVideoProducerStream kinesisVideoProducerStream;
         KinesisVideoFrame frame;
 
@@ -512,7 +512,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      * This test is tests Intermittent Producer under latency pressure
      */
     @Test
-    public void realtimeAutoIntermittentLatencyPressure() {
+    public void realtimeAutoIntermittentLatencyPressure() throws ProducerException {
         final KinesisVideoProducerStream kinesisVideoProducerStream;
 
         final int totalFrameCount;
