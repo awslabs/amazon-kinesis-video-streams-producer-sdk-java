@@ -1,7 +1,5 @@
 package com.amazonaws.kinesisvideo.common;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -95,7 +93,7 @@ public class ProducerTestBase {
     protected List<KinesisVideoFragmentAck> receivedFragmentAcks_ = new ArrayList<>();
 
     // set by the createProducer method to be used throughout
-    private StreamCallbacks streamCallbacks;
+    protected StreamCallbacks streamCallbacks;
     private KinesisVideoClientConfiguration configuration;
     private AWSCredentialsProvider awsCredentialsProvider;
     private JavaKinesisVideoServiceClient serviceClient;
@@ -103,7 +101,8 @@ public class ProducerTestBase {
     private NativeKinesisVideoClient kinesisVideoClient;
     private AuthCallbacks authCallbacks;
     private StorageCallbacks storageCallbacks;
-    private KinesisVideoProducer kinesisVideoProducer;
+    protected KinesisVideoProducer kinesisVideoProducer;
+    protected ServiceCallbacks serviceCallbacks;
 
     protected void reset() {
         stopCalled_ = false;
@@ -173,6 +172,47 @@ public class ProducerTestBase {
     /**
      * This method is used to create a KinesisVideoProducer which is used by the later methods
      */
+    protected void createCachedProducer(DeviceInfo deviceInfo) {
+
+        reset(); // reset all flags to initial values so that they can be modified by the stream and storage callbacks
+
+        executor = Executors.newScheduledThreadPool(NUMBER_OF_THREADS_IN_POOL,
+                new ThreadFactoryBuilder().setNameFormat("KVS-JavaClientExecutor-%d").build());
+
+        awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
+        configuration = KinesisVideoClientConfiguration.builder()
+                .withRegion(Regions.US_WEST_2.getName())
+                .withCredentialsProvider(JavaCredentialsFactory.createKinesisVideoCredentialsProvider(awsCredentialsProvider))
+                .build();
+
+        serviceClient = new JavaKinesisVideoServiceClient(log);
+        authCallbacks = new DefaultAuthCallbacks(configuration.getCredentialsProvider(),
+                executor,
+                log);
+        // use TestStorageCallbacks and TestStreamCallbacks to override the callbacks to update the flags in case of
+        // overflow, errors and other events. The current ProducerTestBase object is passed to their constructors so
+        // that they can access the flags to be updated
+        storageCallbacks = new TestStorageCallbacks(this);
+        streamCallbacks = new TestStreamCallBacks(this);
+
+        serviceCallbacks = new CachedInfoMultiAuthServiceCallbacksImpl(log, executor,
+                configuration, serviceClient);
+        kinesisVideoClient = new NativeKinesisVideoClient(log,
+                authCallbacks,
+                storageCallbacks,
+                serviceCallbacks,
+                streamCallbacks);
+        try {
+            kinesisVideoProducer = kinesisVideoClient.initializeNewKinesisVideoProducer(deviceInfo);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
+    }
+
+    /**
+     * This method is used to create a KinesisVideoProducer which is used by the later methods
+     */
     protected void createProducer(DeviceInfo deviceInfo, ServiceCallbacksConstructor serviceCallbacksConstructor) throws Exception {
 
         reset(); // reset all flags to initial values so that they can be modified by the stream and storage callbacks
@@ -197,12 +237,12 @@ public class ProducerTestBase {
         streamCallbacks = new TestStreamCallBacks(this);
 
         // Use the custom service callbacks (used to inject return values for API calls)
-        ServiceCallbacks defaultServiceCallbacks = serviceCallbacksConstructor.apply(log, executor,
+        serviceCallbacks = serviceCallbacksConstructor.apply(log, executor,
                 configuration, serviceClient);
         kinesisVideoClient = new NativeKinesisVideoClient(log,
                 authCallbacks,
                 storageCallbacks,
-                defaultServiceCallbacks,
+                serviceCallbacks,
                 streamCallbacks);
         try {
             kinesisVideoProducer = kinesisVideoClient.initializeNewKinesisVideoProducer(deviceInfo);
@@ -368,6 +408,15 @@ public class ProducerTestBase {
             kinesisVideoProducer.freeStream(kinesisVideoProducerStream);
         } catch (Exception e) {
             e.printStackTrace();
+            fail();
+        }
+    }
+
+    protected void stopStreams() {
+        try {
+            kinesisVideoProducer.stopStreams();
+        } catch (ProducerException e) {
+            log.error("Failed to stop streams", e);
             fail();
         }
     }

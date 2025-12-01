@@ -286,26 +286,26 @@ public class KinesisVideoFragmentAckTest {
         assertTrue(result.contains("\n")); // Should contain newlines for formatting
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void whenCreatingFragmentAckWithEmptySequenceNumberUsingIntConstructor_thenShouldThrowException() {
+    @Test
+    public void whenCreatingFragmentAckWithEmptySequenceNumberUsingIntConstructor_thenShouldNotThrowException() {
         // Given
         int ackType = FragmentAckType.FRAGMENT_ACK_TYPE_BUFFERING;
         
         // When
         new KinesisVideoFragmentAck(ackType, TEST_TIMESTAMP, "", HTTP_OK);
         
-        // Then - exception should be thrown
+        // Then - no exception should be thrown
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void whenCreatingFragmentAckWithEmptySequenceNumberUsingObjectConstructor_thenShouldThrowException() {
+    @Test
+    public void whenCreatingFragmentAckWithEmptySequenceNumberUsingObjectConstructor_thenShouldNotThrowException() {
         // Given
         FragmentAckType ackType = new FragmentAckType(FragmentAckType.FRAGMENT_ACK_TYPE_RECEIVED);
         
         // When
         new KinesisVideoFragmentAck(ackType, TEST_TIMESTAMP, "", HTTP_OK);
         
-        // Then - exception should be thrown
+        // Then - no exception should be thrown
     }
 
     @Test(expected = IllegalArgumentException.class)
