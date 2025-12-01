@@ -424,3 +424,225 @@ jobs:
             Write-Output "Verifying $($file.FullName) with mkvinfo (verbose and hexdump):"
             mkvinfo.exe -v -X "$($file.FullName)"
           }
+
+  run-benchmarks:
+    needs:
+      - build-jni
+
+    env:
+      STREAM_NAME_PREFIX: producer-java-benchmarking-java-11-ubuntu
+      JNI_FOLDER: ${{ github.workspace }}/jni
+      STREAM_COUNT: 7
+      STREAM_COUNT_START_STOP: 5
+      STREAM_INTERVAL_MS: 10000
+    
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: 11
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        working-directory: scripts/python/benchmarking
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download JNI Library
+        uses: actions/download-artifact@v4
+        with:
+          name: jni-library-ubuntu-22.04
+          path: jni/
+
+      - name: Build with Maven
+        run: mvn clean compile assembly:single
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Run the benchmarking application
+        run: |
+          set +e
+
+          JAR_FILE=$(find target -name '*jar-with-dependencies.jar' | head -n 1)
+
+          if [ -z "$JAR_FILE" ]; then
+            echo "Error: JAR file not found!"
+            exit 1
+          fi
+
+          echo "Using JAR file: $JAR_FILE"
+          java -classpath "$JAR_FILE" \
+            -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
+            -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
+            -Daws.sessionToken=${AWS_SESSION_TOKEN} \
+            -Djava.library.path=${JNI_FOLDER} \
+            -Dkvs-stream=${STREAM_NAME_PREFIX} \
+            -Dlog4j.configurationFile=log4j2.xml \
+            -Dstream-count=${STREAM_COUNT} \
+            -Dstream-interval-ms=${STREAM_INTERVAL_MS} \
+            com.amazonaws.kinesisvideo.demoapp.DemoAppBenchmarking &
+          JAVA_PID=$!
+          BENCHMARKING_FILE="process_${JAVA_PID}_metrics.txt"
+          echo "BENCHMARKING_FILE=$BENCHMARKING_FILE" >> $GITHUB_ENV
+
+          python ./scripts/python/benchmarking/capture_rss_and_cpu.py $JAVA_PID &
+          MONITOR_PID=$!
+
+          # Wait for maximum of STREAM_COUNT * STREAM_INTERVAL_MS + 30 seconds
+          TIMEOUT=$((STREAM_COUNT * STREAM_INTERVAL_MS / 1000 + 30))
+          for ((i=1; i<=TIMEOUT; i++)); do
+            if ! kill -0 $JAVA_PID 2>/dev/null; then
+              break
+            fi
+            sleep 1
+            if [ $i -eq $TIMEOUT ]; then
+              # Time's up, kill the process
+              kill -9 $JAVA_PID
+            fi
+          done
+
+          wait $JAVA_PID
+          EXIT_CODE=$?
+          wait $MONITOR_PID
+
+          # Run the benchmarking app in start/stop mode.
+          java -classpath "$JAR_FILE" \
+            -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
+            -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
+            -Daws.sessionToken=${AWS_SESSION_TOKEN} \
+            -Djava.library.path=${JNI_FOLDER} \
+            -Dkvs-stream=${STREAM_NAME_PREFIX} \
+            -Dlog4j.configurationFile=log4j2.xml \
+            -Dstream-count=${STREAM_COUNT_START_STOP} \
+            -Dstream-interval-ms=${STREAM_INTERVAL_MS} \
+            -Ddo-start-stop=true \
+            com.amazonaws.kinesisvideo.demoapp.DemoAppBenchmarking &
+          JAVA_PID=$!
+          BENCHMARKING_FILE_START_STOP="process_${JAVA_PID}_metrics.txt"
+          echo "BENCHMARKING_FILE_START_STOP=$BENCHMARKING_FILE_START_STOP" >> $GITHUB_ENV
+
+          python ./scripts/python/benchmarking/capture_rss_and_cpu.py $JAVA_PID &
+          MONITOR_PID=$!
+
+          # Wait for maximum of expected duration + 30 seconds.
+          # Note: Start/stop mode runs each stream for 3 intervals, and has an extra 120 seconds of sleep to allow for the streams to stabilize.
+          TIMEOUT=$((STREAM_COUNT_START_STOP * STREAM_INTERVAL_MS * 3 / 1000 + 120 + 30))
+          for ((i=1; i<=TIMEOUT; i++)); do
+            if ! kill -0 $JAVA_PID 2>/dev/null; then
+              break
+            fi
+            sleep 1
+            if [ $i -eq $TIMEOUT ]; then
+              # Time's up, kill the process
+              kill -9 $JAVA_PID
+            fi
+          done
+
+          wait $JAVA_PID
+          EXIT_CODE=$?
+          wait $MONITOR_PID
+
+          set -e
+
+          # Check if the process was forcefully killed
+          if [ $EXIT_CODE -eq 124 ]; then
+            echo "Error: Benchmarking application exceeded time limit and was forcefully terminated."
+            exit 1
+          fi
+
+          # Preserve original exit code
+          echo "Process exited with code: $EXIT_CODE"
+          exit $EXIT_CODE
+
+        shell: bash
+
+      - name: Check uploaded media (benchmarking)
+        working-directory: scripts/python/getmediavalidation/bin
+        run: |
+          for ((i = 0; i < STREAM_COUNT; i++)); do
+            stream="${STREAM_NAME_PREFIX}_${i}"
+            echo "Validating stream: $stream"
+            
+            python ./fetch_fragment_info.py --stream-name "$stream" --last 5m
+            
+            python ./validate_media.py --stream-name "$stream" \
+              --keyframe-interval 25 \
+              -fps 25 \
+              --frames-path "${{ github.workspace }}/src/main/resources/data/h264/*.h264" \
+              --last 5m
+          done
+
+      - name: Generate memory and CPU graph
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+
+          DATA_FILE="${BENCHMARKING_FILE}"
+
+          if [ ! -f "$DATA_FILE" ]; then
+            echo "Error: Data file $DATA_FILE not found!"
+            exit 1
+          fi
+
+          # Key points for each stream
+          KEY_POINTS_ARGS=()
+
+          for ((i = 0; i < STREAM_COUNT; i++)); do
+            TIME_SECONDS=$(awk "BEGIN { printf \"%.2f\", $i * $STREAM_INTERVAL_MS / 1000 }")
+            LABEL="Stream $((i + 1))"
+            KEY_POINTS_ARGS+=(--key-points "$TIME_SECONDS" "$LABEL")
+          done
+
+          python ./scripts/python/benchmarking/plot_rss_and_cpu.py "$DATA_FILE" \
+            --title "Memory and CPU Usage (Benchmarking ${COMMIT_HASH})\n Ubuntu, Java 11" \
+            --output "benchmarking-mem-cpu.png" \
+            "${KEY_POINTS_ARGS[@]}"
+
+          
+          DATA_FILE="${BENCHMARKING_FILE_START_STOP}"
+
+          if [ ! -f "$DATA_FILE" ]; then
+            echo "Error: Data file $DATA_FILE not found!"
+            exit 1
+          fi
+
+          # Key points for each stream
+          KEY_POINTS_ARGS=()
+
+          python ./scripts/python/benchmarking/plot_rss_and_cpu.py "$DATA_FILE" \
+            --title "Start/Stop Memory and CPU Usage (Benchmarking ${COMMIT_HASH})\n Ubuntu, Java 11" \
+            --output "benchmarking-start-stop-mem-cpu.png" \
+
+        shell: bash
+
+      - name: Upload memory and CPU graph (Mac and Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarking-mem-cpu.png
+          path: benchmarking-mem-cpu.png
+          retention-days: 7
+        
+      - name: Upload start-stop memory and CPU graph (Mac and Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarking-start-stop-mem-cpu.png
+          path: benchmarking-start-stop-mem-cpu.png
+          retention-days: 7
