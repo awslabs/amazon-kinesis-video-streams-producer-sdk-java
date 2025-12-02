@@ -360,9 +360,14 @@ public class DontRecoverOnErrorTest extends ProducerTestBase {
                     1
             );
 
+            // The first few frames will get added to the content view successfully,
+            // but after the max timestamp delta, PIC will reject frames until it's not missing a track anymore
+            // The PutMedia connection will get closed by the service but will not be re-opened by the SDK
+            // because of the recoverOnError=false flag
             try {
                 stream.putFrame(frame);
             } catch (final ProducerException e) {
+                // The frame does not get added to the content view
                 assertEquals(STATUS_MAX_FRAME_TIMESTAMP_DELTA_BETWEEN_TRACKS_EXCEEDED, e.getStatusCode());
             }
 
@@ -377,6 +382,10 @@ public class DontRecoverOnErrorTest extends ProducerTestBase {
         }
 
         // Stream normally (recover) for 20s
+        // We should be able to continue to submit frames into the content view, since
+        // the delta between the latest frame in each track is less than the threshold.
+        // Since the PutMedia connection isn't open, there is no PutMedia-sender thread
+        // that is emptying the content view
         for (int frameIndex = framesAfterFailing + framesCorrectly; frameIndex < framesAfterFailing + framesCorrectly + 1000; frameIndex++) {
             final long timestampUs = currentFrameTs * 1000;
 
@@ -390,6 +399,11 @@ public class DontRecoverOnErrorTest extends ProducerTestBase {
                     ((frameIndex + 1) % 2) + 1 // To alternate the track order (to start with the 2nd track to immediately allow frames in again
             );
 
+            // The content view is configured with the CONTENT_STORE_PRESSURE_POLICY_DROP_TAIL_ITEM policy,
+            // meaning that it will drop the oldest item. The content view should have content near expiry
+            // since there are frames submitted before the delta kicked in. putFrame on a "full" content view
+            // will throw an exception if the policy is set to CONTENT_STORE_PRESSURE_POLICY_OOM. Since it's
+            // using the other policy, we are expecting the frame submission to the content view to be successful.
             try {
                 stream.putFrame(frame);
             } catch (final ProducerException e) {
