@@ -19,6 +19,7 @@ import com.amazonaws.kinesisvideo.producer.StreamDescription;
 import com.amazonaws.kinesisvideo.producer.Tag;
 import com.amazonaws.kinesisvideo.producer.Time;
 import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
@@ -53,6 +54,9 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RESOURCE_NOT_F
  */
 public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     private class CompletionCallback implements Consumer<Exception> {
+
+        private final Logger log = LogManager.getLogger(CompletionCallback.class);
+
         private final KinesisVideoProducerStream stream;
         private final AckConsumer ackConsumer;
         private final long uploadHandle;
