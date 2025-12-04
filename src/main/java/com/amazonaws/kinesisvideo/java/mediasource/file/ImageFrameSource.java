@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -49,9 +50,13 @@ public class ImageFrameSource {
     private int metadataCount = 0;
     private long currentFrameTimestampMs;
     private final long executorShutdownTimeoutSeconds = 5L;
-    private final String[] eventMetadataNames = new String[]{"eventMetadata-name-1"};
-    private final String[] eventMetadataValues = new String[]{"eventMetadata-value-1"};
-    private final StreamEventMetadata eventMetadata = new StreamEventMetadata(null, (byte)eventMetadataNames.length, eventMetadataNames, eventMetadataValues);
+    private final HashMap<String, String> metadataValues = new HashMap<>();
+    private final StreamEventMetadata eventMetadata;
+    
+    {
+        metadataValues.put("eventMetadata-name-1", "eventMetadata-value-1");
+        eventMetadata = new StreamEventMetadata(metadataValues);
+    }
 
     public ImageFrameSource(final ImageFileMediaSourceConfiguration configuration) {
         this.configuration = configuration;

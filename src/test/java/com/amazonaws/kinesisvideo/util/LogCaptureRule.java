@@ -45,7 +45,7 @@ public class LogCaptureRule extends ExternalResource {
      * Custom Log4j2 appender to capture log messages for testing
      */
     private static class TestLogAppender extends AbstractAppender {
-        private final List<LogEvent> logEvents = new ArrayList<>();
+        private final List<LogEvent> logEvents = Collections.synchronizedList(new ArrayList<>());
 
         protected TestLogAppender() {
             super("TestLogAppender", null, PatternLayout.createDefaultLayout(), true, Property.EMPTY_ARRAY);
@@ -57,26 +57,34 @@ public class LogCaptureRule extends ExternalResource {
         }
 
         public List<LogEvent> getLogEvents() {
-            return new ArrayList<>(this.logEvents);
+            synchronized (this.logEvents) {
+                return new ArrayList<>(this.logEvents);
+            }
         }
 
         public void clearLogs() {
-            this.logEvents.clear();
+            synchronized (this.logEvents) {
+                this.logEvents.clear();
+            }
         }
 
         public List<String> getLogMessages() {
-            return this.logEvents.stream()
-                    .map(LogEvent::getMessage)
-                    .map(Message::getFormattedMessage)
-                    .collect(Collectors.toList());
+            synchronized (this.logEvents) {
+                return this.logEvents.stream()
+                        .map(LogEvent::getMessage)
+                        .map(Message::getFormattedMessage)
+                        .collect(Collectors.toList());
+            }
         }
 
         public List<String> getLogMessagesAtLevel(final Level level) {
-            return this.logEvents.stream()
-                    .filter(event -> event.getLevel().equals(level))
-                    .map(LogEvent::getMessage)
-                    .map(Message::getFormattedMessage)
-                    .collect(Collectors.toList());
+            synchronized (this.logEvents) {
+                return this.logEvents.stream()
+                        .filter(event -> event.getLevel().equals(level))
+                        .map(LogEvent::getMessage)
+                        .map(Message::getFormattedMessage)
+                        .collect(Collectors.toList());
+            }
         }
     }
 
