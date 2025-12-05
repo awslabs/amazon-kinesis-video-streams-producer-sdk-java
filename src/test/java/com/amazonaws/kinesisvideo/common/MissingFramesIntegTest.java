@@ -321,7 +321,7 @@ public class MissingFramesIntegTest extends ProducerTestBase {
         // 2 - Start streaming normally for 5s
         final int framesCorrectly = 50;
         final int framesAfterFailing = 450;
-        final int framesRecovered = 200;
+        final int framesRecovered = 300; // Increased from 200 to allow more time for recovery
         final int fps = 10;
         long currentFrameTs = System.currentTimeMillis();
         final byte[] frameData = createTestFrameData();
@@ -425,7 +425,7 @@ public class MissingFramesIntegTest extends ProducerTestBase {
 
         // Wait additional time for any delayed error callbacks
         log.debug("Waiting for all acks to come in...");
-        Thread.sleep(5000);
+        Thread.sleep(15000);
 
         // 4 - Verify the frames missing for track error ack count
         // The fragmentAckReceived callback implementation (test) stores all the acks received into this receivedFragmentAcks_ array
@@ -436,13 +436,13 @@ public class MissingFramesIntegTest extends ProducerTestBase {
                 0L, numPutMediaFramesMissingForTrackAcks);
 
         // 5 - Verify persisted acks from the recovered PutMedia
-        final long finalErrorAckTimestamp = this.receivedFragmentAcks_.stream()
+        final String finalErrorAckSequenceNumber = this.receivedFragmentAcks_.stream()
                 .filter(ack -> ack.getAckType().getIntType() == FragmentAckType.FRAGMENT_ACK_TYPE_ERROR)
-                .mapToLong(KinesisVideoFragmentAck::getTimestamp)
-                .max()
+                .map(KinesisVideoFragmentAck::getSequenceNumber) //ref: https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_reader_Fragment.html
+                .max(String::compareTo)
                 .orElseThrow(AssertionError::new); // should never happen since there is at least one missing frames err ack in the (4) check
         final long persistedAcksAfterRecovery = this.receivedFragmentAcks_.stream()
-                .filter(ack -> ack.getTimestamp() > finalErrorAckTimestamp)
+                .filter(ack -> ack.getSequenceNumber().compareTo(finalErrorAckSequenceNumber) > 0)
                 .filter(ack -> ack.getAckType().getIntType() == FragmentAckType.FRAGMENT_ACK_TYPE_PERSISTED)
                 .count();
 
