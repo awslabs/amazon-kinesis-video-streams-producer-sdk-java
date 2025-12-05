@@ -429,6 +429,9 @@ jobs:
     if: github.event_name == 'pull_request'
     needs: [run-unit-tests, run-samples]
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
 
     steps:
       - name: Checkout repository
