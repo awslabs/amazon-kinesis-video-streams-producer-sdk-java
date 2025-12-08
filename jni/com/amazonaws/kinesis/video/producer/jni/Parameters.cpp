@@ -1407,8 +1407,15 @@ BOOL setStreamEventMetadata(JNIEnv* env, jobject streamEventMetadata, PStreamEve
     if (methodId == NULL) {
         DLOGW("Couldn't find method id getNames");
     } else {
-        if(!allocStreamEventMetadataArray(env, streamEventMetadata, pStreamEventMetadata->names, methodId)) {
-            DLOGW("Failed in allocStreamEventMetadataArray step for metadata names.");
+        // Check if names array is null before processing
+        jobjectArray namesArray = (jobjectArray) env->CallObjectMethod(streamEventMetadata, methodId);
+        CHK_JVM_EXCEPTION(env);
+        if (namesArray != NULL) {
+            if(!allocStreamEventMetadataArray(env, streamEventMetadata, pStreamEventMetadata->names, methodId)) {
+                DLOGW("Failed in allocStreamEventMetadataArray step for metadata names.");
+            }
+        } else {
+            DLOGW("Names array is null, skipping allocation");
         }
     }
 
@@ -1416,8 +1423,15 @@ BOOL setStreamEventMetadata(JNIEnv* env, jobject streamEventMetadata, PStreamEve
     if (methodId == NULL) {
         DLOGW("Couldn't find method id getValues");
     } else {
-        if(!allocStreamEventMetadataArray(env, streamEventMetadata, pStreamEventMetadata->values, methodId)) {
-            DLOGW("Failed in allocStreamEventMetadataArray step for metadata vlaues.");
+        // Check if values array is null before processing
+        jobjectArray valuesArray = (jobjectArray) env->CallObjectMethod(streamEventMetadata, methodId);
+        CHK_JVM_EXCEPTION(env);
+        if (valuesArray != NULL) {
+            if(!allocStreamEventMetadataArray(env, streamEventMetadata, pStreamEventMetadata->values, methodId)) {
+                DLOGW("Failed in allocStreamEventMetadataArray step for metadata values.");
+            }
+        } else {
+            DLOGW("Values array is null, skipping allocation");
         }
     }
 
@@ -1449,6 +1463,8 @@ BOOL allocStreamEventMetadataArray(JNIEnv* env, jobject streamEventMetadata, PCH
     // Iterate through the char pointers, allocating memory for the Java string that will be copied to the char pointers.
     for (jsize i = 0; i < arrayLength; i++) {
         stringElement = (jstring) env->GetObjectArrayElement(retArray, i);
+        // Add null check for string element
+        CHK(stringElement != NULL, STATUS_NULL_ARG);
         jsize javaStringLength = env->GetStringUTFLength(stringElement);
         CHK(javaStringLength >= 0, STATUS_INVALID_ARG); // (jsize is signed, but will be used as an unsigned SIZE_T)
         retChars = env->GetStringUTFChars(stringElement, NULL);

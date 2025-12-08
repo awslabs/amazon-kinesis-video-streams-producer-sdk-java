@@ -555,6 +555,10 @@ void KinesisVideoClientWrapper::putKinesisVideoEventMetadata(jlong streamHandle,
 
     // Call the API
     retStatus = ::putKinesisVideoEventMetadata(streamHandle, event, pStreamEventMetadata);
+    if (STATUS_SUCCEEDED(retStatus)) {
+        int metadataLength = (pStreamEventMetadata != NULL) ? pStreamEventMetadata->numberOfPairs : 0;
+        DLOGD("Successfully added event metadata 0x%016" PRIx64 " with %d pairs", (UINT64) streamHandle, metadataLength);
+    }
 
 
 CleanUp:

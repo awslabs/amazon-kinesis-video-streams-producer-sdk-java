@@ -255,8 +255,9 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     @Override
     public void putEventMetadata(final int event, @Nullable StreamEventMetadata streamEventMetadata)
             throws ProducerException {
-        Preconditions.checkArgument(event >= 0);
-        Preconditions.checkState(mStreamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE);
+        Preconditions.checkArgument(event >= 0, "Event type cannot be negative, got: %s", event);
+        Preconditions.checkState(mStreamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE, 
+                "Stream handle is invalid - stream may have been freed or not initialized");
 
         mKinesisVideoProducerJni.putEventMetadata(mStreamHandle, event, streamEventMetadata);
     }
