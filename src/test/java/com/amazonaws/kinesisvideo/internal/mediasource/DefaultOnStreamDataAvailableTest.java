@@ -3,6 +3,7 @@ package com.amazonaws.kinesisvideo.internal.mediasource;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceSink;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
+import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -53,6 +54,11 @@ public class DefaultOnStreamDataAvailableTest {
             this.receivedMetadataName = metadataName;
             this.receivedMetadataValue = metadataValue;
             this.receivedPersistent = persistent;
+        }
+
+        @Override
+        public void onEventMetadata(final int event, final StreamEventMetadata streamEventMetadata) throws KinesisVideoException {
+            // Mock implementation
         }
 
         @Override

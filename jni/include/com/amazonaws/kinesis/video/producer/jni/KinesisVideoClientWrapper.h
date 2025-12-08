@@ -187,6 +187,7 @@ public:
     void getKinesisVideoStreamMetrics(jlong streamHandle, jobject kinesisVideoStreamMetrics);
     void stopKinesisVideoStream(jlong streamHandle);
     void freeKinesisVideoStream(jlong streamHandle);
+    void putKinesisVideoEventMetadata(jlong streamHandle, jint event, jobject pStreamEventMetadata);
     void putKinesisVideoFrame(jlong streamHandle, jobject kinesisVideoFrame);
     void putKinesisVideoFragmentMetadata(jlong streamHandle, jstring metadataName, jstring metadataValue, jboolean persistent);
     void describeStreamResult(jlong streamHandle, jint httpStatusCode, jobject streamDescription);

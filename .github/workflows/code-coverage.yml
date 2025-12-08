@@ -54,7 +54,7 @@ jobs:
             -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
             -Daws.sessionToken=${AWS_SESSION_TOKEN} \
             -Djava.library.path=${JAVA_LIBRARY_PATH} \
-            -Dlog4j.configurationFile=log4j2.xml"
+            -Dlog4j.configurationFile=.github/log4j2.xml"
         shell: bash
 
       - name: Upload coverage reports to Codecov

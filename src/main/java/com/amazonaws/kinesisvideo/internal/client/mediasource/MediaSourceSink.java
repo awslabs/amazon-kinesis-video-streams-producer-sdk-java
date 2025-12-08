@@ -3,6 +3,7 @@ package com.amazonaws.kinesisvideo.internal.client.mediasource;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
+import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -143,6 +144,9 @@ public interface MediaSourceSink {
      * @see <a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/limits.html#limits-streaming-metadata">Fragment metadata limits</a>
      */
     void onFragmentMetadata(final @Nonnull String metadataName, final @Nonnull String metadataValue, final boolean persistent)
+            throws KinesisVideoException;
+    
+    void onEventMetadata(final int event, @Nullable final StreamEventMetadata streamEventMetadata)
             throws KinesisVideoException;
 
     /**

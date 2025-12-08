@@ -10,6 +10,7 @@ import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSourceSink;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
+import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
 
 /**
  * Implementation of the MediaSourceSink interface that pushes frames and stream configuration
@@ -57,6 +58,12 @@ public class ProducerStreamSink implements MediaSourceSink {
                                    final boolean persistent)
             throws KinesisVideoException {
         producerStream.putFragmentMetadata(metadataName, metadataValue, persistent);
+    }
+
+    @Override
+    public void onEventMetadata(final int event, @Nullable final StreamEventMetadata streamEventMetadata)
+            throws KinesisVideoException {
+        producerStream.putEventMetadata(event, streamEventMetadata);
     }
 
     @Override

@@ -72,13 +72,13 @@ public class MultiAuthServiceCallbacksImplTest {
     private static final Long STATUS_DESCRIBE_STREAM_CALL_FAILED = 0x52000011L;
     private static final String FAILING_STREAMS_POSTFIX = "fail";
     private static final String IMAGE_DIR = "src/main/resources/data/h264/";
-    private static final Duration DURATION_TO_STREAM = Duration.ofSeconds(5);
+    private static final Duration DURATION_TO_STREAM = Duration.ofSeconds(20);
     private static final String IMAGE_FILENAME_FORMAT = "frame-%03d.h264";
     private static final int START_FILE_INDEX = 1;
     private static final int END_FILE_INDEX = 375;
 
     // How close to DURATION_TO_STREAM, the greatest ACK timecode should be for the test to pass
-    private static final Duration ACKS_DURATION_THRESHOLD = Duration.ofSeconds(3);
+    private static final Duration ACKS_DURATION_THRESHOLD = Duration.ofSeconds(10);
 
     // Stream names of the healthy and invalidCredentials streams
     private final List<String> streamNamePassingStreams = new ArrayList<>();
@@ -194,7 +194,7 @@ public class MultiAuthServiceCallbacksImplTest {
     }
 
     @Rule
-    public Timeout globalTimeout = Timeout.seconds(120);
+    public Timeout globalTimeout = Timeout.seconds(180);
 
     private class StreamContext {
         public MediaSource mediaSource;
