@@ -6,7 +6,7 @@ include(ExternalProject)
 
 ExternalProject_Add(libkvspic-download
     GIT_REPOSITORY    https://github.com/awslabs/amazon-kinesis-video-streams-pic.git
-    GIT_TAG           develop
+    GIT_TAG           v1.3.0
     GIT_SHALLOW       TRUE
     GIT_PROGRESS      TRUE
     SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/kvspic-src"
