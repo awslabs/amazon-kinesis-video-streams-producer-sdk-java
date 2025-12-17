@@ -45,13 +45,13 @@ import static org.junit.Assert.fail;
  * Integration test suite for PutMediaClient error handling and resource management.
  * <p>
  * This test class validates the client's behavior under adverse conditions, specifically:
- * - Resource cleanup when dealing with infinite/garbage data streams (in a real
+ * - Resource cleanup when dealing with infinite/invalid MKV data streams (in a real
  * application, this would be a data stream that has more data yet to be sent)
  * - Thread lifecycle management to prevent resource leaks
  * - Proper handling of completion callbacks under error conditions
  * - HTTP response parsing and ACK processing robustness
  * <p>
- * The test uses a MockInputStream that generates continuous garbage data to simulate
+ * The test uses a MockInputStream that generates continuous invalid random MKV data to simulate
  * scenarios where the data source never terminates naturally, forcing the client
  * to handle cleanup through external mechanisms (close() calls).
  * <p>
@@ -118,11 +118,11 @@ public class PutMediaClientErrorTest {
     }
 
     /**
-     * Validates PutMediaClient behavior with an infinite garbage data stream.
+     * Validates PutMediaClient behavior with an infinite invalid random data stream.
      * <p>
      * This test is designed to catch resource leaks and threading issues that can occur
      * when the client processes data that never naturally terminates. The MockInputStream
-     * continuously generates random bytes, simulating a pathological data source.
+     * continuously generates invalid random bytes, simulating a pathological data source.
      * <p>
      * Key validations:
      * 1. Thread cleanup - Ensures no background threads are leaked after client shutdown
@@ -134,7 +134,7 @@ public class PutMediaClientErrorTest {
      * for long-running applications that create/destroy many PutMediaClient instances.
      */
     @Test
-    public void testPutMediaClientWithGarbageData() throws Exception {
+    public void testPutMediaClientWithInvalidRandomMkvData() throws Exception {
         final CountDownLatch completionLatch = new CountDownLatch(1);
         final List<String> acksReceived = Collections.synchronizedList(new ArrayList<>());
         final List<Exception> completionsReceived = Collections.synchronizedList(new ArrayList<>());
@@ -143,14 +143,18 @@ public class PutMediaClientErrorTest {
         // This is essential for detecting thread leaks in concurrent environments
         this.threadWatcher = new ThreadWatcher(this.THREADS_TIMEOUT, this.THREADS_POLLING_INTERVAL, this.THREADS_TO_IGNORE);
 
-        // MockInputStream generates infinite garbage data to stress-test resource cleanup
-        final MockInputStream garbageStream = new MockInputStream(72105328310511897L);
+        // MockInputStream generates infinite invalid random data. The random bytes are passed instead of
+        // a proper MKV data stream to stress-test resource cleanup.
+        // This differs from other tests since other tests input random frame data inside the MKV,
+        // whereas this test doesn't even upload a proper MKV.
+        final MockInputStream invalidRandomStream = new MockInputStream(72105328310511897L);
 
         final PutMediaClient client = PutMediaClient.builder()
                 .putMediaDestinationUri(this.putMediaUri)
                 .signWith(this.putMediaAWS4Signer)
                 .streamName(this.streamConfiguration.streamName)
-                .mkvStream(garbageStream)
+                // This is the payload for the PutMedia
+                .mkvStream(invalidRandomStream)
                 .timestamp(System.currentTimeMillis())
                 .fragmentTimecodeType("RELATIVE")
                 .receiveAcks(new Consumer<InputStream>() {
@@ -248,7 +252,7 @@ public class PutMediaClientErrorTest {
         try {
             client.putMediaInBackground();
 
-            // Wait for completion with generous timeout for garbage data processing
+            // Wait for completion with generous timeout for invalid random data processing
             assertTrue("Upload did not complete within timeout",
                     completionLatch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS));
 
@@ -289,7 +293,7 @@ public class PutMediaClientErrorTest {
         this.threadWatcher = null;
 
         // Verify resource cleanup - InputStream.close() must be called exactly once
-        assertEquals("close() was not called exactly once!", 1, garbageStream.closedCalls.get());
+        assertEquals("close() was not called exactly once!", 1, invalidRandomStream.closedCalls.get());
     }
 
     /**
@@ -297,7 +301,7 @@ public class PutMediaClientErrorTest {
      * <p>
      * This implementation simulates a pathological data source that:
      * - Never naturally terminates (never returns -1 from read())
-     * - Generates continuous garbage data to stress-test the client
+     * - Generates continuous invalid random data to stress-test the client
      * - Tracks close() calls to verify proper resource management
      * <p>
      * The key behavior is that read() operations always return data, forcing
@@ -330,7 +334,7 @@ public class PutMediaClientErrorTest {
                         final int len)
                 throws IOException {
 
-            // Generate continuous garbage data - never return -1 (end of stream)
+            // Generate continuous invalid random data - never return -1 (end of stream)
             // This simulates a data source that never naturally terminates,
             // forcing the client to handle cleanup through close() calls
             this.random.nextBytes(b);
