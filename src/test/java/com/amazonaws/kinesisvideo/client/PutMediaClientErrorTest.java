@@ -144,7 +144,7 @@ public class PutMediaClientErrorTest {
         this.threadWatcher = new ThreadWatcher(this.THREADS_TIMEOUT, this.THREADS_POLLING_INTERVAL, this.THREADS_TO_IGNORE);
 
         // MockInputStream generates infinite invalid random data. The random bytes are passed instead of
-        // a proper MKV data stream, to stress-test resource cleanup
+        // a proper MKV data stream to stress-test resource cleanup.
         // This differs from other tests since other tests input random frame data inside the MKV,
         // whereas this test doesn't even upload a proper MKV.
         final MockInputStream invalidRandomStream = new MockInputStream(72105328310511897L);
