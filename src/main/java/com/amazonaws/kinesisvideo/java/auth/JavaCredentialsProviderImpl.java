@@ -5,7 +5,6 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.kinesisvideo.auth.AbstractKinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
-import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 
 import javax.annotation.Nonnull;
@@ -21,9 +20,11 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
     private final long rotationPeriodInMillis;
 
     /**
-     * Constructor for non-temporary credential provider. Access Key ID + Secret Key (no session token)
+     * Constructor for non-temporary credential provider. Access Key ID + Secret Key (no session token).
+     * Also known as long-lived credentials. Not recommended for production use.
      *
      * @param awsCredentialsProvider credential provider
+     * @see <a href="https://docs.aws.amazon.com/sdkref/latest/guide/access-users.html">Using AWS access keys to authenticate AWS SDKs and tools</a>
      */
     public JavaCredentialsProviderImpl(@Nonnull final AWSCredentialsProvider awsCredentialsProvider) {
         this.credentialsProvider = Preconditions.checkNotNull(awsCredentialsProvider);
@@ -33,10 +34,17 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
 
     /**
      * Constructor for temporary credential provider with token rotation period (has a session token)
-     * (i.e. token expires for every 5 minutes)
+     * (i.e. token expires for every 5 minutes).
+     * The KVS Producer client will refresh the credentials based on the provider's configured rotation interval.
+     * The Producer client fetches latest credentials once initially during client initialization, and then every
+     * configured {@code rotationPeriod} interval afterward.
      *
-     * @param awsCredentialsProvider credential provider
-     * @param rotationPeriodInMillis token expire periodically for every rotationPeriodInMillis milliseconds
+     * @param awsCredentialsProvider AWS credentials provider to use
+     * @param rotationPeriodInMillis Token expires periodically for every rotationPeriodInMillis milliseconds.
+     *                               It is important to configure the rotationPeriod to be less than the AWS-configured
+     *                               expiration time (e.g. role duration seconds) to prevent the client from using
+     *                               stale credentials during API operations.
+     * @see #updateCredentials()
      */
     public JavaCredentialsProviderImpl(@Nonnull final AWSCredentialsProvider awsCredentialsProvider,
                                        final long rotationPeriodInMillis) {

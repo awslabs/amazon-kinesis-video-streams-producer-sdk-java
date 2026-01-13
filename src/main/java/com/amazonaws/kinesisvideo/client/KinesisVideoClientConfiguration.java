@@ -1,6 +1,7 @@
 package com.amazonaws.kinesisvideo.client;
 
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
+import com.amazonaws.kinesisvideo.java.auth.JavaCredentialsProviderImpl;
 import com.amazonaws.kinesisvideo.producer.StorageCallbacks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -9,7 +10,7 @@ import javax.annotation.Nonnull;
 import java.util.Optional;
 
 /**
- * Configuration for KinesisVideoClient.
+ * Configuration for {@link com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient}.
  */
 public final class KinesisVideoClientConfiguration {
 
@@ -128,6 +129,30 @@ public final class KinesisVideoClientConfiguration {
             return this;
         }
 
+        /**
+         * Credentials Provider to fetch credentials from, and how often to rotate the credentials.
+         *
+         * @param credentialsProvider The KVS Producer client will refresh the credentials
+         *                            based on the provider's configured rotation interval. The Producer client fetches
+         *                            latest credentials once initially during client initialization, and then every
+         *                            configured {@code rotationPeriod} interval afterward.
+         *                            <p>
+         *                            The client will pass these cached credentials to the {@link com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks}
+         *                            for ControlPlane operations. It is ServiceCallbacks responsibility to construct
+         *                            the request with the provided serialized credentials.
+         *                            <p>
+         *                            For PutMedia (DataPlane) operation, the client will fetch the credentials
+         *                            via the stream's GetStreamingToken state, then pass those serialized credentials
+         *                            to the PutStream operation.
+         *                            <p>
+         *                            It is important to configure the rotationPeriod to be less than the AWS-configured
+         *                            expiration time (e.g. role duration seconds) to prevent the client from using
+         *                            stale credentials during API operations.
+         *                            <p>
+         *                            Use {@link com.amazonaws.kinesisvideo.java.auth.JavaCredentialsFactory} for constructor convenience.
+         * @return This Builder instance to allow method chaining
+         * @see JavaCredentialsProviderImpl#updateCredentials()
+         */
         public Builder withCredentialsProvider(final KinesisVideoCredentialsProvider credentialsProvider) {
             this.credentialsProvider = credentialsProvider;
             return this;
