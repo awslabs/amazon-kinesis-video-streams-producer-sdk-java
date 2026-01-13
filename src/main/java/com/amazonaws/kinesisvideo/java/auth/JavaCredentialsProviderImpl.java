@@ -36,8 +36,8 @@ public class JavaCredentialsProviderImpl extends AbstractKinesisVideoCredentials
      * Constructor for temporary credential provider with token rotation period (has a session token)
      * (i.e. token expires for every 5 minutes).
      * The KVS Producer client will refresh the credentials based on the provider's configured rotation interval.
-     * The Producer client fetches latest credentials once initially during client initialization, and then every
-     * configured {@code rotationPeriod} interval afterward.
+     * During client initialization, the Producer client fetches the latest credentials once, and then every
+     * {@code rotationPeriod} interval afterward.
      *
      * @param awsCredentialsProvider AWS credentials provider to use
      * @param rotationPeriodInMillis Token expires periodically for every rotationPeriodInMillis milliseconds.

@@ -133,9 +133,9 @@ public final class KinesisVideoClientConfiguration {
          * Credentials Provider to fetch credentials from, and how often to rotate the credentials.
          *
          * @param credentialsProvider The KVS Producer client will refresh the credentials
-         *                            based on the provider's configured rotation interval. The Producer client fetches
-         *                            latest credentials once initially during client initialization, and then every
-         *                            configured {@code rotationPeriod} interval afterward.
+         *                            based on the provider's configured rotation interval. During client initialization,
+         *                            the Producer client fetches the latest credentials once, and then every
+         *                            {@code rotationPeriod} interval afterward.
          *                            <p>
          *                            The client will pass these cached credentials to the {@link com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks}
          *                            for ControlPlane operations. It is ServiceCallbacks responsibility to construct
