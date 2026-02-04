@@ -1,5 +1,8 @@
 package com.amazonaws.kinesisvideo.config;
 
+import com.amazonaws.kinesisvideo.client.IPVersionFilter;
+import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfigurationDefaults;
+
 import java.net.URI;
 
 public final class ClientConfiguration {
@@ -11,8 +14,9 @@ public final class ClientConfiguration {
     private URI streamUri;
     private Integer connectionTimeoutInMillis;
     private Integer readTimeoutInMillis;
+    private IPVersionFilter ipVersionFilter;
 
-    ClientConfiguration(final String region, final String serviceName, final String apiName, final String materialSet, final String streamName, final URI streamUri, final Integer connectionTimeoutInMillis, final Integer readTimeoutInMillis) {
+    ClientConfiguration(final String region, final String serviceName, final String apiName, final String materialSet, final String streamName, final URI streamUri, final Integer connectionTimeoutInMillis, final Integer readTimeoutInMillis, final IPVersionFilter ipVersionFilter) {
         this.region = region;
         this.serviceName = serviceName;
         this.apiName = apiName;
@@ -33,6 +37,7 @@ public final class ClientConfiguration {
         private URI streamUri;
         private Integer connectionTimeoutInMillis;
         private Integer readTimeoutInMillis;
+        private IPVersionFilter ipVersionFilter;
 
         ClientConfigurationBuilder() {
         }
@@ -77,13 +82,21 @@ public final class ClientConfiguration {
             return this;
         }
 
+        public ClientConfigurationBuilder ipVersionFilter(final IPVersionFilter ipVersionFilter) {
+            this.ipVersionFilter = ipVersionFilter;
+            return this;
+        }
+
         public ClientConfiguration build() {
-            return new ClientConfiguration(region, serviceName, apiName, materialSet, streamName, streamUri, connectionTimeoutInMillis, readTimeoutInMillis);
+            if (ipVersionFilter == null) {
+                this.ipVersionFilter = KinesisVideoClientConfigurationDefaults.BOTH_IPV4_AND_IPV6;
+            }
+            return new ClientConfiguration(region, serviceName, apiName, materialSet, streamName, streamUri, connectionTimeoutInMillis, readTimeoutInMillis, ipVersionFilter);
         }
 
         @Override
         public String toString() {
-            return "ClientConfiguration.ClientConfigurationBuilder(region=" + this.region + ", serviceName=" + this.serviceName + ", apiName=" + this.apiName + ", materialSet=" + this.materialSet + ", streamName=" + this.streamName + ", streamUri=" + this.streamUri + ", connectionTimeoutInMillis=" + this.connectionTimeoutInMillis + ", readTimeoutInMillis=" + this.readTimeoutInMillis + ")";
+            return "ClientConfiguration.ClientConfigurationBuilder(region=" + this.region + ", serviceName=" + this.serviceName + ", apiName=" + this.apiName + ", materialSet=" + this.materialSet + ", streamName=" + this.streamName + ", streamUri=" + this.streamUri + ", connectionTimeoutInMillis=" + this.connectionTimeoutInMillis + ", readTimeoutInMillis=" + this.readTimeoutInMillis + ", ipVersionFilter=" + this.ipVersionFilter + ")";
         }
     }
 
@@ -121,6 +134,9 @@ public final class ClientConfiguration {
 
     public Integer getReadTimeoutInMillis() {
         return this.readTimeoutInMillis;
+    }
+    public IPVersionFilter getIpVersionFilter() {
+        return this.ipVersionFilter;
     }
 
     @Override

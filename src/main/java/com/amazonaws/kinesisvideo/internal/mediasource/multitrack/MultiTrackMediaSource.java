@@ -74,7 +74,8 @@ public class MultiTrackMediaSource implements MediaSource {
                 null,
                 configuration.getNalAdaptationFlag(),
                 null,
-                configuration.getTrackInfoList());
+                configuration.getTrackInfoList(),
+                configuration.isAllowStreamCreation());
     }
 
     @Override

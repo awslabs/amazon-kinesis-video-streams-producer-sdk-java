@@ -1,5 +1,7 @@
 package com.amazonaws.kinesisvideo.internal.producer;
 
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
+
 import static com.amazonaws.kinesisvideo.producer.Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
 
 /**
@@ -31,6 +33,7 @@ public class KinesisVideoStreamMetrics {
      * @param currentFrameRate current frame rate
      * @param currentTransferRate current transfer rate in bytes per second
      */
+    @CalledByNativeCode
     public void setMetrics(final long overallViewSize,
                            final long currentViewSize,
                            final long overallViewDuration,

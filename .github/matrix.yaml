@@ -1,0 +1,20 @@
+matrix:
+  platform:
+    - os: macos-15-intel
+      name: macos-x86_64
+    - os: macos-latest
+      name: macos-aarch64
+    - os: ubuntu-22.04
+      name: ubuntu-22.04
+    - os: windows-2022
+      name: windows-2022
+  java:
+    - 11
+  sample:
+    - name: DemoAppMain
+      expected_mkv_files: 1
+    - name: DemoAppCachedInfo
+      expected_mkv_files: 2
+    - name: DemoAppMainWithHeapTracking
+      expected_mkv_files: 1
+

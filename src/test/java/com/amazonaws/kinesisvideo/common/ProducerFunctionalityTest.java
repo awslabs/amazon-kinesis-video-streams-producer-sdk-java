@@ -1,28 +1,43 @@
 package com.amazonaws.kinesisvideo.common;
 
-import java.nio.ByteBuffer;
-
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
-
+import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
+import com.amazonaws.kinesisvideo.producer.DeviceInfo;
+import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
+import com.amazonaws.kinesisvideo.producer.ProducerException;
+import com.amazonaws.kinesisvideo.producer.StorageInfo;
+import com.amazonaws.kinesisvideo.producer.StreamInfo;
+import com.amazonaws.kinesisvideo.producer.Time;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
-import com.amazonaws.kinesisvideo.producer.*;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import java.nio.ByteBuffer;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ProducerFunctionalityTest extends ProducerTestBase{
 
     final Logger log = LogManager.getLogger(ProducerFunctionalityTest.class);
+
+    @Before
+    public void checkJNIAvailability() {
+        final boolean jniLoaded = isJNILoaded();
+        if (!jniLoaded) {
+            fail("JNI library not found.");
+        }
+    }
+
     /**
      * This test creates a stream, stops it and frees it
      */
     @Test
-    public void startStopSyncTerminate() {
-        KinesisVideoProducerStream kinesisVideoProducerStream;
+    public void startStopSyncTerminate() throws ProducerException {
+        final KinesisVideoProducerStream kinesisVideoProducerStream;
 
         storageInfo_ = new StorageInfo(0,
                 StorageInfo.DeviceStorageType.DEVICE_STORAGE_TYPE_IN_MEM, STORAGE_SIZE_MEGS,
@@ -36,7 +51,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         // uses the KinesisVideoProducer to create a stream
         try {
             kinesisVideoProducerStream.stopStreamSync();
-        } catch(ProducerException e) {
+        } catch (final ProducerException e) {
             e.printStackTrace();
             fail();
         }
@@ -48,14 +63,14 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      * or any buffering acks that are not in sequence.
      */
     @Test
-    public void offlineUploadLimitedBufferDuration() {
+    public void offlineUploadLimitedBufferDuration() throws ProducerException {
         int flags;
         long currentTimeMs = 0;
-        byte[][] framesData = new byte[][]{
+        final byte[][] framesData = new byte[][]{
                 new byte[TEST_FRAME_SIZE_BYTES],
         };
 
-        KinesisVideoProducerStream kinesisVideoProducerStream;
+        final KinesisVideoProducerStream kinesisVideoProducerStream;
         KinesisVideoFrame frame;
 
         storageInfo_ = new StorageInfo(0,
@@ -77,7 +92,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                     TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
             try {
                 kinesisVideoProducerStream.putFrame(frame);
-            } catch(ProducerException e) {
+            } catch (final ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
@@ -85,7 +100,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         }
         try {
             Thread.sleep(WAIT_5_SECONDS_FOR_ACKS);
-        } catch(InterruptedException e) {
+        } catch (final InterruptedException e) {
             e.printStackTrace();
             fail();
         }
@@ -93,7 +108,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
-        } catch(ProducerException e) {
+        } catch (final ProducerException e) {
             e.printStackTrace();
             fail();
 
@@ -120,14 +135,14 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      */
     @Ignore
     @Test
-    public void offlineUploadLimitedStorage() {
+    public void offlineUploadLimitedStorage() throws ProducerException {
         int flags;
         long currentTimeMs = System.currentTimeMillis() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
-        byte[][] framesData = new byte[][]{
+        final byte[][] framesData = new byte[][]{
                 new byte[TEST_FRAME_SIZE_BYTES * 12]
         };
 
-        KinesisVideoProducerStream kinesisVideoProducerStream;
+        final KinesisVideoProducerStream kinesisVideoProducerStream;
         KinesisVideoFrame frame;
 
         storageInfo_ = new StorageInfo(0,
@@ -148,7 +163,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                     TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
             try {
                 kinesisVideoProducerStream.putFrame(frame);
-            } catch(ProducerException e) {
+            } catch (final ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
@@ -157,7 +172,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
 
         try {
             Thread.sleep(WAIT_5_SECONDS_FOR_ACKS);
-        } catch(InterruptedException e) {
+        } catch (final InterruptedException e) {
             e.printStackTrace();
             fail();
         }
@@ -165,7 +180,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
-        } catch(ProducerException e) {
+        } catch (final ProducerException e) {
             e.printStackTrace();
             fail();
         }
@@ -184,17 +199,17 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      * This test pauses on the last frame of each clip for pauseSeconds which is less than the timeout
      */
     @Test
-    public void intermittentFileUpload() {
+    public void intermittentFileUpload() throws ProducerException {
         int flags;
         long currentTimeMs = 0;
-        byte[][] framesData = new byte[][]{
+        final byte[][] framesData = new byte[][]{
                 new byte[TEST_FRAME_SIZE_BYTES]
         };
-        int clipDurationSeconds = 15;
-        int clipCount = 20;
-        int framesPerClip = clipDurationSeconds * TEST_FPS;
-        int totalFrames = framesPerClip * clipCount;
-        int[] pauseBetweenClipSeconds = new int[]{2, 15};
+        final int clipDurationSeconds = 15;
+        final int clipCount = 20;
+        final int framesPerClip = clipDurationSeconds * TEST_FPS;
+        final int totalFrames = framesPerClip * clipCount;
+        final int[] pauseBetweenClipSeconds = new int[]{2, 15};
 
         KinesisVideoProducerStream kinesisVideoProducerStream;
         KinesisVideoFrame frame;
@@ -207,7 +222,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
 
         createProducer();
 
-        for(int pauseSeconds: pauseBetweenClipSeconds) {
+        for (final int pauseSeconds : pauseBetweenClipSeconds) {
 
             previousBufferingAckTimestamp_.clear();
             bufferingAckInSequence_ = true;
@@ -222,7 +237,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                         TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
                 try {
                     kinesisVideoProducerStream.putFrame(frame);
-                } catch(ProducerException e) {
+                } catch (final ProducerException e) {
                     e.printStackTrace();
                     fail();
                 }
@@ -231,7 +246,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                 if((index + 1) % framesPerClip == 0) { // pause on the last frame of each clip
                     try {
                         Thread.sleep(pauseSeconds * 1000);
-                    } catch(InterruptedException e) {
+                    } catch (final InterruptedException e) {
                         e.printStackTrace();
                         fail();
                     }
@@ -240,7 +255,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
 
             try {
                 Thread.sleep(WAIT_5_SECONDS_FOR_ACKS);
-            } catch(InterruptedException e) {
+            } catch (final InterruptedException e) {
                 e.printStackTrace();
                 fail();
             }
@@ -248,7 +263,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
             try {
                 kinesisVideoProducerStream.stopStreamSync();
-            } catch(ProducerException e) {
+            } catch (final ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
@@ -270,14 +285,14 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      */
     @Ignore
     @Test
-    public void highFragmentRateFileUpload() {
+    public void highFragmentRateFileUpload() throws ProducerException {
         int flags;
         long currentTimeMs = 0;
-        byte[][] framesData = new byte[][]{
+        final byte[][] framesData = new byte[][]{
                 new byte[TEST_FRAME_SIZE_BYTES]
         };
 
-        KinesisVideoProducerStream kinesisVideoProducerStream;
+        final KinesisVideoProducerStream kinesisVideoProducerStream;
         KinesisVideoFrame frame;
 
         storageInfo_ = new StorageInfo(0,
@@ -301,7 +316,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                     TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
             try {
                 kinesisVideoProducerStream.putFrame(frame);
-            } catch(ProducerException e) {
+            } catch (final ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
@@ -309,7 +324,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         }
         try {
             Thread.sleep(WAIT_5_SECONDS_FOR_ACKS);
-        } catch(InterruptedException e) {
+        } catch (final InterruptedException e) {
             e.printStackTrace();
             fail();
         }
@@ -317,7 +332,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
-        } catch(ProducerException e) {
+        } catch (final ProducerException e) {
             e.printStackTrace();
             fail();
         }
@@ -337,14 +352,14 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      */
     @Ignore
     @Test
-    public void offlineModeTokenRotationBlockOnSpace() {
-        KinesisVideoProducerStream kinesisVideoProducerStream;
+    public void offlineModeTokenRotationBlockOnSpace() throws ProducerException {
+        final KinesisVideoProducerStream kinesisVideoProducerStream;
         KinesisVideoFrame frame;
 
         int flags;
-        int testFrameTotalCount = 10 * 1000;
+        final int testFrameTotalCount = 10 * 1000;
         long currentTimeMs = System.currentTimeMillis() * Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
-        byte[][] framesData = new byte[][]{
+        final byte[][] framesData = new byte[][]{
                 new byte[TEST_FRAME_SIZE_BYTES]
         };
 
@@ -365,7 +380,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                     TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
             try {
                 kinesisVideoProducerStream.putFrame(frame);
-            } catch(ProducerException e) {
+            } catch (final ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
@@ -373,7 +388,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         }
         try {
             Thread.sleep(WAIT_5_SECONDS_FOR_ACKS);
-        } catch(InterruptedException e) {
+        } catch (final InterruptedException e) {
             e.printStackTrace();
             fail();
         }
@@ -381,7 +396,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
-        } catch(ProducerException e) {
+        } catch (final ProducerException e) {
             e.printStackTrace();
             fail();
         }
@@ -404,18 +419,18 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      * The new session will not roll back as the previous one was closed with a persisted ACK received.
      */
     @Test
-    public void realtimeIntermittentNoLatencyPressureEofr() {
-        KinesisVideoProducerStream kinesisVideoProducerStream;
+    public void realtimeIntermittentNoLatencyPressureEofr() throws ProducerException {
+        final KinesisVideoProducerStream kinesisVideoProducerStream;
         KinesisVideoFrame frame;
 
         int flags;
-        int testFrameTotalCount;
+        final int testFrameTotalCount;
         long currentTimeMs = 0;
-        byte[][] framesData = new byte[][]{
+        final byte[][] framesData = new byte[][]{
                 new byte[TEST_FRAME_SIZE_BYTES]
         };
-        byte[][] eofrData = new byte[][]{ new byte[0] };
-        KinesisVideoFrame eofr = new KinesisVideoFrame(0, 8, 0, 0, 0,
+        final byte[][] eofrData = new byte[][]{new byte[0]};
+        final KinesisVideoFrame eofr = new KinesisVideoFrame(0, 8, 0, 0, 0,
                 ByteBuffer.wrap(eofrData[0 % eofrData.length]));
 
         storageInfo_ = new StorageInfo(0,
@@ -438,13 +453,13 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             if(index == 5 * keyFrameInterval_) { // pause on the 5th key frame
                 try {
                     kinesisVideoProducerStream.putFrame(eofr);
-                } catch(ProducerException e) {
+                } catch (final ProducerException e) {
                     e.printStackTrace();
                     fail();
                 }
                 try {
                     Thread.sleep(60000); // make sure we hit the connection idle timeout of 60 seconds
-                } catch(InterruptedException e) {
+                } catch (final InterruptedException e) {
                     e.printStackTrace();
                     fail();
                 }
@@ -454,7 +469,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                     TEST_FRAME_DURATION, ByteBuffer.wrap(framesData[index % framesData.length]));
             try {
                 kinesisVideoProducerStream.putFrame(frame);
-            } catch(ProducerException e) {
+            } catch (final ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
@@ -462,7 +477,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
 
             try {
                 Thread.sleep(30);
-            } catch(InterruptedException e) {
+            } catch (final InterruptedException e) {
                 e.printStackTrace();
                 fail();
             }
@@ -470,7 +485,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         }
         try {
             Thread.sleep(WAIT_5_SECONDS_FOR_ACKS);
-        } catch(InterruptedException e) {
+        } catch (final InterruptedException e) {
             e.printStackTrace();
             fail();
         }
@@ -478,7 +493,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
-        } catch(ProducerException e) {
+        } catch (final ProducerException e) {
             e.printStackTrace();
             fail();
         }
@@ -497,14 +512,14 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
      * This test is tests Intermittent Producer under latency pressure
      */
     @Test
-    public void realtimeAutoIntermittentLatencyPressure() {
-        KinesisVideoProducerStream kinesisVideoProducerStream;
+    public void realtimeAutoIntermittentLatencyPressure() throws ProducerException {
+        final KinesisVideoProducerStream kinesisVideoProducerStream;
 
-        int totalFrameCount;
+        final int totalFrameCount;
         int flags;
         long currentTimeMs;
         long delta = 0;
-        byte[][] framesData = new byte[][]{
+        final byte[][] framesData = new byte[][]{
                 new byte[TEST_FRAME_SIZE_BYTES]
         };
 
@@ -531,10 +546,10 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
             flags = index % keyFrameInterval_ == 0 ? FRAME_FLAG_KEY_FRAME : FRAME_FLAG_NONE;
 
             if(index == 5 * keyFrameInterval_) {
-                long start = System.currentTimeMillis();
+                final long start = System.currentTimeMillis();
                 try {
                     Thread.sleep(60000);
-                } catch(InterruptedException e) {
+                } catch (final InterruptedException e) {
                     e.printStackTrace();
                     fail();
                 }
@@ -546,14 +561,14 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
                     frameDuration_, ByteBuffer.wrap(framesData[index % framesData.length]));
             try {
                 kinesisVideoProducerStream.putFrame(frame);
-            } catch(ProducerException e) {
+            } catch (final ProducerException e) {
                 e.printStackTrace();
                 fail();
             }
 
             try {
                 Thread.sleep(frameDuration_ / 10000);
-            } catch(InterruptedException e) {
+            } catch (final InterruptedException e) {
                 e.printStackTrace();
                 fail();
             }
@@ -561,7 +576,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
 
         try {
             Thread.sleep(WAIT_5_SECONDS_FOR_ACKS);
-        } catch(InterruptedException e) {
+        } catch (final InterruptedException e) {
             e.printStackTrace();
             fail();
         }
@@ -569,7 +584,7 @@ public class ProducerFunctionalityTest extends ProducerTestBase{
         log.debug("Stopping the stream: {}", kinesisVideoProducerStream.getStreamName());
         try {
             kinesisVideoProducerStream.stopStreamSync();
-        } catch(ProducerException e) {
+        } catch (final ProducerException e) {
             e.printStackTrace();
             fail();
         }

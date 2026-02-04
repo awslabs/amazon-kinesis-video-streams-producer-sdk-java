@@ -1,0 +1,240 @@
+name: Multiple streams verification
+
+on:
+  push:
+    branches:
+      - develop
+      - master
+  pull_request:
+    branches:
+      - develop
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}
+
+jobs:
+  spawn-multiple-instances:
+    runs-on: ubuntu-24.04
+
+    # This job will spawn STREAM_COUNT instances of the jar
+    # while waiting WAIT_BETWEEN_SPAWNING_MS between jar's.
+    # After they all spawned, it will run for HOLD_PERIOD_MS before
+    # tearing down. (They should finish around the same time.)
+    #
+    # NUM_LABELS is how many labels will be added to the graph
+    # to mark the current streams count
+    env:
+      STREAM_NAME_PREFIX: java-producer-multi-stream-ubuntu-test
+      STREAM_COUNT: 10
+      HOLD_PERIOD_MS: 60000
+      WAIT_BETWEEN_SPAWNING_MS: 10000
+      NUM_LABELS: 4
+      OUTPUT_ARTIFACTS_NAME: artifacts
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Build JNI
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          make -j
+          echo "JNI_FOLDER=`pwd`" >> $GITHUB_ENV
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        working-directory: scripts/python/benchmarking
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          cd ../getmediavalidation
+          pip install .
+
+      - name: Build with Maven
+        run: mvn clean compile assembly:single
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup the streams
+        working-directory: scripts
+        run: |
+          for i in $(seq 1 "${STREAM_COUNT}"); do
+            ./prepareStream.sh "${STREAM_NAME_PREFIX}-${i}"
+          done
+        shell: bash
+
+      - name: Run the JAR files
+        run: |
+          set +e
+
+          JAR_FILE=$(find target -name '*jar-with-dependencies.jar' | head -n 1)
+
+          if [ -z "$JAR_FILE" ]; then
+            echo "Error: JAR file not found!"
+            exit 1
+          fi
+          
+          # Arrays to store PIDs
+          declare -a JAVA_PIDS
+          declare -a MONITOR_PIDS
+          
+          python ./scripts/python/benchmarking/capture_rss_and_cpu.py &
+          WHOLE_SYSTEM_MONITORING_PID=$!
+
+          for i in $(seq 1 "${STREAM_COUNT}"); do
+            # Calculating running duration for this instance - to finish at the same time
+            # Formula: (STREAM_COUNT - i) * WAIT_BETWEEN_SPAWNING_MS + HOLD_PERIOD_MS
+            DURATION_MS=$(( (STREAM_COUNT - i) * WAIT_BETWEEN_SPAWNING_MS + HOLD_PERIOD_MS ))
+
+            echo "Starting instance ${i}..."
+            java -classpath "$JAR_FILE" \
+              -Daws.accessKeyId="${AWS_ACCESS_KEY_ID}" \
+              -Daws.secretKey="${AWS_SECRET_ACCESS_KEY}" \
+              -Daws.sessionToken="${AWS_SESSION_TOKEN}" \
+              -Djava.library.path="${JNI_FOLDER}" \
+              -Dkvs-stream="${STREAM_NAME_PREFIX}-${i}" \
+              -Dlog4j.configurationFile=log4j2.xml \
+              -Dmalloc-data-output-path="./memory-data-stream-${i}.csv" \
+              -Dstream-duration-ms=${DURATION_MS} \
+              com.amazonaws.kinesisvideo.demoapp.DemoAppMainWithHeapTracking &
+            JAVA_PIDS["$i"]=$!
+          
+            python ./scripts/python/benchmarking/capture_rss_and_cpu.py "${JAVA_PIDS[${i}]}" -o "./stream-${i}_cpu_rss_metrics.txt" &
+            MONITOR_PIDS["$i"]=$!
+          
+            # Wait before starting next instance
+            if [ "$i" -lt "$STREAM_COUNT" ]; then
+              sleep $(( WAIT_BETWEEN_SPAWNING_MS / 1000 ))
+            fi
+          done
+          
+          echo "All instances started. Holding for $(( HOLD_PERIOD_MS / 1000 )) seconds..."
+          sleep $(( HOLD_PERIOD_MS / 1000 ))
+          
+          # Use exit code of any failed process, otherwise 0 if all succeeded
+          EXIT_CODE=0
+          for i in $(seq 1 "${STREAM_COUNT}"); do
+            if wait "${JAVA_PIDS[${i}]}"; then
+              echo "Instance $i completed successfully"
+            else
+              local_exit=$?
+              echo "Instance ${i} failed with exit code ${local_exit}"
+              EXIT_CODE="${local_exit}"
+            fi
+            wait "${MONITOR_PIDS[${i}]}"
+          done
+          
+          kill -9 "${WHOLE_SYSTEM_MONITORING_PID}"
+          
+          set -e
+          
+          exit "$EXIT_CODE"
+
+        shell: bash
+
+      - name: Generate graphs
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          DATA_FILES=""
+          for i in $(seq 1 "${STREAM_COUNT}"); do
+            DATA_FILES="${DATA_FILES} ./memory-data-stream-${i}.csv"
+          done
+          
+          python ./scripts/python/benchmarking/csv_plotter.py "${DATA_FILES}" \
+            --x-column "Timestamp" \
+            --y-column "Malloc Usage (Bytes)" \
+            --x-label "Elapsed duration" \
+            --y-label "Malloc Usage" \
+            --convert-memory \
+            --title "Malloc usage over time (DemoAppMainWithHeapTracking @ ${COMMIT_HASH})" \
+            --zero-start \
+            --zero-end \
+            --y-break 10 244 \
+            -o "malloc-usage.png"
+
+          # Labels - we want them to be evenly spaced
+          KEY_POINTS=()
+          for i in $(seq 1 $(( NUM_LABELS - 1 ))); do
+            POSITION=$(( (i * STREAM_COUNT + NUM_LABELS - 1) / NUM_LABELS ))
+            SECS_MARK=$(( (POSITION - 1) * (WAIT_BETWEEN_SPAWNING_MS/ 1000) + 1 ))
+
+            # Handle singular/plural form
+            if [ "$POSITION" -eq 1 ]; then
+              LABEL="${POSITION} Stream"
+              KEY_POINTS+=(--key-points "${SECS_MARK}" "${LABEL}")
+            else
+              LABEL="${POSITION} Streams"
+              KEY_POINTS+=(--key-points "${SECS_MARK}" "${LABEL}")
+            fi
+          done
+
+          # Add the final stream label
+          FINAL_TIME_SECS=$(( (STREAM_COUNT - 1) * (WAIT_BETWEEN_SPAWNING_MS/ 1000) + 1 ))
+          LABEL="${STREAM_COUNT} Streams"
+          KEY_POINTS+=(--key-points "${FINAL_TIME_SECS}" "${LABEL}") 
+
+          set -x
+
+          python ./scripts/python/benchmarking/csv_plotter.py "*metrics.txt" \
+            --x-column "Timestamp" \
+            --y-column "RAM (KB)" \
+            --x-label "Elapsed Duration" \
+            --y-label "RSS" \
+            --title "RSS over time for different processes running a single client with a single stream\n(total: ${STREAM_COUNT} clients, streams, and processes) in the same machine\n(DemoAppMainWithHeapTracking @ ${COMMIT_HASH})\nUbuntu 24.04, Java 17 Adopt" \
+            --convert-memory \
+            -o total-rss.png \
+            --zero-start \
+            --zero-end \
+            --y-min 0 \
+            "${KEY_POINTS[@]}"
+          
+          python ./scripts/python/benchmarking/csv_plotter.py "*metrics.txt" \
+            --x-column "Timestamp" \
+            --y-column 2 \
+            --x-label "Elapsed Duration" \
+            --y-label "CPU" \
+            --title "CPU over time for different processes running a single client with a single stream\n(total: ${STREAM_COUNT} clients, streams, and processes) in the same machine\n(DemoAppMainWithHeapTracking @ ${COMMIT_HASH})\nUbuntu 24.04, Java 17 Adopt" \
+            -o total-cpu.png \
+            --zero-start \
+            --zero-end \
+            --y-min 0 \
+            "${KEY_POINTS[@]}"
+        shell: bash
+
+      - name: Gather artifacts
+        run: |
+          mkdir output
+          mv *.csv output
+          mv *_metrics.txt output  # Don't want to include the CMakeLists.txt
+          mv *.png output
+
+        shell: bash
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.OUTPUT_ARTIFACTS_NAME }}
+          path: output/
+          retention-days: 7

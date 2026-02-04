@@ -41,7 +41,7 @@ public final class PutMediaClient {
     private static final String USER_AGENT = "user-agent";
     private static final int BUFFER_SIZE = 4096; // 4KB
     private static final double MILLI_TO_SEC = 1000;
-    private static final int LOGGING_INTERVAL = 250; // Rougly every 10 seconds in 25 fps
+    private static final int LOGGING_INTERVAL = 250; // Roughly every 10 seconds in 25 fps
     private final Builder mBuilder;
     private final Logger log;
     private ParallelSimpleHttpClient httpClient;
@@ -76,6 +76,9 @@ public final class PutMediaClient {
         clientBuilder.header(FRAGMENT_TIME_CODE_TYPE_HEADER, mBuilder.mFragmentTimecodeType);
         clientBuilder.completionCallback(mBuilder.mCompletion);
         clientBuilder.setSenderCallback(sender);
+        clientBuilder.setStreamName(mBuilder.mStreamName);
+        clientBuilder.setIPVersionFilter(mBuilder.mIPVersionFilter);
+        clientBuilder.setSessionId(mBuilder.sessionId);
         // Timeout if no response is received from the server for put(i.e., acks)
         // Socket will/should be closed by the consumer by throwing the SocketTimeoutException
         clientBuilder.setTimeout(mBuilder.mReceiveTimeout);
@@ -102,6 +105,8 @@ public final class PutMediaClient {
 
     private Consumer<OutputStream> sendChunkEncodedMvkStream(final int fragmentThrottle) {
         return new Consumer<OutputStream>() {
+
+            // Note: The thread name should already have the streamName + uploadHandle
             @Override
             public void accept(final OutputStream rawOutputStream) {
                 FileOutputStream outputFileStream = null;
@@ -133,10 +138,20 @@ public final class PutMediaClient {
                     rawOutputStream.flush();
                     log.debug("Data sent. counter: {}", counter);
                 } catch (final Exception e) {
-                    log.debug("Exception while sending data.", e);
-                    throw new RuntimeException("Exception while sending encoded chunk in MKV stream ! ", e);
+                    log.debug(mBuilder.mStreamName + ": Exception while sending data.", e);
+                    throw new RuntimeException(mBuilder.mStreamName + ": Exception while sending encoded chunk in MKV stream ! ", e);
                 } finally {
                     tryCloseOutputFileStream(outputFileStream);
+
+                    if (mBuilder.mMkvStream != null) {
+                        try {
+                            log.trace("Closing mkv stream");
+                            mBuilder.mMkvStream.close();
+                            log.trace("Closed the mkv stream");
+                        } catch (final IOException e) {
+                            log.error("Failed to close the MKV stream", e);
+                        }
+                    }
                 }
             }
         };
@@ -218,9 +233,11 @@ public final class PutMediaClient {
         private boolean mLogUsedBandwidth;
         private String mFileOutputPath;
         private Long upstreamKbps;
+        private String sessionId = "";
         private Consumer<Exception> mCompletion;
         // TODO: Set to correct output channel
         private Map<String, String> unsignedHeaders;
+        private IPVersionFilter mIPVersionFilter;
 
         public Builder putMediaDestinationUri(final URI uri) {
             mUri = uri;
@@ -287,6 +304,16 @@ public final class PutMediaClient {
 
         public Builder upstreamKbps(final long kbps) {
             upstreamKbps = kbps;
+            return this;
+        }
+
+        public Builder ipVersionFilter(final IPVersionFilter ipVersionFilter) {
+            mIPVersionFilter = ipVersionFilter;
+            return this;
+        }
+
+        public Builder sessionId(final String sessionId) {
+            this.sessionId = sessionId;
             return this;
         }
 

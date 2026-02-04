@@ -1,5 +1,6 @@
 package com.amazonaws.kinesisvideo.producer;
 
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -54,15 +55,18 @@ public class AuthInfo {
         return mAuthType;
     }
 
+    @CalledByNativeCode
     public int getIntAuthType() {
         return mAuthType.getIntType();
     }
 
     @Nullable
+    @CalledByNativeCode
     public byte[] getData() {
         return mData;
     }
 
+    @CalledByNativeCode
     public long getExpiration() {
         return mExpiration;
     }

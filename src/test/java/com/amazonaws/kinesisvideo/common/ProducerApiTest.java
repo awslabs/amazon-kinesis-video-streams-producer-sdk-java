@@ -2,8 +2,12 @@ package com.amazonaws.kinesisvideo.common;
 
 import java.nio.ByteBuffer;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Before;
 import org.junit.Test;
 
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
@@ -12,17 +16,27 @@ import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.producer.KinesisVideoFrame;
 import com.amazonaws.kinesisvideo.producer.ProducerException;
 
+import javax.annotation.Nonnull;
+
 public class ProducerApiTest extends ProducerTestBase{
 
     private static final int TEST_STREAM_COUNT = 10;
     private static final int TEST_START_STOP_ITERATION_COUNT = 200;
+
+    @Before
+    public void checkJNIAvailability() {
+        final boolean jniLoaded = isJNILoaded();
+        if (!jniLoaded) {
+            fail("JNI library not found.");
+        }
+    }
 
     /**
      * This test attempts to create multiple streams, free them, re-create them, free them,
      * and, re-create them
      */
     @Test
-    public void createFreeStream() {
+    public void createFreeStream() throws ProducerException {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
         createProducer();
         String testStreamName;
@@ -56,7 +70,7 @@ public class ProducerApiTest extends ProducerTestBase{
      * This test attempts to create multiple streams, sends frame across them and ultimately stop successfully
      */
     @Test
-    public void createProduceStartStopStream() {
+    public void createProduceStartStopStream() throws ProducerException {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
         KinesisVideoFrame frame;
         String testStreamName;
@@ -106,7 +120,7 @@ public class ProducerApiTest extends ProducerTestBase{
                 e.printStackTrace();
                 fail();
             }
-            assertTrue(stopCalled_);
+            awaitStopCalled();
             // stopCalled_ is set to false initially. It is set to true by the streamClosed
             // callback which is invoked only when a stream is closed successfully
             freeTestStream(kinesisVideoProducerStreams[i]);
@@ -119,7 +133,7 @@ public class ProducerApiTest extends ProducerTestBase{
      * caching the stream-endpoint
      */
     @Test
-    public void createProduceStartStopStreamEndpointCached() {
+    public void createProduceStartStopStreamEndpointCached() throws ProducerException {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
         KinesisVideoFrame frame;
         String testStreamName;
@@ -141,6 +155,13 @@ public class ProducerApiTest extends ProducerTestBase{
             testStreamName = "JavaProducerApiTestStream_createProduceStartStopStreamEndpointCached" + i;
             kinesisVideoProducerStreams[i] = createTestStream(testStreamName,
                     StreamInfo.StreamingType.STREAMING_TYPE_REALTIME, TEST_LATENCY, TEST_BUFFER_DURATION);
+
+            // A prefix might be appended in the createTestStream method, so the stream name may have
+            // gotten updated
+            assertNotNull(kinesisVideoProducerStreams[i].getStreamName());
+            assertTrue(kinesisVideoProducerStreams[i].getStreamName().endsWith(testStreamName));
+            testStreamName = kinesisVideoProducerStreams[i].getStreamName();
+
             cacheStreamingInfo(false, testStreamName); // used to cache the stream-endpoint.
             // first argument is set to false since we want to cache only the endpoint and not the stream-info
             // and the credential-provider
@@ -173,7 +194,7 @@ public class ProducerApiTest extends ProducerTestBase{
                 e.printStackTrace();
                 fail();
             }
-            assertTrue(stopCalled_);
+            awaitStopCalled();
             freeTestStream(kinesisVideoProducerStreams[i]);
             kinesisVideoProducerStreams[i] = null;
         }
@@ -184,7 +205,7 @@ public class ProducerApiTest extends ProducerTestBase{
      * caching the stream-endpoint, credentials-provider and, stream-info
      */
     @Test
-    public void createProduceStartStopStreamAllCached() {
+    public void createProduceStartStopStreamAllCached() throws ProducerException {
         KinesisVideoProducerStream [] kinesisVideoProducerStreams = new KinesisVideoProducerStream[TEST_STREAM_COUNT];
         KinesisVideoFrame frame;
         String testStreamName;
@@ -206,6 +227,13 @@ public class ProducerApiTest extends ProducerTestBase{
             testStreamName = "JavaProducerApiTestStream_createProduceStartStopStreamAllCached" + i;
             kinesisVideoProducerStreams[i] = createTestStream(testStreamName,
                     StreamInfo.StreamingType.STREAMING_TYPE_REALTIME, TEST_LATENCY, TEST_BUFFER_DURATION);
+
+            // A prefix might be appended in the createTestStream method, so the stream name may have
+            // gotten updated
+            assertNotNull(kinesisVideoProducerStreams[i].getStreamName());
+            assertTrue(kinesisVideoProducerStreams[i].getStreamName().endsWith(testStreamName));
+            testStreamName = kinesisVideoProducerStreams[i].getStreamName();
+
             cacheStreamingInfo(true, testStreamName);
             // first argument is true since we want to cache
             // all - the credential-provider, the stream-info and the stream-endpoint
@@ -238,9 +266,24 @@ public class ProducerApiTest extends ProducerTestBase{
                 e.printStackTrace();
                 fail();
             }
-            assertTrue(stopCalled_);
+            awaitStopCalled();
             freeTestStream(kinesisVideoProducerStreams[i]);
             kinesisVideoProducerStreams[i] = null;
         }
+    }
+
+    private void awaitStopCalled() {
+        // Poll every 100ms for up to 1s
+        for (int i = 0; i < 10; i++) {
+            if (stopCalled_) {
+                return;
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (final InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        fail("stopCalled_ is not true");
     }
 }

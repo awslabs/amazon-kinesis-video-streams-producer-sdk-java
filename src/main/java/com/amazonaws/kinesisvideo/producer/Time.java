@@ -19,7 +19,7 @@ public class Time {
     public static final long HUNDREDS_OF_NANOS_IN_A_SECOND = 1000 * HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
     public static final long HUNDREDS_OF_NANOS_IN_A_MINUTE = 60 * HUNDREDS_OF_NANOS_IN_A_SECOND;
     public static final long HUNDREDS_OF_NANOS_IN_AN_HOUR = 60 * HUNDREDS_OF_NANOS_IN_A_MINUTE;
-    public static final long NANOS_IN_A_MILLISECOND = 1000000;
+    public static final long NANOS_IN_A_MILLISECOND = 1_000_000;
 
     /**
      * Gets the current time in producer time units

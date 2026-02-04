@@ -10,16 +10,102 @@ on:
       - develop
       - master
 
-jobs:
-  build:
-    strategy:
-      # Unit and integration tests are not thread safe as they all use the same stream names.
-      max-parallel: 1
-      matrix:
-        os: [ macos-14, ubuntu-22.04, windows-2022 ]
-        java: [ 8, 11, 17, 21 ]
+concurrency:
+  group: ${{ github.workflow }}
 
-    runs-on: ${{ matrix.os }}
+jobs:
+  load-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      build_jni_matrix: ${{ steps.set-matrix.outputs.build_jni_matrix }}
+      unit_test_matrix: ${{ steps.set-matrix.outputs.unit_test_matrix }}
+      sample_matrix: ${{ steps.set-matrix.outputs.sample_matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Load matrix from YAML
+        id: set-matrix
+        run: |
+          MATRIX=$(yq eval '.matrix | explode(.)' .github/matrix.yaml -o=json)
+
+          BUILD_JNI_MATRIX=$(echo "$MATRIX" | jq -c '{platform: .platform}')
+          UNIT_TEST_MATRIX=$(echo "$MATRIX" | jq -c '{platform: .platform, java: .java}')
+          SAMPLE_MATRIX=$(echo "$MATRIX" | jq -c '.')
+
+          echo "build_jni_matrix=$BUILD_JNI_MATRIX" >> $GITHUB_OUTPUT
+          echo "unit_test_matrix=$UNIT_TEST_MATRIX" >> $GITHUB_OUTPUT
+          echo "sample_matrix=$SAMPLE_MATRIX" >> $GITHUB_OUTPUT
+
+  build-jni:
+    needs: load-matrix
+    strategy:
+      matrix: ${{ fromJson(needs.load-matrix.outputs.build_jni_matrix) }}
+      fail-fast: false
+
+    runs-on: ${{ matrix.platform.os }}
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Build JNI (Mac and Linux)
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          make -j
+
+      - name: Build JNI (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: cmd
+        run: |
+          @echo on
+
+          :: Create build directory
+          mkdir build || exit /b 1
+          cd build || exit /b 1
+
+          :: Run CMake with the correct path
+          cmake .. -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=RelWithDebInfo || exit /b 1
+          cmake --build . --config Release --verbose || exit /b 1
+
+          :: Move the compiled library to the expected location
+          :: Note: Using Visual Studio generator, the output file gets put in Release\KinesisVideoProducerJNI.dll
+          :: rather than in the build folder directly
+          move Release\KinesisVideoProducerJNI.dll . || exit /b 1
+
+      - name: Upload JNI Library
+        uses: actions/upload-artifact@v4
+        with:
+          name: jni-library-${{ matrix.platform.name }}
+          path: |
+            build/libKinesisVideoProducerJNI.so
+            build/libKinesisVideoProducerJNI.dylib
+            build/KinesisVideoProducerJNI.dll
+          retention-days: 1
+
+  run-unit-tests:
+    needs:
+      - load-matrix
+      - build-jni
+    strategy:
+      matrix: ${{ fromJson(needs.load-matrix.outputs.unit_test_matrix) }}
+      fail-fast: false
+
+    env:
+      TEST_STREAMS_PREFIX: producer-java-${{ matrix.platform.os }}-java-${{ matrix.java }}_
+      JNI_FOLDER: ${{ github.workspace }}/jni
+
+    runs-on: ${{ matrix.platform.os }}
     permissions:
       id-token: write
       contents: read
@@ -28,33 +114,410 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          role-session-name: ${{ secrets.AWS_ROLE_SESSION_NAME }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
           distribution: 'adopt'
           cache: maven
 
+      - name: Download JNI Library
+        uses: actions/download-artifact@v4
+        with:
+          name: jni-library-${{ matrix.platform.name }}
+          path: jni/
+
       - name: Build with Maven
         run: mvn clean compile assembly:single
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Run tests
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/ubuntu/ -Dlog4j.configurationFile=log4j2.xml"
-          elif [ "$RUNNER_OS" == "Windows" ]; then
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/windows/ -Dlog4j.configurationFile=log4j2.xml"
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=src/main/resources/lib/mac/ -Dlog4j.configurationFile=log4j2.xml"
-          else
-            echo "$RUNNER_OS not supported"
+          mvn clean test -DargLine="-Daws.accessKeyId=${AWS_ACCESS_KEY_ID} -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} -Daws.sessionToken=${AWS_SESSION_TOKEN} -Djava.library.path=${JNI_FOLDER} -Dlog4j.configurationFile=.github/log4j2.xml"
+        shell: bash
+
+  run-samples:
+    needs:
+      - load-matrix
+      - build-jni
+    strategy:
+      matrix: ${{ fromJson(needs.load-matrix.outputs.sample_matrix) }}
+      fail-fast: false
+
+    env:
+      STREAM_NAME: producer-java-${{ matrix.platform.os }}-java-${{ matrix.java }}_${{ matrix.sample.name }}
+      JNI_FOLDER: ${{ github.workspace }}/jni
+      KVS_DEBUG_DUMP_DATA_FILE_DIR: debug
+
+    runs-on: ${{ matrix.platform.os }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        working-directory: scripts/python/benchmarking
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          cd ../getmediavalidation
+          pip install .
+
+      - name: Download JNI Library
+        uses: actions/download-artifact@v4
+        with:
+          name: jni-library-${{ matrix.platform.name }}
+          path: jni/
+
+      - name: Build with Maven
+        run: mvn clean compile assembly:single
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Create the stream (DemoAppMain and DemoAppMainWithHeapTracking)
+        # This sample needs a pre-created stream: `${NAME}`
+        if: ${{ matrix.sample.name == 'DemoAppMain' || matrix.sample.name == 'DemoAppMainWithHeapTracking' }}
+        working-directory: scripts
+        run: |
+          ./prepareStream.sh "$STREAM_NAME"
+
+        shell: bash
+
+      - name: Create the stream (DemoAppCachedInfo)
+        # This sample needs 2 pre-created streams: `${NAME}-account-1` and `${NAME}-account-2`
+        if: ${{ matrix.sample.name == 'DemoAppCachedInfo' }}
+        working-directory: scripts
+        run: |
+          ./prepareStream.sh "$STREAM_NAME-account-1"
+          ./prepareStream.sh "$STREAM_NAME-account-2"
+
+        shell: bash
+
+      - name: Run the sample
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        run: |
+          set +e
+
+          JAR_FILE=$(find target -name '*jar-with-dependencies.jar' | head -n 1)
+
+          if [ -z "$JAR_FILE" ]; then
+            echo "Error: JAR file not found!"
             exit 1
           fi
+
+          echo "Using JAR file: $JAR_FILE"
+          java -classpath "$JAR_FILE" \
+            -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
+            -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
+            -Daws.sessionToken=${AWS_SESSION_TOKEN} \
+            -Djava.library.path=${JNI_FOLDER} \
+            -Dkvs-stream=$STREAM_NAME \
+            -Dlog4j.configurationFile=.github/log4j2.xml \
+            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample.name }} &
+          JAVA_PID=$!
+
+          python ./scripts/python/benchmarking/capture_rss_and_cpu.py $JAVA_PID &
+          MONITOR_PID=$!
+
+          # Wait for maximum 30 seconds
+          TIMEOUT=30
+          for ((i=1; i<=TIMEOUT; i++)); do
+            if ! kill -0 $JAVA_PID 2>/dev/null; then
+              break
+            fi
+            sleep 1
+            if [ $i -eq $TIMEOUT ]; then
+              # Time's up, kill the process
+              kill -9 $JAVA_PID
+            fi
+          done
+
+          wait $JAVA_PID
+          EXIT_CODE=$?
+          wait $MONITOR_PID
+
+          set -e
+
+          # Check if the process was forcefully killed
+          if [ $EXIT_CODE -eq 124 ]; then
+            echo "Error: Sample application exceeded 30 seconds and was forcefully terminated."
+            exit 1
+          fi
+
+          # Preserve original exit code
+          echo "Process exited with code: $EXIT_CODE"
+          exit $EXIT_CODE
+
         shell: bash
+
+      - name: Run the sample (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: cmd
+        run: |
+          for /f "delims=" %%F in ('dir /b /s target\*jar-with-dependencies.jar') do set JAR_FILE=%%F
+
+          if not defined JAR_FILE (
+            echo Error: JAR file not found!
+            exit /b 1
+          )
+
+          echo Using JAR file: %JAR_FILE%
+
+          timeout /t 30 /nobreak && exit /b 124
+
+          java -classpath "%JAR_FILE%" ^
+            -Daws.accessKeyId=%AWS_ACCESS_KEY_ID% ^
+            -Daws.secretKey=%AWS_SECRET_ACCESS_KEY% ^
+            -Daws.sessionToken=%AWS_SESSION_TOKEN% ^
+            -Djava.library.path=%JNI_FOLDER% ^
+            -Dkvs-stream=%STREAM_NAME% ^
+            -Dlog4j.configurationFile=.github\log4j2.xml ^
+            com.amazonaws.kinesisvideo.demoapp.${{ matrix.sample.name }}
+
+          set EXIT_CODE=%ERRORLEVEL%
+
+          echo Process exited with code: %EXIT_CODE%
+          exit /b %EXIT_CODE%
+
+      - name: Generate memory and CPU graph (Mac and Linux)
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        run: |
+          DATA_FILE=$(find . -name 'process_*.txt' | head -n 1)
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          mkdir output
+          python ./scripts/python/benchmarking/plot_rss_and_cpu.py "$DATA_FILE" \
+            --title "Memory and CPU Usage (${{ matrix.sample.name }} @ ${COMMIT_HASH})\n${{ matrix.platform.os }}, Java ${{ matrix.java }}" \
+            --output "output/${{ env.STREAM_NAME }}-mem-cpu.png"
+          
+          mv "$DATA_FILE" output
+        shell: bash
+
+      - name: Generate heap usage graphs (Mac and Linux) (DemoAppMainWithHeapTracking)
+        if: ${{ (runner.os == 'macOS' || runner.os == 'linux') && matrix.sample.name == 'DemoAppMainWithHeapTracking' }}
+        env:
+          DATA_FILE: memory-data.csv
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          python ./scripts/python/benchmarking/csv_plotter.py "$DATA_FILE" \
+            --x-column "Timestamp" \
+            --y-column "Malloc Usage (Bytes)" \
+            --x-label "Elapsed duration" \
+            --y-label "Malloc Usage" \
+            --convert-memory \
+            --title "Malloc usage over time (${{ matrix.sample.name }} @ ${COMMIT_HASH})" \
+            --zero-start \
+            --zero-end \
+            -o "output/malloc-usage.png"
+
+          python ./scripts/python/benchmarking/csv_plotter.py "$DATA_FILE" \
+            --x-column "Timestamp" \
+            --y-column "Content Store Used (Bytes out of 256000000)" \
+            --x-label "Elapsed duration" \
+            --y-label "Content store used" \
+            --convert-memory \
+            --title "Content store usage over time (${{ matrix.sample.name }} @ ${COMMIT_HASH})\n(Out of 244.14 MiB)" \
+            --zero-end \
+            -o "output/content-store-usage.png"
+
+          mv "$DATA_FILE" output
+
+        shell: bash
+
+      - name: Check uploaded media (Mac and Linux) (DemoAppMain)
+        if: ${{ (runner.os == 'macOS' || runner.os == 'linux') && matrix.sample.name == 'DemoAppMain' }}
+        working-directory: scripts/python/getmediavalidation/bin
+        run: |
+          python ./fetch_fragment_info.py --stream-name "$STREAM_NAME" --last 5m
+          python ./validate_media.py --stream-name "$STREAM_NAME" \
+            --keyframe-interval 25 \
+            -fps 25 \
+            --frames-path "${{ github.workspace }}/src/main/resources/data/h264/*.h264" \
+            --last 5m
+
+      - name: Check uploaded media (Windows) (DemoAppMain)
+        if: ${{ runner.os == 'Windows' && matrix.sample.name == 'DemoAppMain' }}
+        working-directory: scripts/python/getmediavalidation/bin
+        run: |
+          python ./fetch_fragment_info.py --stream-name "%STREAM_NAME%" --last 5m
+          python ./validate_media.py --stream-name "%STREAM_NAME%" ^
+            --keyframe-interval 25 ^
+            -fps 25 ^
+            --frames-path "${{ github.workspace }}/src/main/resources/data/h264/*.h264" ^
+            --last 5m
+
+        shell: cmd
+
+      - name: Upload memory and CPU graph (Mac and Linux)
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.STREAM_NAME }}-data
+          path: output/
+          retention-days: 7
+
+      - name: Verify MKV dump (Mac & Linux)
+        if: ${{ runner.os == 'macOS' || runner.os == 'linux' }}
+        working-directory: ${{ env.KVS_DEBUG_DUMP_DATA_FILE_DIR }}
+        run: |
+          if [ "${{ runner.os }}" == "macOS" ]; then
+            brew install mkvtoolnix
+          else
+            sudo apt-get update
+            sudo apt-get install -y mkvtoolnix
+          fi
+
+          shopt -s nullglob  # Ensure globbing works correctly and avoids errors when no files are found
+
+          ls -tlrh
+          mkvfiles=(*.mkv)
+          if [ "${#mkvfiles[@]}" -ne "${{ matrix.sample.expected_mkv_files }}" ]; then
+            echo "Wrong number of MKV files in $KVS_DEBUG_DUMP_DATA_FILE_DIR! Expected: ${{ matrix.sample.expected_mkv_files }}, actual: ${#mkvfiles[@]}"
+            exit 1
+          fi
+
+          for file in "${mkvfiles[@]}"; do
+            echo "Verifying $file with mkvinfo (verbose and hexdump):"
+            mkvinfo -v -X "$file"
+          done
+
+          echo "All MKV files verified successfully!"
+
+      - name: Verify MKV dump exists (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        working-directory: ${{ env.KVS_DEBUG_DUMP_DATA_FILE_DIR }}
+        run: |
+          choco install mkvtoolnix
+          $env:Path += ";C:\Program Files\MKVToolNix"
+
+          dir
+          $mkvFiles = Get-ChildItem -Filter *.mkv
+          if ($mkvFiles.Count -ne ${{ matrix.sample.expected_mkv_files }}) {
+            Write-Error "Wrong number of MKV files in ${{ env.KVS_DEBUG_DUMP_DATA_FILE_DIR }}! Expected: ${{ matrix.sample.expected_mkv_files }}, actual: $mkvFiles.Count"
+            exit 1
+          }
+
+          foreach ($file in $mkvFiles) {
+            Write-Output "Verifying $($file.FullName) with mkvinfo (verbose and hexdump):"
+            mkvinfo.exe -v -X "$($file.FullName)"
+          }
+
+  commit-jni-files:
+    if: github.event_name == 'pull_request'
+    needs: [run-unit-tests, run-samples]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for jni update request in commit message
+        id: check-commit
+        run: |
+          COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
+          COMMIT_MSG=$(git log -1 --pretty=%s "$COMMIT_SHA")
+          echo "Checking commit SHA: $COMMIT_SHA"
+          echo "Commit message first line: '$COMMIT_MSG'"
+          if echo "$COMMIT_MSG" | grep -qi "please update jni"; then
+            echo "has_request=true" >> $GITHUB_OUTPUT
+            echo "Detected 'please update jni' in commit message first line"
+          else
+            echo "has_request=false" >> $GITHUB_OUTPUT
+            echo "Did not detect 'please update jni' in commit message first line"
+          fi
+
+      - name: Download JNI Libraries
+        if: steps.check-commit.outputs.has_request == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: jni-library-*
+          path: temp-jni
+
+      - name: Move JNI files to correct locations
+        if: steps.check-commit.outputs.has_request == 'true'
+        run: |
+          mkdir -p src/main/resources/lib/{mac,mac-m1,windows,ubuntu}
+
+          # Windows
+          find temp-jni -name "*.dll" -exec cp {} src/main/resources/lib/windows/KinesisVideoProducerJNI.dll \;
+
+          # MacOS: Intel and Apple Silicon
+          find temp-jni -path "*macos-x86_64*" -name "*.dylib" -exec cp {} src/main/resources/lib/mac/libKinesisVideoProducerJNI.dylib \;
+          find temp-jni -path "*macos-aarch64*" -name "*.dylib" -exec cp {} src/main/resources/lib/mac-m1/libKinesisVideoProducerJNI.dylib \;
+
+          # Linux: Ubuntu (x86_64)
+          find temp-jni -path "*ubuntu*" -name "*.so" -exec cp {} src/main/resources/lib/ubuntu/libKinesisVideoProducerJNI.so \;
+
+      - name: Generate MD5 sums
+        if: steps.check-commit.outputs.has_request == 'true'
+        run: |
+          for dir in src/main/resources/lib/*/; do
+            if [ -f "$dir"/*.dll ] || [ -f "$dir"/*.dylib ] || [ -f "$dir"/*.so ]; then
+              (cd "$dir" && rm -f md5.sum && md5sum * > md5.sum)
+            fi
+          done
+
+      - name: Commit and push if changed and is latest commit
+        if: steps.check-commit.outputs.has_request == 'true'
+        run: |
+          git config --local user.email "github-actions@github.com"
+          git config --local user.name "github-actions"
+
+          ORIGINAL_PR_HEAD="${{ github.event.pull_request.head.sha }}"
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+
+          echo "Original PR head SHA: $ORIGINAL_PR_HEAD"
+          echo "Current HEAD: $(git rev-parse HEAD)"
+
+          # Check if remote branch has moved beyond the original PR head
+          echo "Fetching latest from origin/$BRANCH_NAME..."
+          git fetch origin $BRANCH_NAME
+          REMOTE_HEAD=$(git rev-parse origin/$BRANCH_NAME)
+          echo "Remote HEAD: $REMOTE_HEAD"
+
+          if [ "$ORIGINAL_PR_HEAD" != "$REMOTE_HEAD" ]; then
+            echo "Branch has new commits (original: $ORIGINAL_PR_HEAD, remote: $REMOTE_HEAD), skipping push to avoid conflicts"
+            exit 0
+          fi
+
+          # Make the commit and push
+          git add src/main/resources/lib
+          if git diff --staged --exit-code; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          echo "Changes detected, committing..."
+          git commit -m "Update JNI libraries using $ORIGINAL_PR_HEAD"
+          echo "Committed. New HEAD: $(git rev-parse HEAD)"
+
+          echo "No conflicts detected, pushing..."
+          git push origin HEAD:$BRANCH_NAME --force-with-lease=$BRANCH_NAME:$ORIGINAL_PR_HEAD

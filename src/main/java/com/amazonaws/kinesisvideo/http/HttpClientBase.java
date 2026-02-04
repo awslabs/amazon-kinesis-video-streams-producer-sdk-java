@@ -8,6 +8,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.amazonaws.kinesisvideo.client.IPVersionFilter;
+import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfigurationDefaults;
 import org.apache.http.entity.ContentType;
 
 public abstract class HttpClientBase implements HttpClient {
@@ -67,6 +69,7 @@ public abstract class HttpClientBase implements HttpClient {
         protected int mSocketTimeoutInMillis;
         protected ContentType mContentType;
         protected String mContentInJson;
+        protected IPVersionFilter mIPVersionFilter;
         
         public abstract T builderType();
 
@@ -74,6 +77,7 @@ public abstract class HttpClientBase implements HttpClient {
             mHeaders = new HashMap<String, String>();
             mConnectionTimeoutInMillis = DEFAULT_CONNECTION_TIMEOUT_IN_MILLIS;
             mSocketTimeoutInMillis = DEFAULT_SOCKET_TIMEOUT_IN_MILLIS;
+            mIPVersionFilter = KinesisVideoClientConfigurationDefaults.BOTH_IPV4_AND_IPV6;
         }
 
         public T withUri(final URI uri) {
@@ -109,6 +113,11 @@ public abstract class HttpClientBase implements HttpClient {
 
         public T withContentInJson(final String contentInJson) {
             mContentInJson = contentInJson;
+            return builderType();
+        }
+
+        public T withIpVersionFilter(final IPVersionFilter ipVersionFilter) {
+            mIPVersionFilter = ipVersionFilter;
             return builderType();
         }
     } 

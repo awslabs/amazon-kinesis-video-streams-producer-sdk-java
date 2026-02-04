@@ -5,6 +5,7 @@ package com.amazonaws.kinesisvideo.producer;
  *
  * NOTE: This structure must be the same as defined in /client/Include.h
  *
+ * @see <a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_dataplane_PutMedia.html">PutMedia API</a>
  */
 public class FragmentAckType {
     /**
@@ -48,5 +49,27 @@ public class FragmentAckType {
      */
     public int getIntType() {
         return mType;
+    }
+
+    /**
+     * @return a string representation of the acknowledgement type
+     * @see <a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_dataplane_PutMedia.html">PutMedia API</a>
+     */
+    @Override
+    public String toString() {
+        switch (mType) {
+            case FRAGMENT_ACK_TYPE_BUFFERING:
+                return "BUFFERING";
+            case FRAGMENT_ACK_TYPE_RECEIVED:
+                return "RECEIVED";
+            case FRAGMENT_ACK_TYPE_PERSISTED:
+                return "PERSISTED";
+            case FRAGMENT_ACK_TYPE_ERROR:
+                return "ERROR";
+            case FRAGMENT_ACK_TYPE_IDLE:
+                return "IDLE";
+            default:
+                return "UNDEFINED";
+        }
     }
 }

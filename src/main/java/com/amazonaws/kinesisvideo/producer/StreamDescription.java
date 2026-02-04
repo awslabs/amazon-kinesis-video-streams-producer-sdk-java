@@ -1,5 +1,7 @@
 package com.amazonaws.kinesisvideo.producer;
 
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
+
 /**
  * Class to represent the stream description object coming from a successful call to the DescribeStream service API.
  *
@@ -41,42 +43,52 @@ public class StreamDescription {
         this.mKmsKeyId = kmsKeyId;
     }
 
+    @CalledByNativeCode
     public int getVersion() {
         return mVersion;
     }
 
+    @CalledByNativeCode
     public String getDeviceName() {
         return mDeviceName;
     }
 
+    @CalledByNativeCode
     public String getStreamName() {
         return mStreamName;
     }
 
+    @CalledByNativeCode
     public String getContentType() {
         return mContentType;
     }
 
+    @CalledByNativeCode
     public String getUpdateVersion() {
         return mUpdateVersion;
     }
 
+    @CalledByNativeCode
     public String getStreamArn() {
         return mStreamArn;
     }
 
+    @CalledByNativeCode
     public int getStreamStatus() {
         return mStreamStatus.intValue();
     }
 
+    @CalledByNativeCode
     public long getCreationTime() {
         return mCreationTime;
     }
 
+    @CalledByNativeCode
     public long getRetention() {
         return mRetention;
     }
 
+    @CalledByNativeCode
     public String getKmsKeyId() {
         return mKmsKeyId;
     }

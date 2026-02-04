@@ -1,26 +1,37 @@
 package com.amazonaws.kinesisvideo.internal.service;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentials;
 import com.amazonaws.kinesisvideo.auth.KinesisVideoCredentialsProvider;
 import com.amazonaws.kinesisvideo.auth.StaticCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
-import org.apache.logging.log4j.Logger;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
-import com.amazonaws.kinesisvideo.producer.ProducerException;
+import com.amazonaws.kinesisvideo.internal.producer.ReadResult;
 import com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks;
+import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
+import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
+import com.amazonaws.kinesisvideo.producer.ProducerException;
 import com.amazonaws.kinesisvideo.producer.StreamDescription;
 import com.amazonaws.kinesisvideo.producer.Tag;
 import com.amazonaws.kinesisvideo.producer.Time;
-import com.amazonaws.kinesisvideo.internal.producer.client.KinesisVideoServiceClient;
-import com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni;
+import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +43,7 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.ACCESS_DENIED;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_ACCESS_DENIED;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_BAD_REQUEST;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_NOT_FOUND;
+import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_NOT_SET;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_OK;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_RESOURCE_IN_USE;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RESOURCE_IN_USE;
@@ -42,19 +54,52 @@ import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.RESOURCE_NOT_F
  */
 public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     private class CompletionCallback implements Consumer<Exception> {
+
+        private final Logger log = LogManager.getLogger(CompletionCallback.class);
+
         private final KinesisVideoProducerStream stream;
+        private final AckConsumer ackConsumer;
         private final long uploadHandle;
 
         public CompletionCallback(@Nonnull final KinesisVideoProducerStream stream,
+                                  @Nonnull final AckConsumer ackConsumer,
                                   final long uploadHandle) {
 
             this.stream = Preconditions.checkNotNull(stream);
+            this.ackConsumer = Preconditions.checkNotNull(ackConsumer);
             this.uploadHandle = uploadHandle;
         }
 
+        // Scenarios:
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        //       Sender thread        | Receiving Thread Acks | Result To PIC
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 1: No exception   | No error acks         | completionCallback(null) --> PIC 200 (no streamTerminatedEvent)
+        //                            |                       | this is the success case, PIC will send end of stream (-1) to the
+        //                            |                       | sender thread to close the connection
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 2: No exception   | ERROR ACK             | parseErrorAck(errAck) --> PIC calls streamTerminatedEvent
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 3: SocketClosedEx | NONE (endOfStream)    | completionCallback(Ex) --> PIC 400
+        //                            | or late error acks    | SocketClosedEx occurs when there is more data to send but the
+        //                            |                       | connection was already closed. This thread exits once it
+        //                            |                       | receives end of stream (\r\n\r\n) from the service
+        // ---------------------------+-----------------------+----------------------------------------------------------
+        // Scenario 4: SocketClosedEx | ERROR ACK             | parseErrorAck(errAck) + completionCallback(Ex) --> parseErrorAck
+        //                            |                       | occurs first, so completionCallback result is ignored.
+        //                            |                       | SocketClosedEx cannot come first since the ack is being received
+        //                            |                       | from the socket
+        // ---------------------------+-----------------------+----------------------------------------------------------
         @Override
         public void accept(@Nullable final Exception object) {
             final long streamHandle = stream.getStreamHandle();
+
+            // Do not fire streamTerminated because an ERROR ack in parseFragmentAck()
+            // would have fired streamTerminated already
+            if (ackConsumer.seenErrorAck()) {
+                log.debug("Seen error ack already, ignoring");
+                return;
+            }
 
             if (streamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE) {
                 // The exception can be null indicating successful completion
@@ -148,6 +193,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
         try {
             this.kinesisVideoServiceClient.initialize(configuration);
+            log.debug("Initialized service client with configuration {}", configuration);
         } catch (final KinesisVideoException e) {
             log.error(e);
         }
@@ -179,16 +225,16 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                              final long timeout,
                              @Nullable final byte[] authData,
                              final int authType,
-                             final long customData)
+                             final KinesisVideoProducerStream stream)
             throws ProducerException {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
         final long delay = calculateRelativeServiceCallAfter(callAfter);
 
-        final Runnable task = new Runnable() {
+        final Runnable task = new LoggedExitRunnable("CreateStream-" + streamName) {
             @Override
-            public void run() {
-                int statusCode;
+            public void execute() {
+                int statusCode = HTTP_NOT_SET;
                 String streamArn = null;
 
                 final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, log);
@@ -205,16 +251,17 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                             timeoutInMillis,
                             credentialsProvider);
                     statusCode = HTTP_OK;
-                } catch (final KinesisVideoException e) {
-                    statusCode = getStatusCodeFromException(e);
-                    log.error("Kinesis Video service client returned an error. Reporting to Kinesis Video PIC.", e);
-                }
-
-                try {
-                    kinesisVideoProducer.createStreamResult(customData, streamArn, statusCode);
-                } catch (final ProducerException e) {
-                    // TODO: Deal with the runtime exception properly in this and following cases
-                    throw new RuntimeException(e);
+                } catch (final Throwable t) {
+                    statusCode = getStatusCodeFromException(t);
+                    log.error("[{}] Kinesis Video service client (CreateStream) returned an error. Reporting to Kinesis Video PIC.", streamName, t);
+                } finally {
+                    try {
+                        kinesisVideoProducer.createStreamResult(stream, streamArn, statusCode);
+                    } catch (final ProducerException e) {
+                        // TODO: Deal with the runtime exception properly in this and following cases
+                        log.error("[{}] Encountered an issue notifying PIC the result of the CreateStream API call.", streamName, e);
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         };
@@ -235,10 +282,10 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
         final long delay = calculateRelativeServiceCallAfter(callAfter);
 
-        final Runnable task = new Runnable() {
+        final Runnable task = new LoggedExitRunnable("DescribeStream-" + streamName) {
             @Override
-            public void run() {
-                int statusCode;
+            public void execute() {
+                int statusCode = HTTP_NOT_SET;
                 StreamDescription streamDescription = null;
 
                 final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, log);
@@ -249,15 +296,16 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                             timeoutInMillis,
                             credentialsProvider);
                     statusCode = HTTP_OK;
-                } catch (final KinesisVideoException e) {
-                    statusCode = getStatusCodeFromException(e);
-                    log.error("Kinesis Video service client returned an error. Reporting to Kinesis Video PIC.", e);
-                }
-
-                try {
-                    kinesisVideoProducer.describeStreamResult(stream, streamHandle, streamDescription, statusCode);
-                } catch (final ProducerException e) {
-                    throw new RuntimeException(e);
+                } catch (final Throwable t) {
+                    statusCode = getStatusCodeFromException(t);
+                    log.error("[{}] Kinesis Video service client (DescribeStream) returned an error. Reporting to Kinesis Video PIC.", streamName, t);
+                } finally {
+                    try {
+                        kinesisVideoProducer.describeStreamResult(stream, streamHandle, streamDescription, statusCode);
+                    } catch (final ProducerException e) {
+                        log.error("[{}] Encountered an issue notifying PIC the result of the DescribeStream API call.", streamName, e);
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         };
@@ -279,9 +327,9 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
         final long delay = calculateRelativeServiceCallAfter(callAfter);
 
-        final Runnable task = new Runnable() {
+        final Runnable task = new LoggedExitRunnable("GetDataEndpoint-" + streamName) {
             @Override
-            public void run() {
+            public void execute() {
                 final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, log);
                 final long timeoutInMillis = timeout / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
                 int statusCode = HTTP_OK;
@@ -291,20 +339,21 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                             apiName,
                             timeoutInMillis,
                             credentialsProvider);
-                } catch (final KinesisVideoException e) {
-                    log.error("Kinesis Video service client returned an error. Reporting to Kinesis Video PIC.", e);
-                    statusCode = getStatusCodeFromException(e);
-                }
+                } catch (final Throwable t) {
+                    log.error("[{}] Kinesis Video service client (GetDataEndpoint) returned an error. Reporting to Kinesis Video PIC.", streamName, t);
+                    statusCode = getStatusCodeFromException(t);
+                } finally {
+                    if (statusCode != HTTP_OK && isBlank(endpoint)) {
+                        // TODO: more URI validation
+                        statusCode = HTTP_NOT_FOUND;
+                    }
 
-                if (statusCode != HTTP_OK && isBlank(endpoint)) {
-                    // TODO: more URI validation
-                    statusCode = HTTP_NOT_FOUND;
-                }
-
-                try {
-                    kinesisVideoProducer.getStreamingEndpointResult(stream, streamHandle, endpoint, statusCode);
-                } catch (final ProducerException e) {
-                    throw new RuntimeException(e);
+                    try {
+                        kinesisVideoProducer.getStreamingEndpointResult(stream, streamHandle, endpoint, statusCode);
+                    } catch (final ProducerException e) {
+                        log.error("[{}] Encountered an issue notifying PIC the result of the GetDataEndpoint API call.", streamName, e);
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         };
@@ -325,9 +374,9 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
         final long delay = calculateRelativeServiceCallAfter(callAfter);
 
-        final Runnable task = new Runnable() {
+        final Runnable task = new LoggedExitRunnable("GetStreamingToken-" + streamName) {
             @Override
-            public void run() {
+            public void execute() {
                 // Currently, we have no support for getting a streaming token. We will refresh the credentials
                 // and return a credential from the credentials provider we got initially.
                 final KinesisVideoCredentialsProvider credentialsProvider = configuration.getCredentialsProvider();
@@ -349,29 +398,28 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     outputStream.flush();
                     serializedCredentials = byteArrayOutputStream.toByteArray();
                     outputStream.close();
-                } catch (final IOException e) {
-                    log.error(e);
-                } catch (final KinesisVideoException e) {
-                    log.error(e);
+                } catch (final Throwable t) {
+                    log.error("[{}] Encountered an error refreshing the credentials", streamName, t);
                 } finally {
                     try {
                         byteArrayOutputStream.close();
                     } catch (final IOException ex) {
                         // Do nothing
                     }
-                }
 
-                final int statusCode = HTTP_OK;
+                    final int statusCode = HTTP_OK;
 
-                try {
-                    kinesisVideoProducer.getStreamingTokenResult(
-                            stream,
-                            streamHandle,
-                            serializedCredentials,
-                            expiration,
-                            statusCode);
-                } catch (final ProducerException e) {
-                    throw new RuntimeException(e);
+                    try {
+                        kinesisVideoProducer.getStreamingTokenResult(
+                                stream,
+                                streamHandle,
+                                serializedCredentials,
+                                expiration,
+                                statusCode);
+                    } catch (final ProducerException e) {
+                        log.error("[{}] Encountered an issue notifying PIC the result of the credentials refresh call.", streamName, e);
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         };
@@ -396,9 +444,9 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
         final long delay = calculateRelativeServiceCallAfter(callAfter);
 
-        final Runnable task = new Runnable() {
+        final Runnable task = new LoggedExitRunnable("PutMedia-" + streamName) {
             @Override
-            public void run() {
+            public void execute() {
 
                 if (kinesisVideoProducerStream == null) {
                     throw new IllegalStateException("Couldn't find the correct stream");
@@ -419,6 +467,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                     final BlockingAckConsumer blockingAckConsumer = new BlockingAckConsumer(ackConsumer, log,
                             kinesisVideoProducerStream);
                     final CompletionCallback completionCallback = new CompletionCallback(kinesisVideoProducerStream,
+                            ackConsumer,
                             clientUploadHandle);
 
                     // This will kick-off a long running operation
@@ -436,16 +485,17 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
                     // Block until we parse the headers
                     blockingAckConsumer.awaitResponse();
-                } catch (final KinesisVideoException e) {
-                    statusCode = getStatusCodeFromException(e);
-                    log.error("Kinesis Video service client returned an error. Reporting to Kinesis Video PIC.", e);
-                }
-
-                try {
-                    log.info("putStreamResult uploadHandle {} {}", clientUploadHandle, statusCode);
-                    kinesisVideoProducer.putStreamResult(kinesisVideoProducerStream, clientUploadHandle, statusCode);
-                } catch (final ProducerException e) {
-                    throw new RuntimeException(e);
+                } catch (final Throwable t) {
+                    statusCode = getStatusCodeFromException(t);
+                    log.error("[{}] Kinesis Video service client (PutMedia) returned an error. Reporting to Kinesis Video PIC.", streamName, t);
+                } finally {
+                    try {
+                        log.info("[{}] putStreamResult uploadHandle {} {}", streamName, clientUploadHandle, statusCode);
+                        kinesisVideoProducer.putStreamResult(kinesisVideoProducerStream, clientUploadHandle, statusCode);
+                    } catch (final ProducerException e) {
+                        log.error("[{}] Encountered an issue notifying PIC the result of the PutMedia API call.", streamName, e);
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         };
@@ -465,10 +515,11 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
         Preconditions.checkState(isInitialized(), "Service callbacks object should be initialized first");
         final long delay = calculateRelativeServiceCallAfter(callAfter);
+        final String streamName = stream.getStreamName();
 
-        final Runnable task = new Runnable() {
+        final Runnable task = new LoggedExitRunnable("TagStream-" + stream.getStreamName()) {
             @Override
-            public void run() {
+            public void execute() {
                 final KinesisVideoCredentialsProvider credentialsProvider = getCredentialsProvider(authData, log);
                 final long timeoutInMillis = timeout / Time.HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
                 int statusCode = HTTP_OK;
@@ -487,20 +538,16 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                             tagsMap,
                             timeoutInMillis,
                             credentialsProvider);
-                } catch (final KinesisVideoException e) {
-                    log.error("Kinesis Video service client returned an error. Reporting to Kinesis Video PIC.", e);
-                    statusCode = getStatusCodeFromException(e);
-                }
-
-                if (statusCode != HTTP_OK) {
-                    // TODO: more URI validation
-                    statusCode = HTTP_BAD_REQUEST;
-                }
-
-                try {
-                    kinesisVideoProducer.tagResourceResult(stream, streamHandle, statusCode);
-                } catch (final ProducerException e) {
-                    throw new RuntimeException(e);
+                } catch (final Throwable t) {
+                    log.error("[{}] Kinesis Video service client (TagStream) returned an error. Reporting to Kinesis Video PIC.", streamName, t);
+                    statusCode = getStatusCodeFromException(t);
+                } finally {
+                    try {
+                        kinesisVideoProducer.tagResourceResult(stream, streamHandle, statusCode);
+                    } catch (final ProducerException e) {
+                        log.error("[{}] Encountered an issue notifying PIC the result of the TagStream API call.", streamName, e);
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         };
@@ -570,7 +617,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
     }
 
     @Override
-    public synchronized void removeStream(@Nonnull KinesisVideoProducerStream kinesisVideoProducerStream) {
+    public synchronized void removeStream(@Nonnull final KinesisVideoProducerStream kinesisVideoProducerStream) {
         StreamingInfo streamingInfoToBeRemoved = null;
         for (final StreamingInfo streamingInfo : mStreams) {
             if (streamingInfo.getStream() == kinesisVideoProducerStream) {
@@ -610,7 +657,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
      * @since 3.0 Changed signature from isBlank(String) to isBlank(CharSequence)
      */
     private static boolean isBlank(final CharSequence cs) {
-        int strLen;
+        final int strLen;
         if (cs == null || (strLen = cs.length()) == 0) {
             return true;
         }
@@ -624,7 +671,7 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
 
     @Nullable
     protected static KinesisVideoCredentialsProvider getCredentialsProvider(@Nullable final byte[] authData,
-                                                                    @Nonnull final Logger log) {
+                                                                            @Nonnull final Logger log) {
         if (null == authData) {
             log.warn("NULL credentials have been returned by the credentials provider.");
             return null;
@@ -665,6 +712,8 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
         // TODO: Implement this properly
         if (e == null) {
             return HTTP_OK;
+        } else if (e instanceof AmazonServiceException) {
+            return ((AmazonServiceException) e).getStatusCode();
         } else if (e.getClass().getName().endsWith(RESOURCE_NOT_FOUND)) {
             return HTTP_NOT_FOUND;
         } else if (e.getClass().getName().endsWith(RESOURCE_IN_USE)) {
@@ -680,6 +729,36 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
                 // Default to bad request
                 return HTTP_BAD_REQUEST;
             }
+        }
+    }
+
+    /**
+     * Post the exception onto the {@link com.amazonaws.kinesisvideo.producer.StreamCallbacks#streamErrorReport(long, long, long)}
+     * callback so the application can decide what to do with the error.
+     * The {@code upload handle} will be {@link ReadResult#INVALID_UPLOAD_HANDLE_VALUE}, and the {@code fragment timecode}
+     * will be {@link ReadResult#ZERO_FRAGMENT_TIMECODE}.
+     *
+     * @param stream     stream that encountered the error
+     * @param methodName for logging purposes
+     * @param ex         the exception that occurred
+     * @see <a href="https://github.com/awslabs/amazon-kinesis-video-streams-producer-c/blob/master/src/source/CurlApiCallbacks.c">Producer-C notifyCallResult</a>
+     */
+    @SuppressWarnings({"ConstantConditions"})
+    protected void notifyCallResult(@Nonnull final KinesisVideoProducerStream stream,
+                                    @Nonnull final String methodName,
+                                    @Nonnull final ProducerException ex) {
+        Preconditions.checkArgument(stream != null, "Stream cannot be null");
+        Preconditions.checkArgument(ex != null, "Exception cannot be null");
+
+        try {
+            log.error("[{}], {} streamErrorReport", stream.getStreamInfo().getSummary(), methodName);
+            stream.streamErrorReport(ReadResult.INVALID_UPLOAD_HANDLE_VALUE, ReadResult.ZERO_FRAGMENT_TIMECODE,
+                    ex.getStatusCode());
+        } catch (final Throwable t) {
+            // The user-implemented streamErrorReport threw an exception - it is their application's responsibility
+            // to handle errors on their end.
+            log.warn("[{}], {} Calling streamErrorReport with 0x{} threw an exception",
+                    stream.getStreamInfo().getSummary(), methodName, Long.toHexString(ex.getStatusCode()), t);
         }
     }
 }

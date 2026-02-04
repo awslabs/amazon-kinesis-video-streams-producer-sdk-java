@@ -1,5 +1,7 @@
 package com.amazonaws.kinesisvideo.internal.producer;
 
+import com.amazonaws.kinesisvideo.util.CalledByNativeCode;
+
 /**
  * Class to hold the read results from the native code call.
  * The class has a setter method that will be called from the native method to avoid object creation.
@@ -9,6 +11,7 @@ public class ReadResult {
      * Invalid upload handle value which is specified in the native codebase.
      */
     public static final long INVALID_UPLOAD_HANDLE_VALUE = -1;
+    public static final long ZERO_FRAGMENT_TIMECODE = 0;
 
     private int readBytes = 0;
     private boolean isEndOfStream = false;
@@ -18,6 +21,7 @@ public class ReadResult {
      * @param readBytes Read bytes
      * @param isEndOfStream Whether its the end of stream
      */
+    @CalledByNativeCode
     public void setReadResult(final int readBytes, final boolean isEndOfStream) {
         this.readBytes = readBytes;
         this.isEndOfStream = isEndOfStream;

@@ -1,0 +1,65 @@
+name: Code coverage report
+
+on:
+  push:
+    branches:
+      - develop
+      - master
+  pull_request:
+    branches:
+      - develop
+      - master
+
+jobs:
+  code-coverage:
+    if: ${{ github.repository == 'awslabs/amazon-kinesis-video-streams-producer-sdk-java' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      JAVA_LIBRARY_PATH: src/main/resources/lib/ubuntu/
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: 11
+          distribution: 'adopt'
+
+      - name: Build JNI (develop branch) # When merging to master, we use the JNI that is committed
+        if: ${{ github.ref == 'refs/heads/develop' || github.base_ref == 'develop' }}
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          make -j
+          echo "JAVA_LIBRARY_PATH=build" >> $GITHUB_ENV
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Run tests
+        run: |
+          echo "Using -Djava.library.path=${JAVA_LIBRARY_PATH}"
+          mvn clean verify -DargLine="\
+            -Daws.accessKeyId=${AWS_ACCESS_KEY_ID} \
+            -Daws.secretKey=${AWS_SECRET_ACCESS_KEY} \
+            -Daws.sessionToken=${AWS_SESSION_TOKEN} \
+            -Djava.library.path=${JAVA_LIBRARY_PATH} \
+            -Dlog4j.configurationFile=.github/log4j2.xml"
+        shell: bash
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: target/site/jacoco/jacoco.xml
+          fail_ci_if_error: true

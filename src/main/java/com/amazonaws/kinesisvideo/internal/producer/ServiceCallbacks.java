@@ -1,6 +1,8 @@
 package com.amazonaws.kinesisvideo.internal.producer;
 
 import com.amazonaws.kinesisvideo.producer.ProducerException;
+import com.amazonaws.kinesisvideo.producer.StreamDescription;
+import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.kinesisvideo.producer.Tag;
 
 import javax.annotation.Nonnull;
@@ -36,7 +38,15 @@ public interface ServiceCallbacks
     boolean isInitialized();
 
     /**
-     * Schedules a call to create stream
+     * Asynchronous call to create stream with the specified parameters. PIC will attempt to schedule stream creation if
+     * the {@link #describeStream(String, long, long, byte[], int, long, KinesisVideoProducerStream)} posts a
+     * {@link KinesisVideoProducer#describeStreamResult(KinesisVideoProducerStream, long, StreamDescription, int)} of
+     * 404 (Resource Not Found). This call will be skipped if {@link StreamInfo#isAllowStreamCreation()} is not allowed.
+     * <p>
+     *   This method will notify PIC the success or failure of the operation via
+     *   {@link KinesisVideoProducer#createStreamResult(KinesisVideoProducerStream, String, int)}.
+     * </p>
+     *
      * @param deviceName - Device name
      * @param streamName - Stream name
      * @param contentType - Stream content type
@@ -46,8 +56,10 @@ public interface ServiceCallbacks
      * @param timeout - Time out for the call - 100ns
      * @param authData - Authentication bits
      * @param authType - Authentication type - this is the AUTH_INFO_TYPE defined in /src/client/Include.h
-     * @param customData - Custom data to use to call the event functions
+     * @param stream - stream object for the result event callback
      * @throws ProducerException
+     *
+     * @see <a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_CreateStream.html">CreateStream API</a>
      */
     void createStream(final @Nonnull String deviceName,
             final @Nonnull String streamName,
@@ -57,11 +69,16 @@ public interface ServiceCallbacks
             long callAfter,
             long timeout,
             final @Nullable byte[] authData,
-            int authType,
-            long customData) throws ProducerException;
+            final int authType,
+            final @Nonnull KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to describe stream
+     * Asynchronous call to describe stream with the specified parameters.
+     * <p>
+     *   This method will notify PIC the success or failure of the operation via
+     *   {@link KinesisVideoProducer#describeStreamResult(KinesisVideoProducerStream, long, StreamDescription, int)}
+     * </p>
+     *
      * @param streamName - Stream name
      * @param callAfter - Call after this time - 100ns
      * @param timeout - Time out for the call - 100ns
@@ -70,6 +87,8 @@ public interface ServiceCallbacks
      * @param streamHandle - stream handle returned by PIC
      * @param stream - stream object for the result event callback
      * @throws ProducerException
+     *
+     * @see <a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_DescribeStream.html">DescribeStream API</a>
      */
     void describeStream(final @Nonnull String streamName,
             long callAfter,
@@ -80,7 +99,12 @@ public interface ServiceCallbacks
             KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to get streaming endpoint
+     * Asynchronous call to get streaming endpoint with the specified parameters.
+     * <p>
+     *   This method will notify PIC the success or failure of the operation via
+     *   {@link KinesisVideoProducer#getStreamingEndpointResult(KinesisVideoProducerStream, long, String, int)}.
+     * </p>
+     *
      * @param streamName - Stream name
      * @param apiName - API name to call
      * @param callAfter - Call after this time - 100ns
@@ -90,6 +114,8 @@ public interface ServiceCallbacks
      * @param streamHandle - stream handle returned by PIC
      * @param stream - stream object for the result event callback
      * @throws ProducerException
+     *
+     * @see <a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_GetDataEndpoint.html">GetDataEndpoint API</a>
      */
     void getStreamingEndpoint(final @Nonnull String streamName,
                               final @Nonnull String apiName,
@@ -101,7 +127,7 @@ public interface ServiceCallbacks
                               KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to get streaming token
+     * Asynchronous call to get streaming token
      * @param streamName - Stream name
      * @param callAfter - Call after this time - 100ns
      * @param timeout - Time out for the call - 100ns
@@ -120,7 +146,7 @@ public interface ServiceCallbacks
                            KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to put stream API
+     * Asynchronous call to put stream API
      * @param streamName - Stream name
      * @param containerType - Container type
      * @param streamStartTime - Stream start timestamp
@@ -147,7 +173,7 @@ public interface ServiceCallbacks
             KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to tag resource API
+     * Asynchronous call to tag resource API
      * @param resourceArn - Resource ARN
      * @param tags - Tags to apply
      * @param callAfter - Call after this time - 100ns
@@ -168,7 +194,7 @@ public interface ServiceCallbacks
             KinesisVideoProducerStream stream) throws ProducerException;
 
     /**
-     * Schedules a call to create device
+     * Asynchronous call to create device
      * @param deviceName - Device name
      * @param callAfter - Call after this time - 100ns
      * @param timeout - Time out for the call - 100ns
@@ -182,16 +208,18 @@ public interface ServiceCallbacks
             long timeout,
             final @Nullable byte[] authData,
             int authType,
-            long customData) throws ProducerException;
+            final long customData) throws ProducerException;
 
     /**
-     * Schedules a call to device certificate to token API
+     * Asynchronous call to device certificate to token API. Called when AuthType is AUTH_INFO_TYPE_CERT.
+     *
      * @param deviceName - Device name
      * @param callAfter - Call after this time - 100ns
      * @param timeout - Time out for the call - 100ns
      * @param authData - Authentication bits
      * @param authType - Authentication type - this is the AUTH_INFO_TYPE defined in /src/client/Include.h
      * @param customData - Custom data to use to call the event functions
+     *
      * @throws ProducerException
      */
     void deviceCertToToken(final @Nonnull String deviceName,

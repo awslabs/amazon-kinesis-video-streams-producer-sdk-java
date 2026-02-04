@@ -107,10 +107,9 @@ public class ImageFileMediaSource implements MediaSource {
                 DEFAULT_TIMESCALE,
                 RECALCULATE_METRICS,
                 AVCC_EXTRA_DATA,
-                new Tag[] {
-                        new Tag("device", "Test Device"),
-                        new Tag("stream", "Test Stream") },
-                NAL_ADAPTATION_FLAG_NONE);
+                imageFileMediaSourceConfiguration.getTags(),
+                NAL_ADAPTATION_FLAG_NONE,
+                imageFileMediaSourceConfiguration.isAllowStreamCreation());
     }
 
     @Override
@@ -171,6 +170,6 @@ public class ImageFileMediaSource implements MediaSource {
     @Nullable
     @Override
     public StreamCallbacks getStreamCallbacks() {
-        return null;
+        return imageFileMediaSourceConfiguration.getStreamCallbacks();
     }
 }

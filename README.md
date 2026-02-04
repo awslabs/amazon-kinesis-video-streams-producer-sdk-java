@@ -1,8 +1,17 @@
-## Amazon Kinesis Video Streams Producer SDK Java
+<h1 align="center">
+  Amazon Kinesis Video Streams Producer SDK Java
+  <br>
+</h1>
 
-## License
-
-This library is licensed under the Apache License, 2.0. 
+<p align="center">
+  <a href="#building-from-source">Build</a> •
+  <a href="#run-examples">Run</a> •
+  <a href="#troubleshooting">Troubleshooting</a> •
+  <a href="#resources">Resources</a> •
+  <a href="#development">Development</a> •
+  <a href="#release-notes">Release Notes</a> •
+  <a href="#license">License</a>
+</p>
 
 ## Introduction
 
@@ -14,65 +23,153 @@ The Amazon Kinesis Video Streams Producer SDK Java makes it easy to build an on-
 
 * [Developer Guide](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-sdk-javaapi.html) - For in-depth getting started and usage information.
 * [Release Notes](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/releases) - To see the latest features, bug fixes, and changes in the SDK
-* [Issues](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues) - Report issues and submit pull requests 
-
+* [Issues](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues) - Report issues and submit pull requests
+* [SDK Documentation JavaDoc](https://awslabs.github.io/amazon-kinesis-video-streams-producer-sdk-java/master/index.html) (master branch)
+* [SDK Documentation JavaDoc](https://awslabs.github.io/amazon-kinesis-video-streams-producer-sdk-java/develop/index.html) (develop branch)
 
 ### Prerequisites
 
-* You can find available pre-built KinesisVideoProducerJNI library in [src/main/resources/lib/](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/tree/master/src/main/resources/lib) for Mac (x64), Ubuntu (x64) and Raspian (x86) and Windows 10. If pre-built libraries did not work for you, ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp) native library needs to be built first before running the Java demo application. Please follow the steps  in the section **Build the native library (KinesisVideoProducerJNI) to run Java Demo App** in Producer SDK CPP [readme](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp).
+* Java 11, 17, or 21
+* maven
+* JNI libraries
 
-### Building from Source
+#### Using pre-built JNI libraries
 
-Import the Maven project to your IDE, it will find dependency packages from Maven and build.
+* You can find available pre-built KinesisVideoProducerJNI library in [src/main/resources/lib/](./src/main/resources/lib) for Mac (x64), Ubuntu (x64) and Raspbian (x86) and Windows 10.
 
-### Examples
+#### Building JNI libraries
+
+* If pre-built libraries did not work for you, KinesisVideoProducerJNI native library needs to be built first before running the Java demo application. Please follow the steps [here](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/wiki/Building-and-Using-JNI).
+
+### Building the Java Producer SDK and Demo Applications from Source
+
+#### In an IDE
+
+Import the Maven project ([`pom.xml`](./pom.xml)) to your IDE, it will find dependency packages from Maven and build.
+
+#### Using command-line
+
+Make sure you have Java and Maven installed on your system.
+
+```sh
+git clone https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java.git
+cd amazon-kinesis-video-streams-producer-sdk-java
+mvn clean compile assembly:single
+```
+
+### Run Examples
+
+#### Preparing a stream
+
+##### AWS Management Console
+
+You can create a stream using the AWS management console using the instructions [here](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/gs-createstream.html).
+
+You can also edit the data retention in the AWS management console in the section under the media player.
+
+##### AWS CLI
+
+If you have AWS CLI and `jq` installed and configured, you can also run the [prepareStream.sh](./scripts/prepareStream.sh).
+
+This script will create a stream with the given name if the stream doesn't exist.
+
+> [!NOTE]
+> The script will increase the data retention of your stream to 2 hours if it's 0.
+
+```shell
+./scripts/prepareStream.sh <YourKinesisVideoStreamName>
+```
 
 #### Launching Demoapp sample application
 
-Run `DemoAppMain.java` in `./src/main/demo` with JVM arguments set to
-```
--Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Dkvs-stream=<YourKinesisVideoStreamName> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml
-```
-for **non-temporary** AWS credential.
+Demo app will start running and putting sample video frames in a loop into Kinesis Video Streams.
+You can change your stream settings in [`DemoAppMain.java`](./src/main/demo/com/amazonaws/kinesisvideo/demoapp/DemoAppMain.java) before you run the app.
 
-```
--Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Dkvs-stream=<YourKinesisVideoStreamName> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml
-```
-for *temporary* AWS credential.
+To run [`DemoAppMain.java`](./src/main/demo/com/amazonaws/kinesisvideo/demoapp/DemoAppMain.java) in `./src/main/demo` with JVM arguments:
 
-**Note**: NativeLibraryPath must contain your ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp#build-the-native-library-kinesisvideoproducerjni-to-run-java-demo-app) library. File name depends on your Operating System:
-* `libKinesisVideoProducerJNI.so` for Linux
-* `libKinesisVideoProducerJNI.dylib` for Mac OS
-* `KinesisVideoProducerJNI.dll` for Windows
+1. Credentials: `aws.accessKeyId`, `aws.secretKey`, `aws.sessionToken` (optional)
+2. Stream name: `kvs-stream`
+3. Path to JNI library directory: `java.library.path`
+4. Log4j configuration file: `log4j.configurationFile`
 
-If you are using pre-built libraries, please specify the path of library. Take pre-build library for Mac as example, you can specify `src/resources/lib/mac` as <NativeLibraryPath>.
-
-Demo app will start running and putting sample video frames in a loop into Kinesis Video Streams. You can change your stream settings in `DemoAppMain.java` before you run the app.
-
-##### Run the demo application from command line
-
-If you want to run the `DemoAppMain`, follow the [steps](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/issues/14) below. See [Prerequisites](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java#prerequisites) to find available native library needed to run `DemoAppMain`.
-
-Change the current working directory to
-
-```
-$ cd /<YOUR_FOLDER_PATH_WHERE_SDK_IS_DOWNLOADED>/amazon-kinesis-video-streams-producer-sdk-java/
+```sh
+java -classpath target/*jar-with-dependencies.jar \
+  -Daws.accessKeyId=<YourAwsAccessKey> \
+  -Daws.secretKey=<YourAwsSecretKey> \
+  -Dkvs-stream=<YourKinesisVideoStreamName> \
+  -Djava.library.path=<NativeLibraryPath ex. src/main/lib/mac> \
+  -Dlog4j.configurationFile=log4j2.xml \
+  com.amazonaws.kinesisvideo.demoapp.DemoAppMain
 ```
 
-Compile and assemble Java SDK, Java Demoapp and the Maven dependencies
-```
-$ mvn clean compile assembly:single
+> [!NOTE]
+> On Windows command prompt, the newline separator is `^` instead of `\`.
+
+> [!NOTE]
+> NativeLibraryPath must contain path to the folder containing your ["KinesisVideoProducerJNI"](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp) library (not to the file itself). File name depends on your operating system:
+> * `libKinesisVideoProducerJNI.so` for Linux
+> * `libKinesisVideoProducerJNI.dylib` for Mac OS
+> * `KinesisVideoProducerJNI.dll` for Windows
+
+> [!TIP]
+> Pre-built JNI libraries for some systems can be found in `src/resources/lib`.
+
+> [!NOTE]
+> If your system isn't part of the pre-built JNI libraries, you will need to build the JNI yourself. You can find instructions [here](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/wiki/Building-and-Using-JNI).
+
+##### Changing the log level
+
+Locate the log4j configuration file `log4j2.xml`, and change the level (currently `WARN`) to something else like `INFO` or `DEBUG`. For a full list of levels, see the [log4j documentation](https://logging.apache.org/log4j/2.x/manual/customloglevels.html).
+
+```xml
+<Loggers>
+    <Root level="WARN">
+        <AppenderRef ref="ConsoleAppender"/>
+        <AppenderRef ref="RollingFile"/>
+    </Root>
+</Loggers>
 ```
 
-Start the demo app
-```
-$ java -classpath target/amazon-kinesis-video-streams-producer-sdk-java-1.12.1-jar-with-dependencies.jar -Daws.accessKeyId=<ACCESS_KEY> -Daws.secretKey=<SECRET_KEY> -Dkvs-stream=<KINESIS_VIDEO_STREAM_NAME> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+###### To change log level for a single class
 
+To change the log level for a single class, add a `<Logger>` element inside the `<Loggers>` section.
+
+```xml
+<Logger name="com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory" level="TRACE" additivity="false">
+    <AppenderRef ref="ConsoleAppender"/>
+    <AppenderRef ref="RollingFile"/>
+</Logger>
 ```
+
+In the example above, we set the JNI logs to `TRACE`.
+
+Log levels to PIC equivalents:
+* `TRACE` = 1 -- `LOG_LEVEL_VERBOSE`
+* `DEBUG` = 2 -- `LOG_LEVEL_DEBUG`
+* `INFO` = 3 -- `LOG_LEVEL_INFO`
+* `WARN` = 4 -- `LOG_LEVEL_WARN`
+* `ERROR` = 5+ -- `LOG_LEVEL_ERROR`
+
 ##### Run API and functionality tests
+```sh
+mvn clean test -DargLine="\
+  -Daws.accessKeyId=<YourAwsAccessKey> \
+  -Daws.secretKey=<YourAwsSecretKey> \
+  -Daws.sessionToken=<YourAwsSessionToken> \
+  -Djava.library.path=<NativeLibraryPath> \
+  -Dlog4j.configurationFile=log4j2.xml"
 ```
-$ mvn clean test -DargLine="-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml"
+
+> [!NOTE]
+> The tests require pre-provisioned streams and require data retention enabled. If either or both conditions are not met, the tests will attempt to fix them before starting. Make sure this is OK in your account before running. Set the `TEST_STREAMS_PREFIX` environment variable to add a prefix to the streams used in the integration tests.
+
+##### Generate code coverage report
+
+```shell
+mvn clean verify -DargLine="-Daws.accessKeyId=<YourAwsAccessKey> -Daws.secretKey=<YourAwsSecretKey> -Daws.sessionToken=<YourAwsSessionToken> -Djava.library.path=<NativeLibraryPath> -Dlog4j.configurationFile=log4j2.xml"
 ```
+
+This will run the tests and generate a code coverage report. It will get output in `target/site/jacoco`. You can open `target/site/jacoco/index.html` in a web browser of your choice. 
 
 ##### Run the demo application from Docker
 
@@ -93,7 +190,7 @@ for **non-temporary** AWS credential.
 #### Pre-built KinesisVideoProducerJNI library supported platforms
 * Mac OS X (El capitan 10.11 or above)
 * Ubuntu (14.04 or above)
-* Raspian (9 stretch or above)
+* Raspbian (9 stretch or above)
 
 #### Additional Examples
 
@@ -104,29 +201,87 @@ For additional examples on using Kinesis Video Streams Java SDK and  Kinesis Vid
 
 ##### [Kinesis Video Streams Android](https://github.com/awslabs/aws-sdk-android-samples/tree/master/AmazonKinesisVideoDemoApp)
 
-#### Troubleshooting
+## JavaDoc
 
-If you notice error in loading the native library (JNI), then check the output of `ldd` or `otool`
+Use the following command to build the JavaDoc locally:
 
-```
-$ ldd libKinesisVideoProducerJNI.so
-```
-or in MacOS
-```
-$ otool -L libKinesisVideoProducerJNI.dylib
+```shell
+mvn clean compile javadoc:javadoc
 ```
 
-This will provide details on missing libraries during linking; If the output shows missing shared libraries, then run the following commands to link:
+You can then open `target/site/apidocs/index.html` in a browser of your choice.
 
-Run the following from the build directory in CPP producer SDK:
+### Troubleshooting
+
+#### Class not found
+
+If you receive an error like this:
+
+```log
+Error: Could not find or load main class com.amazonaws.kinesisvideo.demoapp.DemoAppMain
+Caused by: java.lang.ClassNotFoundException: com.amazonaws.kinesisvideo.demoapp.DemoAppMain
 ```
-cmake .. -DBUILD_JNI=TRUE 
-make
+
+Check the file path to the `.jar` is correct, and that the class name is correct.
+
+#### Unsatisfied link error - no KinesisVideoProducerJNI in java.library.path
+
+Provide the path to the *folder* containing the KinesisVideoProducerJNI library (not the file itself) as part of `java.library.path` JVM argument.
+
+#### Other Unsatisfied link error
+
+If you notice error in loading the native library (JNI), it may be due to CPU architecture mismatch.
+Check the error in the logging output.
+
+<details>
+<summary>Sample output</summary>
+
+```log
+20:49:47.747 [main] ERROR com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory - Unsatisfied link error.
+java.lang.UnsatisfiedLinkError: /Users/me/Desktop/libKinesisVideoProducerJNI.dylib: dlopen(/Users/me/Desktop/libKinesisVideoProducerJNI.dylib, 0x0001): tried: '/Users/me/Desktop/libKinesisVideoProducerJNI.dylib' (mach-o file, but is an incompatible architecture (have 'x86_64', need 'arm64e' or 'arm64')), '/System/Volumes/Preboot/Cryptexes/OS/Users/me/Desktop/libKinesisVideoProducerJNI.dylib' (no such file), '/Users/me/Desktop/libKinesisVideoProducerJNI.dylib' (mach-o file, but is an incompatible architecture (have 'x86_64', need 'arm64e' or 'arm64'))
+	at jdk.internal.loader.NativeLibraries.load(Native Method) ~[?:?]
+	at jdk.internal.loader.NativeLibraries$NativeLibraryImpl.open(NativeLibraries.java:331) ~[?:?]
+	at jdk.internal.loader.NativeLibraries.loadLibrary(NativeLibraries.java:197) ~[?:?]
+	at jdk.internal.loader.NativeLibraries.loadLibrary(NativeLibraries.java:139) ~[?:?]
+	at jdk.internal.loader.NativeLibraries.findFromPaths(NativeLibraries.java:259) ~[?:?]
+	at jdk.internal.loader.NativeLibraries.loadLibrary(NativeLibraries.java:251) ~[?:?]
+	at java.lang.ClassLoader.loadLibrary(ClassLoader.java:2451) ~[?:?]
+	at java.lang.Runtime.loadLibrary0(Runtime.java:916) ~[?:?]
+	at java.lang.System.loadLibrary(System.java:2063) ~[?:?]
+	at com.amazonaws.kinesisvideo.internal.producer.jni.NativeLibraryLoader.loadNativeLibraryIndirect(NativeLibraryLoader.java:76) [classes/:?]
+	at com.amazonaws.kinesisvideo.internal.producer.jni.NativeLibraryLoader.loadNativeLibrary(NativeLibraryLoader.java:44) [classes/:?]
+	at com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni.initializeLibrary(NativeKinesisVideoProducerJni.java:1175) [classes/:?]
+	at com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni.create(NativeKinesisVideoProducerJni.java:228) [classes/:?]
+	at com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni.createSync(NativeKinesisVideoProducerJni.java:246) [classes/:?]
+	at com.amazonaws.kinesisvideo.internal.producer.jni.NativeKinesisVideoProducerJni.createSync(NativeKinesisVideoProducerJni.java:211) [classes/:?]
+	at com.amazonaws.kinesisvideo.internal.client.NativeKinesisVideoClient.initializeNewKinesisVideoProducer(NativeKinesisVideoClient.java:239) [classes/:?]
+	at com.amazonaws.kinesisvideo.internal.client.NativeKinesisVideoClient.initialize(NativeKinesisVideoClient.java:119) [classes/:?]
+	at com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory.createKinesisVideoClient(KinesisVideoJavaClientFactory.java:154) [classes/:?]
+	at com.amazonaws.kinesisvideo.java.client.KinesisVideoJavaClientFactory.createKinesisVideoClient(KinesisVideoJavaClientFactory.java:127) [classes/:?]
+	at com.amazonaws.kinesisvideo.demoapp.DemoAppMain.main(DemoAppMain.java:65) [classes/:?]
+Exception in thread "main" java.lang.RuntimeException: com.amazonaws.kinesisvideo.producer.ProducerException: Failed loading native library StatusCode: 0xd
+	at com.amazonaws.kinesisvideo.demoapp.DemoAppMain.main(DemoAppMain.java:93)
+Caused by: com.amazonaws.kinesisvideo.producer.ProducerException: Failed loading native library StatusCode: 0xd
 ```
 
-Then, provide the path to the libKinesisVideoProducerJNI.dylib library.
+</details>
 
-This should resolve native library loading issues.
+If using the pre-built JNI libraries located in `src/main/resources/lib`, make sure you are using the one that matches your CPU architecture.
+
+If your architecture isn't provided as one of the pre-built libraries, you will need to build the JNI yourself.
+Building the JNI on your local system will make sure the correct architecture and bit-ness are used.
+See instructions [here](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-java/wiki/Building-and-Using-JNI).
+
+> [!NOTE]
+> If you run into issues building the JNI on your system, please raise an issue in repository where the JNI source code is located.
+
+#### macOS security warning
+
+If you receive an error like this when trying to use the JNI:
+
+> `Apple could not verify "libKinesisVideoProducerJNI.dylib" is free of malware that may harm your Mac or compromise your privacy.`
+
+The above error should not appear if you cloned the repository using `git clone`. Download the artifacts using `git clone`.
 
 ## Development
 
@@ -240,7 +395,7 @@ The repository is using `develop` branch as the aggregation and all of the featu
 
 ### Release 1.3.0 (15 March 2018)
 
-* Provide pre-built KinesisVideoProducerJNI library for Mac (x64), Ubuntu (x64) and Raspian (x86).
+* Provide pre-built KinesisVideoProducerJNI library for Mac (x64), Ubuntu (x64) and Raspbian (x86).
 * Remove Lombok dependency on Java Producer SDK.
 * Update instruction in README about KinsisVideoProducerJNI build.
 * Compatible changes in Java Adapter to work with latest changes in [Kinesis Video Streams Producer SDK CPP](https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp/blob/master/README.md).
@@ -262,3 +417,7 @@ The repository is using `develop` branch as the aggregation and all of the featu
 ### Release 1.0.0 (November 2017)
 
 * First release of the Amazon Kinesis Video Producer SDK Java.
+
+## License
+
+This library is licensed under the Apache License, 2.0. 

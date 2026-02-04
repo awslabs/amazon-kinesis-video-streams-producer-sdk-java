@@ -94,12 +94,12 @@ public interface KinesisVideoProducer {
     /**
      * CreateStream result event
      *
-     * @param customData     Custom data that should be passed to the engine
+     * @param stream         Stream object for the result event callback
      * @param streamArn      Newly create stream ARN on success
      * @param httpStatusCode HTTP status code
      * @throws ProducerException
      */
-    void createStreamResult(final long customData, final @Nullable String streamArn, int httpStatusCode) throws ProducerException;
+    void createStreamResult(@Nonnull final KinesisVideoProducerStream stream, final @Nullable String streamArn, int httpStatusCode) throws ProducerException;
 
     /**
      * DescribeStream result event
@@ -110,7 +110,7 @@ public interface KinesisVideoProducer {
      * @param httpStatusCode    HTTP status code
      * @throws ProducerException
      */
-    void describeStreamResult(final KinesisVideoProducerStream stream,
+    void describeStreamResult(@Nonnull final KinesisVideoProducerStream stream,
                               final long streamHandle,
                               final @Nullable StreamDescription streamDescription,
                               int httpStatusCode) throws ProducerException;
@@ -124,7 +124,7 @@ public interface KinesisVideoProducer {
      * @param httpStatusCode HTTP status code
      * @throws ProducerException
      */
-    void getStreamingEndpointResult(final KinesisVideoProducerStream stream,
+    void getStreamingEndpointResult(@Nonnull final KinesisVideoProducerStream stream,
                                     final long streamHandle,
                                     final @Nullable String endpoint,
                                     int httpStatusCode)
@@ -140,7 +140,7 @@ public interface KinesisVideoProducer {
      * @param httpStatusCode HTTP status code
      * @throws ProducerException
      */
-    void getStreamingTokenResult(final KinesisVideoProducerStream stream,
+    void getStreamingTokenResult(@Nonnull final KinesisVideoProducerStream stream,
                                  final long streamHandle,
                                  final @Nullable byte[] token, long expiration,
                                  int httpStatusCode)
@@ -154,7 +154,7 @@ public interface KinesisVideoProducer {
      * @param httpStatusCode     HTTP status code
      * @throws ProducerException
      */
-    void putStreamResult(final KinesisVideoProducerStream stream, long uploadHandle, int httpStatusCode)
+    void putStreamResult(@Nonnull final KinesisVideoProducerStream stream, long uploadHandle, int httpStatusCode)
             throws ProducerException;
 
     /**
@@ -165,14 +165,14 @@ public interface KinesisVideoProducer {
      * @param httpStatusCode HTTP status code
      * @throws ProducerException
      */
-    void tagResourceResult(final KinesisVideoProducerStream stream,
+    void tagResourceResult(@Nonnull final KinesisVideoProducerStream stream,
                            final long streamHandle, int httpStatusCode)
             throws ProducerException;
 
     /**
      * CreateDevice result event
      *
-     * @param customData     Custom data that should be passed to the engine
+     * @param customData     Used for the result event callback
      * @param deviceArn      Newly create device ARN on success
      * @param httpStatusCode HTTP status code
      * @throws ProducerException
@@ -183,7 +183,7 @@ public interface KinesisVideoProducer {
     /**
      * DeviceCertToToken result event
      *
-     * @param customData     Custom data that should be passed to the engine
+     * @param customData     Used for the result event callback
      * @param token          Security token if successful
      * @param expiration     Streaming token expiration in absolute time in 100ns
      * @param httpStatusCode HTTP status code
