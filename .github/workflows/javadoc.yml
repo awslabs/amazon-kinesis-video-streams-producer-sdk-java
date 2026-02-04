@@ -10,12 +10,11 @@ on:
       - master
       - develop
 
-permissions:
-  contents: write
-
 jobs:
   javadoc:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
