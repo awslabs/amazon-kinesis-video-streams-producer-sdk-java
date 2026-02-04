@@ -33,8 +33,8 @@ jobs:
       OUTPUT_ARTIFACTS_NAME: artifacts
 
     permissions:
-      id-token: write
-      contents: read
+      id-token: write  # Required for AWS OIDC authentication
+      contents: read   # Required to checkout code
 
     steps:
       - name: Checkout the repository

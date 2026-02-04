@@ -14,6 +14,8 @@ on:
 jobs:
   check-description:
     runs-on: macos-latest
+    permissions:
+      pull-requests: read  # Required to read PR description
     steps:
       - name: Install GitHub CLI
         run: |

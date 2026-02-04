@@ -15,8 +15,8 @@ jobs:
     if: ${{ github.repository == 'awslabs/amazon-kinesis-video-streams-producer-sdk-java' }}
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
-      contents: read
+      id-token: write  # Required for AWS OIDC authentication
+      contents: read   # Required to checkout code
 
     env:
       JAVA_LIBRARY_PATH: src/main/resources/lib/ubuntu/

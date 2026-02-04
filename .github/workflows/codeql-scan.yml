@@ -14,8 +14,8 @@ jobs:
     runs-on: 'ubuntu-latest'
 
     permissions:
-      security-events: write
-      packages: read
+      security-events: write  # Required to upload CodeQL results
+      packages: read          # Required to read package dependencies
 
     steps:
       - name: Checkout repository

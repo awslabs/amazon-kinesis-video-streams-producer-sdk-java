@@ -107,8 +107,8 @@ jobs:
 
     runs-on: ${{ matrix.platform.os }}
     permissions:
-      id-token: write
-      contents: read
+      id-token: write  # Required for AWS OIDC authentication
+      contents: read   # Required to checkout code
 
     steps:
       - name: Checkout the repository
@@ -156,8 +156,8 @@ jobs:
 
     runs-on: ${{ matrix.platform.os }}
     permissions:
-      id-token: write
-      contents: read
+      id-token: write  # Required for AWS OIDC authentication
+      contents: read   # Required to checkout code
 
     steps:
       - name: Checkout the repository
@@ -430,8 +430,7 @@ jobs:
     needs: [run-unit-tests, run-samples]
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
-      contents: write
+      contents: write  # Required to commit and push JNI files
 
     steps:
       - name: Checkout repository
