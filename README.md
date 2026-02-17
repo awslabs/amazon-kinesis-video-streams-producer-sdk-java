@@ -13,6 +13,10 @@
   <a href="#license">License</a>
 </p>
 
+<p align="center">
+	<a href="https://codecov.io/gh/awslabs/amazon-kinesis-video-streams-producer-sdk-java"> <img src="https://codecov.io/gh/awslabs/amazon-kinesis-video-streams-producer-sdk-java/branch/master/graph/badge.svg" alt="Coverage Status"> </a>
+</p>
+
 ## Introduction
 
 Amazon Kinesis Video Streams makes it easy to securely stream video from connected devices to AWS for analytics, machine learning (ML), and other processing.
