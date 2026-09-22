@@ -62,7 +62,10 @@ public final class KinesisVideoApacheHttpAsyncClient extends HttpClientBase {
 
     private CloseableHttpAsyncClient buildHttpAsyncClient() {
         try {
-            final SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+            // "TLS" negotiates the highest protocol version supported by both the JVM and the
+            // server (TLS 1.2 minimum on all supported JDKs). On JDK 27+ this enables TLS 1.3
+            // with hybrid post-quantum key exchange (X25519MLKEM768, JEP 527) automatically.
+            final SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, new X509ExtendedTrustManager[] {
                     new HostnameVerifyingX509ExtendedTrustManager(true)}, new SecureRandom());
 

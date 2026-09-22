@@ -89,11 +89,14 @@ public class SocketFactory {
      *
      * @param address The target {@link InetAddress}.
      * @param port    The port number.
-     * @return A secure {@link Socket} using TLSv1.2.
+     * @return A secure {@link Socket} using the highest TLS version supported by the JVM and server.
      * @throws Exception If an error occurs while creating the SSL socket.
      */
     private Socket createSslSocket(final InetAddress address, final int port) throws Exception {
-        final SSLContext context = SSLContext.getInstance("TLSv1.2");
+        // "TLS" negotiates the highest protocol version supported by both the JVM and the
+        // server (TLS 1.2 minimum on all supported JDKs). On JDK 27+ this enables TLS 1.3
+        // with hybrid post-quantum key exchange (X25519MLKEM768, JEP 527) automatically.
+        final SSLContext context = SSLContext.getInstance("TLS");
 
         // Skipping IP-based hostname verification to avoid unnecessary debug logs:
         // e.g. "Certificate for <x.x.x.x> doesn't match any of the subject alternative names: [s-1234abcd.kinesisvideo.us-west-2.amazonaws.com]"
