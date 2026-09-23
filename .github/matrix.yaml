@@ -10,6 +10,9 @@ matrix:
       name: windows-2022
   java:
     - 11
+    # JDK 27+ is where post-quantum TLS key exchange comes from (JEP 527).
+    # Running the suite on 27 guards the runtime that PQC customers will use.
+    - 27
   sample:
     - name: DemoAppMain
       expected_mkv_files: 1
