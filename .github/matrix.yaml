@@ -10,6 +10,13 @@ matrix:
       name: windows-2022
   java:
     - 11
+    # JDK 21 is the current LTS most customers run (classical TLS 1.3), so it
+    # runs the full matrix: unit, integration and samples. It has the
+    # SSLParameters.setNamedGroups API but no ML-KEM, so it runs the
+    # classical-fallback referee tests and their constraint control but skips
+    # the PQC assertions. JDK 11 has no named-group API (both skip); JDK 27
+    # runs the fallback tests too, plus the PQC assertions.
+    - 21
     # JDK 27+ is where post-quantum TLS key exchange comes from (JEP 527).
     # Running the suite on 27 guards the runtime that PQC customers will use.
     - 27
