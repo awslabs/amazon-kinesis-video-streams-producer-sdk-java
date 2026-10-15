@@ -287,6 +287,18 @@ If you receive an error like this when trying to use the JNI:
 
 The above error should not appear if you cloned the repository using `git clone`. Download the artifacts using `git clone`.
 
+## TLS and post-quantum cryptography
+
+The SDK negotiates the highest TLS protocol version supported by both your JVM and the service endpoint. The lowest version the SDK will accept is set by your JVM's `jdk.tls.disabledAlgorithms` security property, not by the SDK: current JDK 17+ releases disable TLS 1.0 and TLS 1.1 by default, but some JDK 11 builds still allow them. To enforce TLS 1.2 as the minimum on such a JVM, add `TLSv1, TLSv1.1` to `jdk.tls.disabledAlgorithms`.
+
+On **JDK 27 or later**, TLS 1.3 connections automatically offer hybrid post-quantum key exchange (`X25519MLKEM768`, ML-KEM per NIST FIPS 203, via [JEP 527](https://openjdk.org/jeps/527)) alongside classical key exchange. No SDK or application configuration is required: post-quantum key exchange is used when the service endpoint also supports it, with transparent fallback to classical key exchange otherwise. On earlier JDKs, connections use classical key exchange.
+
+Notes:
+
+* TLS in Java is provided by the JDK (JSSE), not by the SDK. The JDK version of the runtime determines the available TLS features, including post-quantum key exchange. Installing a JCA crypto provider such as Amazon Corretto Crypto Provider (ACCP) does not change TLS key exchange negotiation.
+* The offered key exchange groups can be inspected or overridden with the standard JDK system property `jdk.tls.namedGroups`.
+* Compliance obligations (e.g. FIPS 140-3, post-quantum readiness) that apply to your deployment are your responsibility under the AWS shared responsibility model; the JDK/JVM selection is part of your runtime environment.
+
 ## Development
 
 The repository is using `develop` branch as the aggregation and all of the feature development is done in appropriate feature branches. The PRs (Pull Requests) are cut on a feature branch and once approved with all the checks passed they can be merged by a click of a button on the PR tool. The master branch should always be build-able and all the tests should be passing. We are welcoming any contribution to the code base. The master branch contains our most recent release cycle from `develop`.
