@@ -1,0 +1,128 @@
+name: PQC key exchange drift check
+
+# Nightly guard for the post-quantum TLS path against the LIVE service.
+#
+# Per-PR CI proves the SDK's PQC capability offline (the referee tests), so a
+# service-side rollout cannot break unrelated pull requests. This workflow is the
+# strict counterpart: it pins the named group the SDK is expected to negotiate with
+# the KVS control plane today and fails on ANY change, in either direction:
+#   - a different group -> ML-KEM: the service changed its PQC posture; update the
+#     expectation (below);
+#   - ML-KEM -> classical: a silent fallback (SDK, JDK, or service regression);
+#     investigate before anything else.
+#
+# Java has no public API to read the negotiated group, so the probe pins the SDK's
+# socket to offer ONLY the expected group: a completed handshake proves the service
+# accepts it, a failed one is drift. The expected group is a repository variable
+# (Settings -> Secrets and variables -> Actions -> Variables), so the next
+# service-side flip is a settings change, not a code change. Default matches the
+# state observed on 2026-10-12:
+#   KVS_EXPECTED_CONTROL_PLANE_GROUP  default X25519MLKEM768
+#
+# The probe performs a TLS handshake only -- no request, no credentials.
+# On failure an issue labelled "pqc-drift" is opened (or the open one updated).
+
+on:
+  schedule:
+    - cron: '37 9 * * *'   # daily, 09:37 UTC
+  workflow_dispatch:
+    inputs:
+      control_plane_group:
+        description: 'Expected named group on the control plane (overrides the repository variable)'
+        required: false
+        default: ''
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    name: SDK SocketFactory vs live KVS control plane (JDK 27)
+    # A silently-dropping network path could hang the handshake; a cancelled job
+    # (6h default limit) would skip the if-failure issue step, so bound it here.
+    timeout-minutes: 30
+
+    env:
+      EXPECTED_CP: ${{ inputs.control_plane_group || vars.KVS_EXPECTED_CONTROL_PLANE_GROUP || 'X25519MLKEM768' }}
+      CONTROL_PLANE_HOST: ${{ vars.KVS_CONTROL_PLANE_HOST || 'kinesisvideo.us-west-2.amazonaws.com' }}
+
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 27
+          distribution: 'corretto'
+          cache: maven
+
+      - name: Offline referee (the SDK still offers ML-KEM regardless of the service)
+        run: |
+          # requireMlKem turns the ML-KEM tests' capability skips into failures: on this
+          # JDK 27 job a JVM without usable ML-KEM is an SDK/JDK regression, and must not
+          # pass here and then surface as service drift in the live probe below.
+          mvn -B test -Dtest='TlsKeyExchangeRefereeTest,TlsProtocolPolicyTest' -DfailIfNoTests=true \
+            -Dkvs.tls.requireMlKem=true
+
+      - name: Build the probe classpath
+        run: |
+          mvn -B -q test-compile dependency:build-classpath -Dmdep.outputFile=target/probe-classpath.txt
+
+      - name: Control plane probe (strict, pinned to the expected group)
+        run: |
+          # Without pipefail this step's status would be tee's, never the probe's.
+          set -o pipefail
+          echo "Expected control plane group: $EXPECTED_CP"
+          java -cp "target/test-classes:target/classes:$(cat target/probe-classpath.txt)" \
+            com.amazonaws.kinesisvideo.tls.SdkTlsHandshakeProbe \
+            "https://${CONTROL_PLANE_HOST}/" "$EXPECTED_CP" | tee probe-control-plane.log
+
+      - name: Control plane handshake (unpinned, the SDK's default offer)
+        run: |
+          set -o pipefail
+          java -cp "target/test-classes:target/classes:$(cat target/probe-classpath.txt)" \
+            com.amazonaws.kinesisvideo.tls.SdkTlsHandshakeProbe \
+            "https://${CONTROL_PLANE_HOST}/" | tee probe-unpinned.log
+          grep -q 'protocol=TLSv1.3' probe-unpinned.log
+
+      - name: Open or update the drift issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -e
+          # A pipeline's status is its last command's (sed), so defaults are applied on the result, not with ||
+          pinned_probe=$(grep 'SDK TLS PROBE' probe-control-plane.log 2>/dev/null | sed 's/^/    /')
+          unpinned_probe=$(grep 'SDK TLS PROBE' probe-unpinned.log 2>/dev/null | sed 's/^/    /')
+          [ -n "$pinned_probe" ] || pinned_probe="    (no probe output; the offline referee step may have failed first)"
+          [ -n "$unpinned_probe" ] || unpinned_probe="    (no probe output)"
+          title="PQC drift: KVS control plane key exchange no longer matches expected ($EXPECTED_CP)"
+          body=$(cat <<EOF
+          The nightly PQC key exchange drift check failed.
+
+          Expected: control plane \`$EXPECTED_CP\` (repository variable KVS_EXPECTED_CONTROL_PLANE_GROUP) on \`$CONTROL_PLANE_HOST\`, probed with the SDK's real SocketFactory on JDK 27.
+
+          Pinned probe (offers only the expected group; a failed handshake is drift):
+          $pinned_probe
+
+          Unpinned probe (the SDK's default offer; must negotiate TLSv1.3):
+          $unpinned_probe
+
+          Run: $RUN_URL
+
+          If KVS changed the group it negotiates on the control plane, update the repository variable. If the pinned probe moved from ML-KEM to classical, treat it as a silent fallback and investigate the SDK, the JDK, and the service. If the offline referee step failed, the regression is in the SDK or JDK, not the service.
+          EOF
+          )
+          # '// empty' matters: on an empty list '.[0].number' prints the string "null", which would pass -n
+          existing=$(gh issue list --label pqc-drift --state open --json number --jq '.[0].number // empty' || true)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+            echo "Updated issue #$existing"
+          else
+            gh label create pqc-drift --description "Nightly PQC key exchange drift check failed" --color D93F0B || true
+            gh issue create --title "$title" --label pqc-drift --body "$body"
+          fi

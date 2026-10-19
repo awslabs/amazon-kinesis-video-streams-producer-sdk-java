@@ -118,7 +118,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
-          distribution: 'adopt'
+          distribution: 'corretto'
           cache: maven
 
       - name: Download JNI Library
@@ -167,7 +167,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
-          distribution: 'adopt'
+          distribution: 'corretto'
           cache: maven
 
       - name: Set up Python 3.12
