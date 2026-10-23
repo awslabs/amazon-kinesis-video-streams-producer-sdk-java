@@ -5,6 +5,7 @@
 #define LOG_CLASS "KinesisVideoProducerJNI"
 #include "com/amazonaws/kinesis/video/producer/jni/com_amazonaws_kinesisvideo_internal_producer_jni_NativeKinesisVideoProducerJni.h"
 #include "com/amazonaws/kinesis/video/producer/jni/KinesisVideoClientWrapper.h"
+#include "com/amazonaws/kinesis/video/producer/jni/StreamManagerLeaseRegistry.h"
 
 // Used to detect version mismatches at runtime between the native interface library and the Java code that uses it.
 // This must match the value returned by EXPECTED_LIBRARY_VERSION in java JNI counterpart.
@@ -49,6 +50,15 @@ extern "C" {
 
         KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
 
+        // Stop new JNI calls from pinning the wrapper and wait for the in-flight ones to return. Deleting the
+        // wrapper while another thread holds or waits on its SyncMutex frees that mutex underneath the other
+        // thread and corrupts the heap.
+        if (pWrapper != NULL && !StreamManagerLeaseRegistry::drainAndRemove(handle)) {
+            DLOGE("Not freeing Kinesis Video client 0x%016" PRIx64 ": unknown handle, already being freed, or calls still in flight.",
+                  (UINT64) handle);
+            pWrapper = NULL;
+        }
+
         // Calling leave early since the logger is part of pWrapper.
         // Avoiding errors by logging after free
         LEAVE();
@@ -80,6 +90,9 @@ extern "C" {
         // Create the wrapper engine
         pWrapper = new KinesisVideoClientWrapper(env, thiz, deviceInfo);
 
+        // Make the handle usable by the other entry points
+        StreamManagerLeaseRegistry::add(TO_WRAPPER_HANDLE(pWrapper));
+
         // Returning the pointer as a handle
         retValue = (jlong) TO_WRAPPER_HANDLE(pWrapper);
 
@@ -99,7 +112,8 @@ CleanUp:
         DLOGI("Stopping Kinesis Video streams.");
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->stopKinesisVideoStreams();
@@ -118,7 +132,8 @@ CleanUp:
         DLOGI("Stopping Kinesis Video stream.");
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->stopKinesisVideoStream(streamHandle);
@@ -137,7 +152,8 @@ CleanUp:
         DLOGI("Stopping Kinesis Video stream.");
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->freeKinesisVideoStream(streamHandle);
@@ -156,7 +172,8 @@ CleanUp:
         DLOGS("Getting Kinesis Video metrics.");
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->getKinesisVideoMetrics(kinesisVideoMetrics);
@@ -175,7 +192,8 @@ CleanUp:
         DLOGS("Getting Kinesis Video stream metrics.");
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->getKinesisVideoStreamMetrics(streamHandle, kinesisVideoStreamMetrics);
@@ -195,7 +213,8 @@ CleanUp:
         DLOGI("Creating Kinesis Video stream.");
         CHECK(env != NULL && thiz != NULL && streamInfo != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             streamHandle = pWrapper->createKinesisVideoStream(streamInfo);
@@ -216,7 +235,8 @@ CleanUp:
         DLOGS("Putting Kinesis Video frame for stream 0x%016" PRIx64 ".", streamHandle);
         CHECK(env != NULL && thiz != NULL && kinesisVideoFrame != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->putKinesisVideoFrame(streamHandle, kinesisVideoFrame);
@@ -235,7 +255,8 @@ CleanUp:
         DLOGS("Putting Kinesis Video fragment metadata for stream 0x%016" PRIx64 ".", streamHandle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->putKinesisVideoFragmentMetadata(streamHandle, metadataName, metadataValue, persistent);
@@ -254,7 +275,8 @@ CleanUp:
         DLOGS("Putting Kinesis Video event metadata for stream 0x%016" PRIx64 ".", streamHandle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->putKinesisVideoEventMetadata(streamHandle, event, streamEventMetadata);
@@ -271,7 +293,8 @@ CleanUp:
         DLOGS("Reporting Kinesis Video fragment ack for stream 0x%016" PRIx64 ".", streamHandle);
         CHECK(env != NULL && thiz != NULL && fragmentAck != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->kinesisVideoStreamFragmentAck(streamHandle, uploadHandle, fragmentAck);
@@ -287,7 +310,8 @@ CleanUp:
         DLOGS("Parsing Kinesis Video fragment ack for stream 0x%016" PRIx64 ".", streamHandle);
         CHECK(env != NULL && thiz != NULL && ack != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->kinesisVideoStreamParseFragmentAck(streamHandle, uploadHandle, ack);
@@ -303,7 +327,8 @@ CleanUp:
         DLOGI("Describe stream event for handle 0x%016" PRIx64 ".", (UINT64) handle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->describeStreamResult(streamHandle, httpStatusCode, streamDescription);
@@ -319,7 +344,8 @@ CleanUp:
         DLOGI("get streaming endpoint event for handle 0x%016" PRIx64 ".", (UINT64) handle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->getStreamingEndpointResult(streamHandle, httpStatusCode, streamingEndpoint);
@@ -335,7 +361,8 @@ CleanUp:
         DLOGI("get streaming token event for handle 0x%016" PRIx64 ".", (UINT64) handle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->getStreamingTokenResult(streamHandle, httpStatusCode, (jbyteArray) streamingToken, tokenSize, tokenExpiration);
@@ -351,7 +378,8 @@ CleanUp:
         DLOGI("create stream event for handle 0x%016" PRIx64 ".", (UINT64) handle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->createStreamResult(streamHandle, httpStatusCode, streamArn);
@@ -367,7 +395,8 @@ CleanUp:
         DLOGI("put stream event for handle 0x%016" PRIx64 ".", (UINT64) handle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->putStreamResult(streamHandle, httpStatusCode, clientStreamHandle);
@@ -383,7 +412,8 @@ CleanUp:
         DLOGI("tag resource event for handle 0x%016" PRIx64 ".", (UINT64) handle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->tagResourceResult(customData, httpStatusCode);
@@ -400,7 +430,8 @@ CleanUp:
         DLOGS("get kinesis video stream data event for handle 0x%016" PRIx64 ".", (UINT64) handle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->getKinesisVideoStreamData(streamHandle, uploadHandle, dataBuffer, offset, length, readResult);
@@ -416,7 +447,8 @@ CleanUp:
         DLOGI("stream format changed event for handle 0x%016" PRIx64 ".", (UINT64) handle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->streamFormatChanged(streamHandle, codecPrivateData, trackId);
@@ -432,7 +464,8 @@ CleanUp:
         DLOGI("create device event for handle 0x%016" PRIx64 ".", (UINT64) handle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->createDeviceResult(deviceHandle, httpStatusCode, deviceArn);
@@ -448,7 +481,8 @@ CleanUp:
         DLOGI("device cert to token event for handle 0x%016" PRIx64 ".", (UINT64) handle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->deviceCertToTokenResult(deviceHandle, httpStatusCode, (jbyteArray) token, tokenSize, tokenExpiration);
@@ -464,7 +498,8 @@ CleanUp:
         DLOGI("Stream terminated event for handle 0x%016" PRIx64 ".", (UINT64) handle);
         CHECK(env != NULL && thiz != NULL);
 
-        KinesisVideoClientWrapper* pWrapper = FROM_WRAPPER_HANDLE(handle);
+        StreamManagerLease lease(handle);
+        KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
             SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
             pWrapper->kinesisVideoStreamTerminated(streamHandle, uploadHandle, httpStatusCode);

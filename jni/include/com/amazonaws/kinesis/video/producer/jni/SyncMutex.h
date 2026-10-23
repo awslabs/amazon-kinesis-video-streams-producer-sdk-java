@@ -50,6 +50,14 @@ public:
 
     ~SyncMutex()
     {
+        // Freeing a mutex that another thread still holds or waits on corrupts the heap later, far from the
+        // cause. Leave a breadcrumb on stderr; the JNI logger may already be gone at this point.
+        if (!MUTEX_TRYLOCK(mMutex)) {
+            fprintf(stderr, "SyncMutex '%s' destroyed while held by another thread\n", mMutexDescription);
+        } else {
+            MUTEX_UNLOCK(mMutex);
+        }
+
         MUTEX_FREE(mMutex);
         CVAR_FREE(mCondition);
     }
