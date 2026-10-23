@@ -23,7 +23,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -63,9 +62,15 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     public static final String EXPECTED_LIBRARY_VERSION = "1.14.0";
 
     /**
+     * How long free() and freeStream() wait for in-flight native calls before giving up and leaving the native object
+     * allocated
+     */
+    private static final long FREE_TIMEOUT_MS = 30000;
+
+    /**
      * The manifest handle will be set after call to parse()
      */
-    private long mClientHandle = INVALID_CLIENT_HANDLE_VALUE;
+    private volatile long mClientHandle = INVALID_CLIENT_HANDLE_VALUE;
 
     /**
      * Will store whether the library has been initialized
@@ -88,9 +93,17 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     private final Object mCallbackSyncObject = new Object();
 
     /**
-     * Keeps the mapping between the stream handle and the Kinesis Video stream object
+     * Keeps free() and freeStream() from releasing the native client or a stream while another thread is still inside a
+     * native call on it. Covers the calls that do not hold mSyncObject: putFrame, getStreamData,
+     * fragmentAck, metrics.
      */
-    private final Map<Long, KinesisVideoProducerStream> mKinesisVideoHandleMap = new HashMap<Long, KinesisVideoProducerStream>();
+    private final StreamManagerShutdownGuard mShutdownGuard = new StreamManagerShutdownGuard(FREE_TIMEOUT_MS);
+
+    /**
+     * Keeps the mapping between the stream handle and the Kinesis Video stream object. Concurrent because native
+     * callback threads read it without holding mSyncObject.
+     */
+    private final Map<Long, KinesisVideoProducerStream> mKinesisVideoHandleMap = new ConcurrentHashMap<Long, KinesisVideoProducerStream>();
 
     /**
      * Keeps track of handles that are ready in the Native side, but the Java object creation is still in progress for.
@@ -325,7 +338,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     public KinesisVideoMetrics getMetrics() throws ProducerException
     {
         Preconditions.checkState(isInitialized());
-        getKinesisVideoMetrics(mClientHandle, mKinesisVideoMetrics);
+        mShutdownGuard.callWithClient(() -> getKinesisVideoMetrics(mClientHandle, mKinesisVideoMetrics));
 
         return mKinesisVideoMetrics;
     }
@@ -339,6 +352,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     public void free() throws ProducerException
     {
         Preconditions.checkState(isInitialized());
+
+        // Rejects new calls on the client and its streams and waits for in-flight ones. Must not hold
+        // mSyncObject:
+        // an in-flight call can need it from a callback.
+        mShutdownGuard.closeClient();
+
         synchronized (mSyncObject) {
             freeKinesisVideoClient(mClientHandle);
             mClientHandle = INVALID_CLIENT_HANDLE_VALUE;
@@ -360,40 +379,46 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkNotNull(streamInfo);
         Preconditions.checkState(isInitialized());
 
-        synchronized (mSyncObject) {
-            Preconditions.checkState(streamInProgressStreamCallbacks == null && streamInProgressStreamInfo == null);
-            // Create the native stream
-            long streamHandle = INVALID_STREAM_HANDLE_VALUE;
-            try {
-                // KinesisVideoProducerStream hasn't been added into the map yet,
-                // the service callbacks need access to the streamInfo and the callbacks
-                streamInProgressStreamInfo = streamInfo;
-                streamInProgressStreamCallbacks = streamCallbacks;
+        final KinesisVideoProducerStream[] createdStream = new KinesisVideoProducerStream[1];
+        mShutdownGuard.callWithClient(() -> {
+            synchronized (mSyncObject) {
+                Preconditions.checkState(streamInProgressStreamCallbacks == null && streamInProgressStreamInfo == null);
+                // Create the native stream
+                long streamHandle = INVALID_STREAM_HANDLE_VALUE;
+                try {
+                    // KinesisVideoProducerStream hasn't been added into the map yet,
+                    // the service callbacks need access to the streamInfo and the callbacks
+                    streamInProgressStreamInfo = streamInfo;
+                    streamInProgressStreamCallbacks = streamCallbacks;
 
-                streamHandle = createKinesisVideoStream(mClientHandle, streamInfo);
+                    streamHandle = createKinesisVideoStream(mClientHandle, streamInfo);
 
-                final KinesisVideoProducerStream kinesisVideoProducerStream = new NativeKinesisVideoProducerStream(this,
-                        streamInfo,
-                        streamHandle,
-                        mLog,
-                        streamCallbacks,
-                        mDeviceInfo);
+                    final KinesisVideoProducerStream kinesisVideoProducerStream = new NativeKinesisVideoProducerStream(this,
+                            streamInfo,
+                            streamHandle,
+                            mLog,
+                            streamCallbacks,
+                            mDeviceInfo);
 
-                // Insert into the maps
-                mKinesisVideoHandleMap.put(streamHandle, kinesisVideoProducerStream);
+                    // Insert into the maps
+                    mKinesisVideoHandleMap.put(streamHandle, kinesisVideoProducerStream);
+                    mShutdownGuard.addStream(streamHandle);
 
-                return kinesisVideoProducerStream;
-            } catch (final Exception e) {
-                mLog.error("Encountered exception creating {}", streamInfo.getSummary(), e);
-                if (streamHandle != INVALID_CLIENT_HANDLE_VALUE) {
-                    freeKinesisVideoStream(mClientHandle, streamHandle);
+                    createdStream[0] = kinesisVideoProducerStream;
+                } catch (final Exception e) {
+                    mLog.error("Encountered exception creating {}", streamInfo.getSummary(), e);
+                    if (streamHandle != INVALID_CLIENT_HANDLE_VALUE) {
+                        freeKinesisVideoStream(mClientHandle, streamHandle);
+                    }
+                    throw e;
+                } finally {
+                    streamInProgressStreamInfo = null;
+                    streamInProgressStreamCallbacks = null;
                 }
-                throw e;
-            } finally {
-                streamInProgressStreamInfo = null;
-                streamInProgressStreamCallbacks = null;
             }
-        }
+        });
+
+        return createdStream[0];
     }
 
     /**
@@ -460,17 +485,21 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     public void freeStreams() throws ProducerException
     {
         Preconditions.checkState(isInitialized());
+        final Collection<KinesisVideoProducerStream> streamCollection;
         synchronized (mSyncObject) {
-            try {
-                final Collection<KinesisVideoProducerStream> streamCollection =
-                        new HashSet<KinesisVideoProducerStream>(mKinesisVideoHandleMap.values());
-                for (final KinesisVideoProducerStream stream : streamCollection) {
+            streamCollection = new HashSet<KinesisVideoProducerStream>(mKinesisVideoHandleMap.values());
+        }
 
-                    // Free the stream
-                    freeStream(stream);
-                }
-            } finally{
-                // Remove from the map
+        try {
+            for (final KinesisVideoProducerStream stream : streamCollection) {
+
+                // Free the stream. Not under mSyncObject: freeStream() waits for the stream's in-flight
+                // calls.
+                freeStream(stream);
+            }
+        } finally {
+            // Remove from the map
+            synchronized (mSyncObject) {
                 mKinesisVideoHandleMap.clear();
             }
         }
@@ -486,8 +515,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
             return;
         }
 
+        // Rejects new calls on this stream and waits for in-flight ones; the client's other streams keep running.
+        // Must not hold mSyncObject: an in-flight call can need it from a callback.
+        final long streamHandle = stream.getStreamHandle();
+        mShutdownGuard.closeStream(streamHandle);
+
         synchronized (mSyncObject) {
-            final long streamHandle = stream.getStreamHandle();
             mReadyStreamHandles.remove(streamHandle);
             stream.streamFreed();
             try {
@@ -495,6 +528,7 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
                 freeKinesisVideoStream(mClientHandle, streamHandle);
             } finally {
                 mKinesisVideoHandleMap.remove(streamHandle);
+                mShutdownGuard.removeStream(streamHandle);
             }
         }
     }
@@ -530,7 +564,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     {
         Preconditions.checkState(isInitialized());
 
-        getKinesisVideoStreamMetrics(mClientHandle, streamHandle, streamMetrics);
+        mShutdownGuard.callWithStream(streamHandle,
+                () -> getKinesisVideoStreamMetrics(mClientHandle, streamHandle, streamMetrics));
     }
 
     /**
@@ -546,7 +581,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkNotNull(kinesisVideoFrame);
         Preconditions.checkArgument(mKinesisVideoHandleMap.containsKey(streamHandle), "StreamHandle 0x" + Long.toHexString(streamHandle) + " is not valid!");
 
-        putKinesisVideoFrame(mClientHandle, streamHandle, kinesisVideoFrame);
+        mShutdownGuard.callWithStream(streamHandle,
+                () -> putKinesisVideoFrame(mClientHandle, streamHandle, kinesisVideoFrame));
     }
 
     /**
@@ -565,7 +601,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkNotNull(metadataName);
         Preconditions.checkNotNull(metadataValue);
 
-        putKinesisVideoFragmentMetadata(mClientHandle, streamHandle, metadataName, metadataValue, persistent);
+        mShutdownGuard.callWithStream(streamHandle, () -> putKinesisVideoFragmentMetadata(mClientHandle, streamHandle,
+                metadataName, metadataValue, persistent));
     }
 
     /**
@@ -584,7 +621,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     {
         Preconditions.checkState(isInitialized());
         Preconditions.checkArgument(event >= 0);
-        putKinesisVideoEventMetadata(mClientHandle, streamHandle, event, streamEventMetadata);
+        mShutdownGuard.callWithStream(streamHandle,
+                () -> putKinesisVideoEventMetadata(mClientHandle, streamHandle, event, streamEventMetadata));
     }
 
     /**
@@ -599,7 +637,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkState(isInitialized());
         Preconditions.checkNotNull(kinesisVideoFragmentAck);
 
-        kinesisVideoStreamFragmentAck(mClientHandle, streamHandle, uploadHandle, kinesisVideoFragmentAck);
+        mShutdownGuard.callWithStream(streamHandle, () -> kinesisVideoStreamFragmentAck(mClientHandle, streamHandle,
+                uploadHandle, kinesisVideoFragmentAck));
     }
 
     /**
@@ -614,7 +653,9 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkState(isInitialized());
         Preconditions.checkNotNull(kinesisVideoFragmentAck);
 
-        kinesisVideoStreamParseFragmentAck(mClientHandle, streamHandle, uploadHandle, kinesisVideoFragmentAck);
+        mShutdownGuard.callWithStream(streamHandle, () -> kinesisVideoStreamParseFragmentAck(mClientHandle,
+                streamHandle,
+                uploadHandle, kinesisVideoFragmentAck));
     }
 
     /**
@@ -641,8 +682,8 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
         Preconditions.checkNotNull(fillBuffer);
         Preconditions.checkNotNull(readResult);
 
-        getKinesisVideoStreamData(mClientHandle, streamHandle, uploadHandle, fillBuffer, offset, length,
-                readResult);
+        mShutdownGuard.callWithStream(streamHandle, () -> getKinesisVideoStreamData(mClientHandle, streamHandle,
+                uploadHandle, fillBuffer, offset, length, readResult));
     }
 
     /**
@@ -951,9 +992,13 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
 
     @Override
     public void createStreamResult(@Nonnull KinesisVideoProducerStream stream, @Nullable String streamArn, int httpStatusCode) throws ProducerException {
-        synchronized (mCallbackSyncObject) {
-            createStreamResultEvent(mClientHandle, stream.getStreamHandle(), httpStatusCode, streamArn);
-        }
+        // Holds only mCallbackSyncObject, not mSyncObject, so free() could otherwise run underneath
+        // it
+        mShutdownGuard.callWithClient(() -> {
+            synchronized (mCallbackSyncObject) {
+                createStreamResultEvent(mClientHandle, stream.getStreamHandle(), httpStatusCode, streamArn);
+            }
+        });
     }
 
     /**
