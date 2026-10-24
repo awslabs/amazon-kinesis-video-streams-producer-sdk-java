@@ -6,6 +6,8 @@
 
 #include "com/amazonaws/kinesis/video/producer/jni/KinesisVideoClientWrapper.h"
 
+#include <atomic>
+
 KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
                                          jobject thiz,
                                          jobject deviceInfo): mClientHandle(INVALID_CLIENT_HANDLE_VALUE)
@@ -17,7 +19,9 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
     // Double-checked locking pattern to prevent race condition in globalCustomLogPrintFn assignment
     // The first successful client will set the global logPrintFn in PIC's inputValidator to this static logPrintFunc
     static std::mutex clientCreationMutex;
-    bool firstClientCreated = ClientRegistry::getInstance().getCurrentNumberClients() > 0;
+    // Not the registry's count: clients are registered before PIC creates them, so they can log their creation
+    static std::atomic<bool> logFunctionSet(false);
+    bool firstClientCreated = logFunctionSet.load();
 
     // Fast path: if first client already created, proceed without locking
     std::unique_lock<std::mutex> lock(clientCreationMutex, std::defer_lock);
@@ -47,19 +51,23 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
         return;
     }
 
+    // Register every client, not just the first: PIC has one log function for the whole process, and logPrintFunc
+    // sends its lines through the oldest live client. With only the first client registered, every PIC log line was
+    // dropped once that client was freed, even while other clients were still running. Registering before PIC creates
+    // the client keeps the lines PIC logs while creating it; the first client's used to be dropped.
+    clientRegistryInfo = ClientRegistry::getInstance().addClient(this); // Note: 'this' cannot be null
+    mJVMContext.clientId = clientRegistryInfo.second;
+
     // Creating the client object might return an error as well so freeing potentially allocated tags right after the call.
     retStatus = createKinesisVideoClient(&mDeviceInfo, &mClientCallbacks, &mClientHandle);
-    if (STATUS_SUCCEEDED(retStatus)) {
-        // Register every client, not just the first: PIC has one log function for the whole process, and logPrintFunc
-        // sends its lines through the oldest live client. With only the first client registered, every PIC log line
-        // was dropped once that client was freed, even while other clients were still running.
-        clientRegistryInfo = ClientRegistry::getInstance().addClient(this); // Note: 'this' cannot be null
-        mJVMContext.clientId = clientRegistryInfo.second;
-    }
     releaseTags(mDeviceInfo.tags);
     if (STATUS_FAILED(retStatus)) {
+        ClientRegistry::getInstance().removeClient(this);
         throwNativeException(env, EXCEPTION_NAME, "Failed to create Kinesis Video client.", retStatus);
         return;
+    }
+    if (isFirstClient) {
+        logFunctionSet.store(true);
     }
 
     // Auxiliary initialization
