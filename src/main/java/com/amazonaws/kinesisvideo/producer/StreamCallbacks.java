@@ -9,6 +9,10 @@ import javax.annotation.Nonnull;
  * These will be used to report various stream latency pressures and
  * report dropped frames.
  *
+ * <p>The producer calls these on its callback thread, one per client, in the order the events happened, after the native
+ * call that raised them has returned and with no SDK or PIC lock held. Implementations may call any producer API from
+ * them, including stop and free; a slow callback delays only the client's later callbacks.</p>
+ *
  *
  */
 public interface StreamCallbacks

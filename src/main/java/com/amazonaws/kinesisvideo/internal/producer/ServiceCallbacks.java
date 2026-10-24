@@ -15,6 +15,11 @@ import javax.annotation.Nullable;
  * These will be used for scheduling and managing
  * the service calls.
  *
+ * <p>The producer calls these on its callback thread, one per client, in the order the events happened, after the native
+ * call that raised them has returned and with no SDK or PIC lock held. Implementations may call any producer API from
+ * them, including stop and free; a slow callback delays only the client's later callbacks.</p>
+ * <p>A method that throws is reported to PIC as a failed service call, which PIC retries.</p>
+ *
  *
  */
 public interface ServiceCallbacks

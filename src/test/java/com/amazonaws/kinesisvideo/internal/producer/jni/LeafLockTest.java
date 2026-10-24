@@ -47,6 +47,7 @@ public class LeafLockTest
 {
     private static final Logger log = LogManager.getLogger(LeafLockTest.class);
     private static final long WAIT_MS = 10000;
+    private static final int STATUS_DUPLICATE_STREAM_NAME = 0x5200004b;
 
     private ExecutorService mServiceExecutor;
     private ExecutorService mWorkers;
@@ -123,7 +124,10 @@ public class LeafLockTest
             producer.createStream(OfflineCallbacks.streamInfo("leaf-duplicate"), new DefaultStreamCallbacks());
             fail("A second createStream for a stream that is being created must be rejected");
         } catch (final ProducerException expected) {
-            assertTrue(expected.getMessage(), expected.getMessage().contains("already being created"));
+            // Rejected by the pending-stream check while the first call is inside the native call, or by PIC itself
+            // (duplicate stream name) once the first call has returned and its DescribeStream runs elsewhere
+            assertTrue(expected.getMessage(), expected.getMessage().contains("already being created")
+                    || expected.getStatusCode() == STATUS_DUPLICATE_STREAM_NAME);
         } finally {
             release.countDown();
         }

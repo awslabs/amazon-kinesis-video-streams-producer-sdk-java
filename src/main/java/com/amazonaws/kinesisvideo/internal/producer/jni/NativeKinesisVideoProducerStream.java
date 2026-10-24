@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Implementation of {@link KinesisVideoProducerStream}
@@ -197,6 +198,8 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     private final Logger mLog;
     private final KinesisVideoStreamMetrics mStreamMetrics;
     private final Map<Long, NativeDataInputStream> mInputStreamMap;
+    private final AtomicBoolean mDataAvailableQueued = new AtomicBoolean();
+    private final AtomicReference<long[]> mLatestDataAvailable = new AtomicReference<long[]>();
 
     public NativeKinesisVideoProducerStream(final @Nonnull NativeKinesisVideoProducerJni kinesisVideoProducerJni,
                                             final @Nonnull StreamInfo streamInfo,
@@ -357,6 +360,16 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         return mStreamHandle;
     }
 
+    /**
+     * Runs an application callback on the client's callback thread, with no native lock held
+     */
+    private void toApp(final String name, final CallbackDispatcher.Callback callback)
+    {
+        if (mStreamCallbacks != null) {
+            mKinesisVideoProducerJni.dispatchCallback(name, callback);
+        }
+    }
+
     @Override
     public void streamFreed() throws ProducerException {
         mLog.debug("{} Stream Freed.", mStreamInfo.getSummary());
@@ -367,58 +380,44 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     @Override
     public void streamUnderflowReport() throws ProducerException
     {
-        if (mStreamCallbacks != null) {
-            mStreamCallbacks.streamUnderflowReport();
-        }
+        toApp("streamUnderflowReport", () -> mStreamCallbacks.streamUnderflowReport());
     }
 
     @Override
     public void streamLatencyPressure(final long duration) throws ProducerException
     {
-        if (mStreamCallbacks != null) {
-            mStreamCallbacks.streamLatencyPressure(duration);
-        }
+        toApp("streamLatencyPressure", () -> mStreamCallbacks.streamLatencyPressure(duration));
     }
 
     @Override
     public void streamConnectionStale(final long lastAckDuration) throws ProducerException
     {
-        if (mStreamCallbacks != null) {
-            mStreamCallbacks.streamConnectionStale(lastAckDuration);
-        }
+        toApp("streamConnectionStale", () -> mStreamCallbacks.streamConnectionStale(lastAckDuration));
     }
 
     @Override
     public void fragmentAckReceived(final long uploadHandle,
                                     @Nonnull final KinesisVideoFragmentAck fragmentAck) throws ProducerException
     {
-        if (mStreamCallbacks != null) {
-            mStreamCallbacks.fragmentAckReceived(uploadHandle, fragmentAck);
-        }
+        toApp("fragmentAckReceived", () -> mStreamCallbacks.fragmentAckReceived(uploadHandle, fragmentAck));
     }
 
     @Override
     public void droppedFrameReport(final long frameTimecode) throws ProducerException
     {
-        if (mStreamCallbacks != null) {
-            mStreamCallbacks.droppedFrameReport(frameTimecode);
-        }
+        toApp("droppedFrameReport", () -> mStreamCallbacks.droppedFrameReport(frameTimecode));
     }
 
     @Override
     public void droppedFragmentReport(final long fragmentTimecode) throws ProducerException
     {
-        if (mStreamCallbacks != null) {
-            mStreamCallbacks.droppedFragmentReport(fragmentTimecode);
-        }
+        toApp("droppedFragmentReport", () -> mStreamCallbacks.droppedFragmentReport(fragmentTimecode));
     }
 
     @Override
     public void streamErrorReport(final long uploadHandle, final long fragmentTimecode, final long statusCode) throws ProducerException
     {
-        if (mStreamCallbacks != null) {
-            mStreamCallbacks.streamErrorReport(uploadHandle, fragmentTimecode, statusCode);
-        }
+        toApp("streamErrorReport", () -> mStreamCallbacks.streamErrorReport(uploadHandle, fragmentTimecode, statusCode));
     }
 
     @Override
@@ -432,8 +431,16 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
             mLog.warn("Data available notification for non-existing uploadHandle {}", uploadHandle);
         }
 
+        // One per frame: coalesce, so a slow application callback cannot grow the queue without bound
         if (mStreamCallbacks != null) {
-            mStreamCallbacks.streamDataAvailable(uploadHandle, duration, availableSize);
+            mLatestDataAvailable.set(new long[] {uploadHandle, duration, availableSize});
+            if (mDataAvailableQueued.compareAndSet(false, true)) {
+                mKinesisVideoProducerJni.dispatchCallback("streamDataAvailable", () -> {
+                    mDataAvailableQueued.set(false);
+                    final long[] latest = mLatestDataAvailable.get();
+                    mStreamCallbacks.streamDataAvailable(latest[0], latest[1], latest[2]);
+                });
+            }
         }
     }
 
@@ -444,9 +451,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         // Release the ready latch
         mReadyLatch.countDown();
 
-        if (mStreamCallbacks != null) {
-            mStreamCallbacks.streamReady();
-        }
+        toApp("streamReady", () -> mStreamCallbacks.streamReady());
     }
 
     @Override
@@ -458,9 +463,8 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
             for (final Map.Entry<Long, NativeDataInputStream> stream : mInputStreamMap.entrySet()) {
                 try {
                     stream.getValue().close();
-                    if (mStreamCallbacks != null) {
-                        mStreamCallbacks.streamClosed(stream.getKey());
-                    }
+                    final long closedUploadHandle = stream.getKey();
+                    toApp("streamClosed", () -> mStreamCallbacks.streamClosed(closedUploadHandle));
                 } catch (final IOException e) {
                     mLog.error("stream close failed with exception ", e);
                 }
@@ -483,17 +487,13 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
             // Release the stopped latch
             mStoppedLatch.countDown();
 
-            if (mStreamCallbacks != null) {
-                mStreamCallbacks.streamClosed(uploadHandle);
-            }
+            toApp("streamClosed", () -> mStreamCallbacks.streamClosed(uploadHandle));
         }
     }
 
     @Override
     public void bufferDurationOverflowPressure(final long remainDuration) throws ProducerException {
-        if (mStreamCallbacks != null) {
-            mStreamCallbacks.bufferDurationOverflowPressure(remainDuration);
-        }
+        toApp("bufferDurationOverflowPressure", () -> mStreamCallbacks.bufferDurationOverflowPressure(remainDuration));
     }
 
     /**
@@ -530,9 +530,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         if (readyStreamHandles.remove(this.mStreamHandle)) {
             mLog.info("Stream {} (handle=0x{}) is already ready", this.mStreamInfo.getSummary(), Long.toHexString(this.mStreamHandle));
             mReadyLatch.countDown();
-            if (mStreamCallbacks != null) {
-                mStreamCallbacks.streamReady();
-            }
+            toApp("streamReady", () -> mStreamCallbacks.streamReady());
             return;
         }
 
@@ -549,9 +547,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                 if (readyStreamHandles.remove(this.mStreamHandle)) {
                     mLog.info("Stream {} (handle=0x{}) became already ready", this.mStreamInfo.getSummary(), Long.toHexString(this.mStreamHandle));
                     mReadyLatch.countDown();
-                    if (mStreamCallbacks != null) {
-                        mStreamCallbacks.streamReady();
-                    }
+                    toApp("streamReady", () -> mStreamCallbacks.streamReady());
                     return;
                 }
             }

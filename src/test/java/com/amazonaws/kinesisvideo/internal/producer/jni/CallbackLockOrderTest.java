@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -42,6 +41,7 @@ import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_KEY_FRAM
 import static com.amazonaws.kinesisvideo.producer.FrameFlags.FRAME_FLAG_NONE;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.HTTP_OK;
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.VERSION_ZERO;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -92,21 +92,36 @@ public class CallbackLockOrderTest
     }
 
     /**
-     * Thread A delivers the streaming token of one stream. It holds mSyncObject and the native client
-     * lock while PIC
-     * moves the stream to READY and calls streamReady, which takes mCallbackSyncObject. Thread B delivers the
-     * CreateStream result of another stream. If createStreamResult holds mCallbackSyncObject while it calls into
-     * native
-     * code, B holds the lock A is waiting for and waits for the native client lock that A holds.
+     * Thread A delivers the streaming token of one stream, and PIC moves that stream to READY and calls streamReady on
+     * A, inside the native call. The application's streamReady callback is slow (paused here). Thread B delivers the
+     * CreateStream result of another stream.
+     *
+     * Before the callback dispatcher, the application callback ran on A while A held the native client lock, so B, and
+     * every other call on the client, waited for the application. With v1.14.0's lock order they deadlocked. Now the
+     * application callback runs on the client's callback thread: A returns at once and B goes through.
      */
     @Test(timeout = 60000)
-    public void createStreamResultDoesNotDeadlockWithStreamReady() throws Exception
+    public void createStreamResultDoesNotWaitForASlowStreamReadyCallback() throws Exception
     {
         final HoldingServiceCallbacks serviceCallbacks = new HoldingServiceCallbacks(mServiceExecutor, mWorkers);
         final NativeKinesisVideoProducerJni producer = createProducer(serviceCallbacks);
+        final CountDownLatch inAppCallback = new CountDownLatch(1);
+        final CountDownLatch releaseAppCallback = new CountDownLatch(1);
+        final StreamCallbacks slowReady = new DefaultStreamCallbacks() {
+            @Override
+            public void streamReady() throws ProducerException
+            {
+                inAppCallback.countDown();
+                try {
+                    releaseAppCallback.await();
+                } catch (final InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        };
 
         // One stream stops just before READY, the other one waits for its CreateStream result
-        producer.createStream(OfflineCallbacks.streamInfo(READY_STREAM, false), new DefaultStreamCallbacks());
+        producer.createStream(OfflineCallbacks.streamInfo(READY_STREAM, false), slowReady);
         producer.createStream(OfflineCallbacks.streamInfo(CREATED_STREAM, true), new DefaultStreamCallbacks());
         final Runnable deliverToken = serviceCallbacks.mHeldToken.poll(WAIT_MS, TimeUnit.MILLISECONDS);
         final Runnable deliverCreateResult = serviceCallbacks.mHeldCreateResult.poll(WAIT_MS, TimeUnit.MILLISECONDS);
@@ -117,19 +132,18 @@ public class CallbackLockOrderTest
         a.setName("A-getStreamingTokenResult");
         final Thread b = daemon(deliverCreateResult);
         b.setName("B-createStreamResult");
-
-        synchronized (lockOf(producer, "mCallbackSyncObject")) {
+        try {
             a.start();
-            awaitBlocked(a, "streamReady");
+            assertTrue("The application's streamReady callback never ran",
+                    inAppCallback.await(WAIT_MS, TimeUnit.MILLISECONDS));
             b.start();
-            // Before the lock-order fix B blocks on a Java monitor; without Java locks it waits inside native code
-            awaitWaiting(b, "createStreamResult", "createStreamResultEvent");
-        }
-
-        a.join(WAIT_MS);
-        b.join(WAIT_MS);
-        if (a.isAlive() || b.isAlive()) {
-            fail("Deadlock between the token result and createStreamResult:\n" + describe(a) + describe(b));
+            a.join(WAIT_MS);
+            b.join(WAIT_MS);
+            if (a.isAlive() || b.isAlive()) {
+                fail("Calls waited for the application's callback:\n" + describe(a) + describe(b));
+            }
+        } finally {
+            releaseAppCallback.countDown();
         }
 
         producer.freeStreams();
@@ -138,12 +152,13 @@ public class CallbackLockOrderTest
 
     /**
      * A ServiceCallbacks implementation answers PutStream synchronously, from inside the callback. The first putFrame
-     * after a stream is ready makes PIC call putStream on the putFrame thread, which holds the native client lock but
-     * not mSyncObject, and putStreamResult then needs mSyncObject. Thread Q stops another
-     * stream while the callback is
-     * still working out its answer: Q holds mSyncObject and needs the native client lock. A result
-     * delivered from inside
-     * a callback now runs after the callback returns.
+     * after a stream is ready makes PIC call putStream on the putFrame thread, which holds the native client lock. Thread
+     * Q stops another stream while the callback is still working out its answer.
+     *
+     * Before the fixes, putStreamResult needed mSyncObject on the putFrame thread while Q held
+     * mSyncObject and needed
+     * the native lock: a deadlock. Now ServiceCallbacks run on the client's callback thread, where an immediate answer is
+     * an ordinary call, and the putFrame thread returns at once.
      */
     @Test(timeout = 60000)
     public void synchronousResultFromAPutFrameCallbackDoesNotDeadlock() throws Exception
@@ -195,7 +210,11 @@ public class CallbackLockOrderTest
      * the SDK's media sources implement stop() with stopStreamSync(). PIC calls fragmentAckReceived on the thread that
      * delivers the ack, inside parseFragmentAck, so that thread holds the native client lock while stopStreamSync() waits
      * for the stream to close. Closing needs getStreamData, which needs the same lock, so the wait could only time out,
-     * with every other stream of the client blocked until it did. From inside a callback it now only starts the stop.
+     * with every other stream of the client blocked until it did. Now the application callback runs on the client's
+     * callback thread, which holds no native lock: the ack thread returns at once and the other streams carry on.
+     *
+     * This harness never sends PERSISTED acks, and PIC reports a stream closed only after the last one, so
+     * stopStreamSync() itself still waits for its timeout here, on the callback thread.
      */
     @Test(timeout = 120000)
     public void stoppingAStreamFromItsAckCallbackDoesNotStallTheOtherStreams() throws Exception
@@ -210,8 +229,11 @@ public class CallbackLockOrderTest
                     throws ProducerException
             {
                 final long start = System.currentTimeMillis();
-                streamToStop.get().stopStreamSync();
-                stopMillis.set(System.currentTimeMillis() - start);
+                try {
+                    streamToStop.get().stopStreamSync();
+                } finally {
+                    stopMillis.set(System.currentTimeMillis() - start);
+                }
             }
         };
         final KinesisVideoProducerStream acked = producer.createStreamSync(
@@ -246,54 +268,55 @@ public class CallbackLockOrderTest
             }
         });
         ackThread.setName("ack-consumer");
+        final long ackStart = System.currentTimeMillis();
         ackThread.start();
         ackThread.join(60000);
-        Thread.sleep(500);
+        final long ackMillis = System.currentTimeMillis() - ackStart;
+        Thread.sleep(2500);
         stop.set(true);
         ackedPublisher.join(WAIT_MS);
         otherPublisher.join(WAIT_MS);
 
         log.info("stopStreamSync from the ack callback took {} ms; the other stream accepted no frame for {} ms",
                 stopMillis.get(), longestGapMs.get());
-        assertTrue("stopStreamSync from the ack callback took " + stopMillis.get() + " ms and the other stream "
-                + "accepted no frame for " + longestGapMs.get() + " ms", longestGapMs.get() < 2000);
-        assertTrue("stopStreamSync from the ack callback waited " + stopMillis.get() + " ms",
-                stopMillis.get() >= 0 && stopMillis.get() < 2000);
+        assertTrue("parseFragmentAck took " + ackMillis + " ms and the other stream accepted no frame for "
+                + longestGapMs.get() + " ms", longestGapMs.get() < 2000 && ackMillis < 2000);
 
         producer.freeStreams();
         producer.free();
     }
 
     /**
-     * PIC calls streamReady on the thread that delivers the streaming token, inside the native call and on the stream
-     * PIC is still working on. Freeing from there would free the stream, or the client, under PIC, so it is rejected.
+     * The application frees the client from its streamReady callback. Before the callback dispatcher that ran on the
+     * thread delivering the streaming token, inside the native call, so it freed the client under PIC (with B1 + B2 it
+     * waited 30 s for its own call and leaked the client; phase 1 rejected it). Application callbacks now run on the
+     * client's callback thread, so freeing from one is an ordinary call.
      */
     @Test(timeout = 60000)
-    public void freeFromInsideACallbackIsRejected() throws Exception
+    public void freeFromAnApplicationCallbackIsSafe() throws Exception
     {
         final NativeKinesisVideoProducerJni producer = createProducer(new OfflineCallbacks.Service(mServiceExecutor, mWorkers));
-        final AtomicReference<Throwable> fromFree = new AtomicReference<Throwable>();
         final AtomicReference<Throwable> fromFreeStreams = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> fromFree = new AtomicReference<Throwable>();
+        final AtomicReference<String> callbackThread = new AtomicReference<String>();
         final CountDownLatch called = new CountDownLatch(1);
         final StreamCallbacks freeOnReady = new DefaultStreamCallbacks() {
             @Override
             public void streamReady() throws ProducerException
             {
-                fromFree.set(attempt(producer::free));
+                callbackThread.set(Thread.currentThread().getName());
                 fromFreeStreams.set(attempt(producer::freeStreams));
+                fromFree.set(attempt(producer::free));
                 called.countDown();
             }
         };
 
         producer.createStreamSync(OfflineCallbacks.streamInfo(OTHER_STREAM, false), freeOnReady);
         assertTrue("streamReady was never called", called.await(WAIT_MS, TimeUnit.MILLISECONDS));
-        assertTrue("free() from streamReady: " + fromFree.get(), fromFree.get() instanceof IllegalStateException);
-        assertTrue("freeStreams() from streamReady: " + fromFreeStreams.get(),
-                fromFreeStreams.get() instanceof IllegalStateException);
-
-        // Both still work from a thread of the application's own
-        producer.freeStreams();
-        producer.free();
+        assertEquals("KinesisVideoProducer-callbacks", callbackThread.get());
+        assertEquals("freeStreams() from streamReady", null, fromFreeStreams.get());
+        assertEquals("free() from streamReady", null, fromFree.get());
+        assertTrue("The client is still allocated", !producer.isInitialized());
     }
 
     private interface ProducerCall
@@ -482,13 +505,6 @@ public class CallbackLockOrderTest
         }
     }
 
-    private static Object lockOf(final NativeKinesisVideoProducerJni producer, final String fieldName) throws Exception
-    {
-        final Field field = NativeKinesisVideoProducerJni.class.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        return field.get(producer);
-    }
-
     /**
      * Waits until the thread is blocked on a monitor inside the given NativeKinesisVideoProducerJni method.
      */
@@ -526,12 +542,16 @@ public class CallbackLockOrderTest
     }
 
     /**
-     * Waits until the thread is inside the given native method, then gives it time to block on the native lock.
+     * Waits until the thread is inside the given native method, then gives it time to block on the native lock. Returns
+     * at once if the thread has finished, since then it did not have to wait.
      */
     private static void awaitIn(final Thread thread, final String method) throws InterruptedException
     {
         final long deadline = System.currentTimeMillis() + WAIT_MS;
         while (!isIn(thread, method)) {
+            if (!thread.isAlive()) {
+                return;
+            }
             if (System.currentTimeMillis() > deadline) {
                 fail(thread.getName() + " never reached " + method + ":\n" + describe(thread));
             }
