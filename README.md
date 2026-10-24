@@ -154,6 +154,22 @@ Log levels to PIC equivalents:
 * `WARN` = 4 -- `LOG_LEVEL_WARN`
 * `ERROR` = 5+ -- `LOG_LEVEL_ERROR`
 
+##### One log file per client and per stream
+
+The SDK tags each thread's log4j2 `ThreadContext` with the client and stream it is working for, around every native call
+and callback, so PIC's lines are tagged as well as the SDK's. `log4j2-per-stream.xml` uses the tags to write
+`logs/client_001.log` (creating and freeing the client), `logs/stream_001.log`, `logs/stream_002.log`, ... (one per
+stream: creation, PIC's state machine, PutMedia, acks, callbacks, stop and free) and `logs/kvs.log` (everything else).
+Clients and streams are numbered in creation order across the process.
+
+```sh
+-Dlog4j.configurationFile=log4j2-per-stream.xml -Dkvs.logDir=logs -Dkvs.logLevel=DEBUG
+```
+
+PIC only sends lines at or above the `ClientInfo` log level, so lower that too to get PIC's DEBUG lines. The keys are
+`kvsLogFile`, `kvsClient` and `kvsStreamName`; use `%X{kvsStreamName}` in any pattern. Disable the tagging with
+`-Dkvs.logContext=false`.
+
 ##### Run API and functionality tests
 ```sh
 mvn clean test -DargLine="\

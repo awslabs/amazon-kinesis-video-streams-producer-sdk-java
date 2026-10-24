@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Writes each Kinesis Video client's and each stream's log lines, from the SDK and from PIC alike, to files of their
+    own:
+
+        logs/client_001.log   client creation, service calls made for the client, freeing it
+        logs/stream_001.log   one stream: creation, its PIC state machine, PutMedia, acks, callbacks, stop and free
+        logs/stream_002.log
+        logs/kvs.log          everything else: application code, AWS SDK internals, and PIC lines logged on PIC's
+                              timer thread outside any client or stream callback
+
+    Clients and streams are numbered in creation order across the process. Each line also shows its client and stream
+    name. Use with -Dlog4j.configurationFile=log4j2-per-stream.xml; set the directory with -Dkvs.logDir=... and the level
+    with -Dkvs.logLevel=DEBUG. PIC only sends lines at or above the ClientInfo log level, so lower that too to get PIC's
+    DEBUG lines.
+
+    The SDK sets the ThreadContext keys kvsLogFile, kvsClient and kvsStreamName (see LogContext); application code can
+    log with %X{kvsStreamName} too.
+-->
+<Configuration status="WARN">
+    <Properties>
+        <Property name="logDir">${sys:kvs.logDir:-logs}</Property>
+        <Property name="logLevel">${sys:kvs.logLevel:-INFO}</Property>
+        <Property name="pattern">%d [%t] %-5level %c{1.} [%X{kvsClient} %X{kvsStreamName}] - %msg%n%throwable</Property>
+    </Properties>
+
+    <Appenders>
+        <Routing name="PerClientAndStream">
+            <Routes pattern="$${ctx:kvsLogFile}">
+                <!-- Lines with no client or stream tag: the lookup is left unresolved -->
+                <Route key="$${ctx:kvsLogFile}">
+                    <RollingFile name="kvs" fileName="${logDir}/kvs.log" filePattern="${logDir}/kvs-%i.log.gz">
+                        <PatternLayout pattern="${pattern}"/>
+                        <SizeBasedTriggeringPolicy size="50 MB"/>
+                        <DefaultRolloverStrategy max="5"/>
+                    </RollingFile>
+                </Route>
+                <Route>
+                    <RollingFile name="kvs-${ctx:kvsLogFile}" fileName="${logDir}/${ctx:kvsLogFile}.log"
+                                 filePattern="${logDir}/${ctx:kvsLogFile}-%i.log.gz">
+                        <PatternLayout pattern="${pattern}"/>
+                        <SizeBasedTriggeringPolicy size="50 MB"/>
+                        <DefaultRolloverStrategy max="5"/>
+                    </RollingFile>
+                </Route>
+            </Routes>
+            <!-- Closes the files of streams that have stopped logging; a file reopens, appending, if its stream logs again -->
+            <IdlePurgePolicy timeToLive="10" timeUnit="minutes"/>
+        </Routing>
+
+        <Console name="Console" target="SYSTEM_OUT">
+            <ThresholdFilter level="WARN"/>
+            <PatternLayout pattern="${pattern}"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Root level="${logLevel}">
+            <AppenderRef ref="PerClientAndStream"/>
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>

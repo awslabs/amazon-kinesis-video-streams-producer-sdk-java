@@ -3,6 +3,7 @@ package com.amazonaws.kinesisvideo.http;
 import com.amazonaws.kinesisvideo.client.IPVersionFilter;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClientConfigurationDefaults;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
+import com.amazonaws.kinesisvideo.common.logging.LogContext;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.socket.SocketFactory;
 import com.amazonaws.kinesisvideo.util.LoggedExitRunnable;
@@ -181,7 +182,8 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         if (mBuilder.mSender != null) {
             final String postfix = computeThreadNamePostfix();
             payloadSender = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Sending" + postfix).build());
-            payloadSender.execute(new LoggedExitRunnable("PutMedia-Sending-" + postfix) {
+            // The PutMedia threads log with the client and stream tag of the thread that started the upload
+            payloadSender.execute(LogContext.wrap(new LoggedExitRunnable("PutMedia-Sending-" + postfix) {
                 @Override
                 public void execute() {
                     Exception storedException = null;
@@ -198,7 +200,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                         payloadSender.shutdownNow();
                     }
                 }
-            });
+            }));
         }
     }
 
@@ -206,7 +208,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
         if (mBuilder.mReceiver != null) {
             final String postfix = computeThreadNamePostfix();
             responseReceiver = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("PutMedia-Receiving" + postfix).build());
-            responseReceiver.execute(new LoggedExitRunnable("PutMedia-Receiving" + postfix) {
+            responseReceiver.execute(LogContext.wrap(new LoggedExitRunnable("PutMedia-Receiving" + postfix) {
                 @Override
                 public void execute() {
                     Exception storedException = null;
@@ -223,7 +225,7 @@ public final class ParallelSimpleHttpClient implements HttpClient {
                         closeSocket();
                     }
                 }
-            });
+            }));
         }
     }
 

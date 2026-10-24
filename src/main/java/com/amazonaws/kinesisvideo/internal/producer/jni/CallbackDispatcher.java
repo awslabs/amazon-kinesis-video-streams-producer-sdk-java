@@ -1,5 +1,6 @@
 package com.amazonaws.kinesisvideo.internal.producer.jni;
 
+import com.amazonaws.kinesisvideo.common.logging.LogContext;
 import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.ExecutorService;
@@ -44,13 +45,14 @@ final class CallbackDispatcher
     void dispatch(final String name, final Callback callback)
     {
         try {
-            mExecutor.execute(() -> {
+            // With the client and stream tag of the thread that raised it, so its log lines go to the same file
+            mExecutor.execute(LogContext.wrap(() -> {
                 try {
                     callback.run();
                 } catch (final Exception e) {
                     mLog.error("{} callback threw", name, e);
                 }
-            });
+            }));
         } catch (final RejectedExecutionException e) {
             mLog.debug("{} callback dropped: the client has been freed", name);
         }

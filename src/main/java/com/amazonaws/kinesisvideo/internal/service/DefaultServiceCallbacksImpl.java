@@ -9,6 +9,7 @@ import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.common.function.Consumer;
 import com.amazonaws.kinesisvideo.common.preconditions.Preconditions;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducer;
+import com.amazonaws.kinesisvideo.common.logging.LogContext;
 import com.amazonaws.kinesisvideo.internal.producer.KinesisVideoProducerStream;
 import com.amazonaws.kinesisvideo.internal.producer.ReadResult;
 import com.amazonaws.kinesisvideo.internal.producer.ServiceCallbacks;
@@ -184,7 +185,8 @@ public class DefaultServiceCallbacksImpl implements ServiceCallbacks {
             @Nonnull final ScheduledExecutorService executor,
             @Nonnull final KinesisVideoClientConfiguration configuration,
             @Nonnull final KinesisVideoServiceClient kinesisVideoServiceClient) {
-        this.executor = Preconditions.checkNotNull(executor);
+        // Tasks run with the client and stream log tag of the callback that scheduled them
+        this.executor = LogContext.propagating(Preconditions.checkNotNull(executor));
         this.kinesisVideoServiceClient = Preconditions.checkNotNull(kinesisVideoServiceClient);
         this.log = Preconditions.checkNotNull(log);
         this.configuration = Preconditions.checkNotNull(configuration);
