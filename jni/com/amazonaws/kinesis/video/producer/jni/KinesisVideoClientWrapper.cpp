@@ -1016,7 +1016,12 @@ void KinesisVideoClientWrapper::getStreamingTokenResult(jlong streamHandle, jint
     }
 
     BYTE pToken[MAX_AUTH_LEN];
-    env->GetByteArrayRegion(streamingToken, 0, tokenSize, (jbyte *) pToken);
+    // The token is null when the service call failed; GetByteArrayRegion on a null array crashes the JVM
+    if (streamingToken != NULL && tokenSize > 0) {
+        env->GetByteArrayRegion(streamingToken, 0, tokenSize, (jbyte *) pToken);
+    } else {
+        tokenSize = 0;
+    }
 
     if (STATUS_FAILED(retStatus = ::getStreamingTokenResultEvent(streamHandle,
                                                                  (SERVICE_CALL_RESULT) httpStatusCode,
@@ -1087,7 +1092,12 @@ void KinesisVideoClientWrapper::deviceCertToTokenResult(jlong clientHandle, jint
     }
 
     BYTE pToken[MAX_AUTH_LEN];
-    env->GetByteArrayRegion(token, 0, tokenSize, (jbyte *) pToken);
+    // The token is null when the service call failed; GetByteArrayRegion on a null array crashes the JVM
+    if (token != NULL && tokenSize > 0) {
+        env->GetByteArrayRegion(token, 0, tokenSize, (jbyte *) pToken);
+    } else {
+        tokenSize = 0;
+    }
 
     if (STATUS_FAILED(retStatus = ::deviceCertToTokenResultEvent(clientHandle,
                                                                  (SERVICE_CALL_RESULT) httpStatusCode,
