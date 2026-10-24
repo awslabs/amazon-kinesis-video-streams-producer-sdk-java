@@ -992,13 +992,12 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
 
     @Override
     public void createStreamResult(@Nonnull KinesisVideoProducerStream stream, @Nullable String streamArn, int httpStatusCode) throws ProducerException {
-        // Holds only mCallbackSyncObject, not mSyncObject, so free() could otherwise run underneath
-        // it
-        mShutdownGuard.callWithClient(() -> {
-            synchronized (mCallbackSyncObject) {
-                createStreamResultEvent(mClientHandle, stream.getStreamHandle(), httpStatusCode, streamArn);
-            }
-        });
+        // mSyncObject like the other result events, never mCallbackSyncObject: PIC can call back
+        // into Java from inside
+        // this call, and those callbacks take mCallbackSyncObject while the native client lock is held
+        synchronized (mSyncObject) {
+            createStreamResultEvent(mClientHandle, stream.getStreamHandle(), httpStatusCode, streamArn);
+        }
     }
 
     /**
