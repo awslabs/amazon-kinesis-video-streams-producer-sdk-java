@@ -14,13 +14,16 @@ import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.kinesisvideo.producer.DeviceInfo;
 import com.amazonaws.kinesisvideo.producer.Time;
+import com.amazonaws.kinesisvideo.streaming.DefaultStreamCallbacks;
 import com.amazonaws.kinesisvideo.internal.producer.StreamEventMetadata;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -199,6 +202,12 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     private final KinesisVideoStreamMetrics mStreamMetrics;
     private final Map<Long, NativeDataInputStream> mInputStreamMap;
     private final AtomicBoolean mDataAvailableQueued = new AtomicBoolean();
+
+    /**
+     * The callbacks the application implements itself. Those it leaves to DefaultStreamCallbacks are no-ops and are not
+     * handed to the callback thread at all, which matters for streamDataAvailable: PIC raises it for every frame.
+     */
+    private final Set<String> mAppCallbacks;
     private final AtomicReference<long[]> mLatestDataAvailable = new AtomicReference<long[]>();
 
     public NativeKinesisVideoProducerStream(final @Nonnull NativeKinesisVideoProducerJni kinesisVideoProducerJni,
@@ -212,6 +221,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         Preconditions.checkState(streamHandle != NativeKinesisVideoProducerJni.INVALID_STREAM_HANDLE_VALUE);
         mStreamHandle = streamHandle;
         mStreamCallbacks = streamCallbacks;
+        mAppCallbacks = implementedCallbacks(streamCallbacks);
         mReadyLatch = new CountDownLatch(1);
         mStoppedLatch = new CountDownLatch(1);
         mLog = Preconditions.checkNotNull(log);
@@ -365,9 +375,29 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
      */
     private void toApp(final String name, final CallbackDispatcher.Callback callback)
     {
-        if (mStreamCallbacks != null) {
+        if (mAppCallbacks.contains(name)) {
             mKinesisVideoProducerJni.dispatchCallback(name, callback);
         }
+    }
+
+    private static Set<String> implementedCallbacks(@Nullable final StreamCallbacks callbacks)
+    {
+        final Set<String> implemented = new HashSet<String>();
+        if (callbacks == null) {
+            return implemented;
+        }
+
+        for (final Method callback : StreamCallbacks.class.getMethods()) {
+            try {
+                final Method implementation = callbacks.getClass().getMethod(callback.getName(), callback.getParameterTypes());
+                if (implementation.getDeclaringClass() != DefaultStreamCallbacks.class) {
+                    implemented.add(callback.getName());
+                }
+            } catch (final NoSuchMethodException e) {
+                implemented.add(callback.getName());
+            }
+        }
+        return implemented;
     }
 
     @Override
@@ -432,7 +462,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         }
 
         // One per frame: coalesce, so a slow application callback cannot grow the queue without bound
-        if (mStreamCallbacks != null) {
+        if (mAppCallbacks.contains("streamDataAvailable")) {
             mLatestDataAvailable.set(new long[] {uploadHandle, duration, availableSize});
             if (mDataAvailableQueued.compareAndSet(false, true)) {
                 mKinesisVideoProducerJni.dispatchCallback("streamDataAvailable", () -> {
