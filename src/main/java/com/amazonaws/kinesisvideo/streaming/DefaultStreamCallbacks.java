@@ -39,6 +39,10 @@ import javax.annotation.Nonnull;
  *        }
  *    };
  *</pre>
+ *
+ * <p>Callbacks run on the producer's callback thread, one per client, so calling stop or free from them is safe.
+ * mediaSource.stop() waits for the stream to close, which holds up the client's later callbacks until then; to return
+ * at once, stop the stream with {@code stream.stopStreamAsync()}.</p>
  */
 public class DefaultStreamCallbacks implements StreamCallbacks {
     @Override

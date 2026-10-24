@@ -12,7 +12,7 @@ import javax.annotation.Nullable;
 /**
  * Interface to the Kinesis Video Producer functionality
  */
-public interface KinesisVideoProducer {
+public interface KinesisVideoProducer extends AutoCloseable {
     /**
      * Ready timeout value in milliseconds for the sync API
      */
@@ -48,6 +48,19 @@ public interface KinesisVideoProducer {
      * Stops the streams and frees/releases the underlying object
      */
     void free() throws ProducerException;
+
+    /**
+     * Frees the streams and the client. Idempotent: does nothing once the client has been freed, so it suits
+     * try-with-resources and shutdown hooks.
+     */
+    @Override
+    default void close() throws ProducerException
+    {
+        if (isInitialized()) {
+            freeStreams();
+            free();
+        }
+    }
 
     /**
      * Frees all of the underlying streams

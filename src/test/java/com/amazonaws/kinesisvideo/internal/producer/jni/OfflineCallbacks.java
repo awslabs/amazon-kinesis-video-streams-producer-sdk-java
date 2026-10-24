@@ -64,6 +64,15 @@ final class OfflineCallbacks
 
     static StreamInfo streamInfo(final String streamName, final boolean allowStreamCreation)
     {
+        return streamInfo(streamName, allowStreamCreation, REQUEST_FRAGMENT_ACKS);
+    }
+
+    /**
+     * @param fragmentAcks without acks PIC closes a stopped stream once it has sent everything; with acks it waits for
+     *                     the last PERSISTED ack, which these callbacks never send
+     */
+    static StreamInfo streamInfo(final String streamName, final boolean allowStreamCreation, final boolean fragmentAcks)
+    {
         return new StreamInfo(StreamInfo.STREAM_INFO_CURRENT_VERSION,
                 streamName,
                 StreamInfo.StreamingType.STREAMING_TYPE_REALTIME,
@@ -76,7 +85,7 @@ final class OfflineCallbacks
                 KEYFRAME_FRAGMENTATION,
                 USE_FRAME_TIMECODES,
                 RELATIVE_TIMECODES,
-                REQUEST_FRAGMENT_ACKS,
+                fragmentAcks,
                 RECOVER_ON_FAILURE,
                 VIDEO_CODEC_ID,
                 "test-track",

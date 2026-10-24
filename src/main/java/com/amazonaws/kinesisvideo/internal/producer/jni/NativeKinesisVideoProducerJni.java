@@ -567,6 +567,24 @@ public class NativeKinesisVideoProducerJni implements KinesisVideoProducer {
     }
 
     /**
+     * Frees the streams and the client, once. Concurrent and repeated calls return without doing anything.
+     */
+    @Override
+    public void close() throws ProducerException
+    {
+        rejectIfInsideCallback("close");
+
+        synchronized (mLifecycleLock) {
+            if (!isInitialized()) {
+                return;
+            }
+
+            freeStreams();
+            free();
+        }
+    }
+
+    /**
      * Creates a Kinesis Video stream
      * @param streamInfo      Stream information {@link StreamInfo} object
      * @param streamCallbacks Optional stream callbacks {@link StreamCallbacks}

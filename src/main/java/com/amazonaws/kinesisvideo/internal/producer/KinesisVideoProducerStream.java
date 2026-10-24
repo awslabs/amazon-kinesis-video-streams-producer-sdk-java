@@ -7,6 +7,8 @@ import com.amazonaws.kinesisvideo.producer.StreamCallbacks;
 import com.amazonaws.kinesisvideo.producer.StreamInfo;
 
 import java.io.InputStream;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -118,10 +120,27 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
     /**
      * Stops the Kinesis Video stream and awaits for the stream stopped notification in a sync call.
      *
-     * Called from inside a Kinesis Video callback, it only kicks off the stop, like {@link #stopStream()}: the callback
-     * thread can hold the lock the stream needs to finish stopping.
+     * From an application callback, prefer {@link #stopStreamAsync()}: waiting there also holds up the client's later
+     * callbacks until the stream has closed. Called from inside a native callback, it only kicks off the stop, like
+     * {@link #stopStream()}: that thread can hold the lock the stream needs to finish stopping.
      */
     void stopStreamSync() throws ProducerException;
+
+    /**
+     * Stops the Kinesis Video stream without waiting. The future completes when the stream has sent its remaining data
+     * and closed, or exceptionally if the stop could not be started. Safe to call from any thread, including callbacks.
+     * Use {@code get(timeout, unit)} to bound the wait.
+     */
+    default CompletableFuture<Void> stopStreamAsync()
+    {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                stopStreamSync();
+            } catch (final ProducerException e) {
+                throw new CompletionException(e);
+            }
+        });
+    }
 
     /**
      * Reports an abnormal stream termination

@@ -25,6 +25,8 @@ import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -204,6 +206,11 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     private final AtomicBoolean mDataAvailableQueued = new AtomicBoolean();
 
     /**
+     * Completes when the stream has closed, with mStoppedLatch
+     */
+    private final CompletableFuture<Void> mClosed = new CompletableFuture<Void>();
+
+    /**
      * The callbacks the application implements itself. Those it leaves to DefaultStreamCallbacks are no-ops and are not
      * handed to the callback thread at all, which matters for streamDataAvailable: PIC raises it for every frame.
      */
@@ -313,7 +320,27 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
     }
 
     @Override
+    public CompletableFuture<Void> stopStreamAsync()
+    {
+        try {
+            stopStream();
+        } catch (final ProducerException e) {
+            final CompletableFuture<Void> failed = new CompletableFuture<Void>();
+            failed.completeExceptionally(e);
+            return failed;
+        }
+
+        // A dependent future, so that callers cannot complete or cancel the stream's own
+        return mClosed.thenApply(Function.identity());
+    }
+
+    @Override
     public void stopStreamSync() throws ProducerException {
+        if (mKinesisVideoProducerJni.isCallbackThread()) {
+            mLog.warn("stopStreamSync() for {} called from an application callback: the client's later callbacks wait "
+                    + "until the stream has closed. Use stopStreamAsync() to return at once.", mStreamInfo.getName());
+        }
+
         if (CallbackThreads.isInsideCallback()) {
             // This thread can hold the native client lock that the stream needs to finish, so waiting here would
             // only time out and stall the client's other streams meanwhile
@@ -503,6 +530,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
 
             // Release the stopped latch
             mStoppedLatch.countDown();
+            mClosed.complete(null);
         } else {
             // A session can close without an input stream, for example when PutMedia failed before reading from it.
             // The latch must still be released, or stopStreamSync() waits for its whole timeout.
@@ -517,6 +545,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
 
             // Release the stopped latch
             mStoppedLatch.countDown();
+            mClosed.complete(null);
 
             toApp("streamClosed", () -> mStreamCallbacks.streamClosed(uploadHandle));
         }
