@@ -122,7 +122,8 @@ public class CallbackLockOrderTest
             a.start();
             awaitBlocked(a, "streamReady");
             b.start();
-            awaitBlocked(b, "createStreamResult");
+            // Before the lock-order fix B blocks on a Java monitor; without Java locks it waits inside native code
+            awaitWaiting(b, "createStreamResult", "createStreamResultEvent");
         }
 
         a.join(WAIT_MS);
@@ -501,6 +502,27 @@ public class CallbackLockOrderTest
             Thread.sleep(1);
         }
         fail(thread.getName() + " never blocked in " + method + ":\n" + describe(thread));
+    }
+
+    /**
+     * Waits until the thread is blocked on a monitor inside javaMethod, or is inside nativeMethod, where it waits for the
+     * native lock, or has finished.
+     */
+    private static void awaitWaiting(final Thread thread, final String javaMethod, final String nativeMethod)
+            throws InterruptedException
+    {
+        final long deadline = System.currentTimeMillis() + WAIT_MS;
+        while (System.currentTimeMillis() < deadline) {
+            if (!thread.isAlive() || (thread.getState() == Thread.State.BLOCKED && isIn(thread, javaMethod))) {
+                return;
+            }
+            if (isIn(thread, nativeMethod)) {
+                Thread.sleep(200);
+                return;
+            }
+            Thread.sleep(1);
+        }
+        fail(thread.getName() + " never waited in " + javaMethod + " or " + nativeMethod + ":\n" + describe(thread));
     }
 
     /**

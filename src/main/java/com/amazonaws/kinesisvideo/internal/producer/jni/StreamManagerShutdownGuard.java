@@ -10,8 +10,8 @@ import static com.amazonaws.kinesisvideo.producer.ProducerException.STATUS_INVAL
 /**
  * Lifetime guard for one native Kinesis Video client and its streams.
  *
- * Every call that passes the client handle to native code without holding the producer's sync object goes through
- * {@link #callWithClient} or {@link #callWithStream}. {@link #closeStream} and {@link #closeClient} reject new calls
+ * Every call that passes the client handle to native code goes through {@link #callWithClient} or
+ * {@link #callWithStream}, or their try variants. {@link #closeStream} and {@link #closeClient} reject new calls
  * and wait for in-flight ones before the caller frees the native stream or client. A stream being freed only blocks
  * calls on that stream; the other streams of the client keep running.
  */
@@ -77,6 +77,58 @@ final class StreamManagerShutdownGuard
                 streamGate.exit();
             }
         });
+    }
+
+    /**
+     * Like {@link #callWithClient}, for events that may arrive after the client is gone, such as service results.
+     *
+     * @return false, without making the call, if the client is being freed or has been freed
+     */
+    boolean tryCallWithClient(final NativeCall nativeCall) throws ProducerException
+    {
+        if (!mClientGate.tryEnter()) {
+            return false;
+        }
+
+        try {
+            nativeCall.call();
+            return true;
+        } finally {
+            mClientGate.exit();
+        }
+    }
+
+    /**
+     * Like {@link #callWithStream}, for events that may arrive after the stream is gone, such as service results.
+     *
+     * @return false, without making the call, if the client or the stream is being freed or has been freed
+     */
+    boolean tryCallWithStream(final long streamHandle, final NativeCall nativeCall) throws ProducerException
+    {
+        if (!mClientGate.tryEnter()) {
+            return false;
+        }
+
+        try {
+            final ShutdownGate streamGate = mStreamGates.get(streamHandle);
+            if (streamGate == null || !streamGate.tryEnter()) {
+                return false;
+            }
+
+            try {
+                nativeCall.call();
+                return true;
+            } finally {
+                streamGate.exit();
+            }
+        } finally {
+            mClientGate.exit();
+        }
+    }
+
+    boolean hasStream(final long streamHandle)
+    {
+        return mStreamGates.containsKey(streamHandle);
     }
 
     /**
