@@ -300,6 +300,15 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
 
     @Override
     public void stopStreamSync() throws ProducerException {
+        if (CallbackThreads.isInsideCallback()) {
+            // This thread can hold the native client lock that the stream needs to finish, so waiting here would
+            // only time out and stall the client's other streams meanwhile
+            mLog.warn("stopStreamSync() for {} called from inside a callback; stopping without waiting",
+                    mStreamInfo.getName());
+            stopStream();
+            return;
+        }
+
         // Kick off stream stop
         stopStream();
 

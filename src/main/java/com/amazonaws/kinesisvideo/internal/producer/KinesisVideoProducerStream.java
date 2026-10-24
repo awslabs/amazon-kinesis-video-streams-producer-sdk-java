@@ -117,6 +117,9 @@ public interface KinesisVideoProducerStream extends StreamCallbacks {
 
     /**
      * Stops the Kinesis Video stream and awaits for the stream stopped notification in a sync call.
+     *
+     * Called from inside a Kinesis Video callback, it only kicks off the stop, like {@link #stopStream()}: the callback
+     * thread can hold the lock the stream needs to finish stopping.
      */
     void stopStreamSync() throws ProducerException;
 
