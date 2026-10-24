@@ -49,7 +49,10 @@ KinesisVideoClientWrapper::KinesisVideoClientWrapper(JNIEnv* env,
 
     // Creating the client object might return an error as well so freeing potentially allocated tags right after the call.
     retStatus = createKinesisVideoClient(&mDeviceInfo, &mClientCallbacks, &mClientHandle);
-    if (STATUS_SUCCEEDED(retStatus) && isFirstClient) {
+    if (STATUS_SUCCEEDED(retStatus)) {
+        // Register every client, not just the first: PIC has one log function for the whole process, and logPrintFunc
+        // sends its lines through the oldest live client. With only the first client registered, every PIC log line
+        // was dropped once that client was freed, even while other clients were still running.
         clientRegistryInfo = ClientRegistry::getInstance().addClient(this); // Note: 'this' cannot be null
         mJVMContext.clientId = clientRegistryInfo.second;
     }
@@ -2792,7 +2795,7 @@ VOID KinesisVideoClientWrapper::logPrintFunc(UINT32 level, PCHAR tag, PCHAR fmt,
 
     // Note: PIC's logging macros point to a global log printing function, so which client it belongs to is ambiguous.
     // We cannot change all of the logging APIs (e.g. `DLOGE("Test message");`) to accept which client it belongs to as
-    // a parameter without breaking backwards compatibility.
+    // a parameter without breaking backwards compatibility. The line goes to the oldest live client's logger.
     ClientRegistry::getInstance().withFirstClient([&](KinesisVideoClientWrapper* pWrapper) {
         JNIEnv *env;
         BOOL attached = FALSE;
