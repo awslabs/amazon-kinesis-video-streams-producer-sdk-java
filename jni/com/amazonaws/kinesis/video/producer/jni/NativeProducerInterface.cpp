@@ -175,7 +175,8 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            // Data path: no client-wide lock. PIC locks the stream, and the StreamManagerLease above keeps the
+            // wrapper alive; the wrapper state used here is set once at creation.
             pWrapper->getKinesisVideoMetrics(kinesisVideoMetrics);
         }
 
@@ -195,7 +196,8 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            // Data path: no client-wide lock. PIC locks the stream, and the StreamManagerLease above keeps the
+            // wrapper alive; the wrapper state used here is set once at creation.
             pWrapper->getKinesisVideoStreamMetrics(streamHandle, kinesisVideoStreamMetrics);
         }
 
@@ -238,7 +240,8 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            // Data path: no client-wide lock. PIC locks the stream, and the StreamManagerLease above keeps the
+            // wrapper alive; the wrapper state used here is set once at creation.
             pWrapper->putKinesisVideoFrame(streamHandle, kinesisVideoFrame);
         }
 
@@ -258,7 +261,8 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            // Data path: no client-wide lock. PIC locks the stream, and the StreamManagerLease above keeps the
+            // wrapper alive; the wrapper state used here is set once at creation.
             pWrapper->putKinesisVideoFragmentMetadata(streamHandle, metadataName, metadataValue, persistent);
         }
 
@@ -278,7 +282,8 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            // Data path: no client-wide lock. PIC locks the stream, and the StreamManagerLease above keeps the
+            // wrapper alive; the wrapper state used here is set once at creation.
             pWrapper->putKinesisVideoEventMetadata(streamHandle, event, streamEventMetadata);
         }
 
@@ -296,7 +301,8 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            // Data path: no client-wide lock. PIC locks the stream, and the StreamManagerLease above keeps the
+            // wrapper alive; the wrapper state used here is set once at creation.
             pWrapper->kinesisVideoStreamFragmentAck(streamHandle, uploadHandle, fragmentAck);
         }
 
@@ -313,7 +319,8 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            // Data path: no client-wide lock. PIC locks the stream, and the StreamManagerLease above keeps the
+            // wrapper alive; the wrapper state used here is set once at creation.
             pWrapper->kinesisVideoStreamParseFragmentAck(streamHandle, uploadHandle, ack);
         }
 
@@ -433,7 +440,8 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            // Data path: no client-wide lock. PIC locks the stream, and the StreamManagerLease above keeps the
+            // wrapper alive; the wrapper state used here is set once at creation.
             pWrapper->getKinesisVideoStreamData(streamHandle, uploadHandle, dataBuffer, offset, length, readResult);
         }
 

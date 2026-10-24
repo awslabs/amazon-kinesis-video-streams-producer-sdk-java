@@ -22,10 +22,10 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -226,7 +226,8 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
         mStoppedLatch = new CountDownLatch(1);
         mLog = Preconditions.checkNotNull(log);
         mStreamMetrics = new KinesisVideoStreamMetrics();
-        mInputStreamMap = new HashMap<Long, NativeDataInputStream>();
+        // Concurrent: PutMedia tasks add to it while putFrame and getStreamData threads look streams up
+        mInputStreamMap = new ConcurrentHashMap<Long, NativeDataInputStream>();
         mDeviceInfo = deviceInfo;
     }
 
