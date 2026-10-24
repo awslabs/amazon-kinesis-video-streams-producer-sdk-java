@@ -460,10 +460,15 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
             // Release the stopped latch
             mStoppedLatch.countDown();
         } else {
-            try {
-                mInputStreamMap.get(uploadHandle).close();
-            } catch (final IOException e) {
-                mLog.error("stream close failed with exception ", e);
+            // A session can close without an input stream, for example when PutMedia failed before reading from it.
+            // The latch must still be released, or stopStreamSync() waits for its whole timeout.
+            final NativeDataInputStream inputStream = mInputStreamMap.get(uploadHandle);
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (final IOException e) {
+                    mLog.error("stream close failed with exception ", e);
+                }
             }
 
             // Release the stopped latch
