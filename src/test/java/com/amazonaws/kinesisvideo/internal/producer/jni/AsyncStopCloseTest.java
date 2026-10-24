@@ -115,7 +115,14 @@ public class AsyncStopCloseTest
         final Long uploadHandle = service.awaitUploadHandle("async-stop-callback");
         assertNotNull(uploadHandle);
 
-        stream.parseFragmentAck(uploadHandle, "{\"EventType\":\"BUFFERING\",\"FragmentTimecode\":0,\"FragmentNumber\":\"1\"}");
+        try {
+            stream.parseFragmentAck(uploadHandle,
+                    "{\"EventType\":\"BUFFERING\",\"FragmentTimecode\":0,\"FragmentNumber\":\"1\"}");
+        } catch (final ProducerException rejected) {
+            // PIC can reject this synthetic ack (its timecode may be outside the view); it calls fragmentAckReceived
+            // either way, and that is all this test needs
+            log.debug("Synthetic ack rejected: {}", rejected.getMessage());
+        }
         assertTrue("fragmentAckReceived was never called", called.await(WAIT_MS, TimeUnit.MILLISECONDS));
         assertTrue("stopStreamAsync from a callback waited " + returnedMs.get() + " ms", returnedMs.get() < 500);
         closedRef.get().get(WAIT_MS, TimeUnit.MILLISECONDS);
