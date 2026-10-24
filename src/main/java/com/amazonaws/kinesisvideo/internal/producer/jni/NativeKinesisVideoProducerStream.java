@@ -83,7 +83,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                 synchronized (mMonitor) {
                     while (!mDataAvailable && !mStreamClosed.get()) {
                         try {
-                            mLog.debug("no data for stream {} with uploadHandle {}, waiting", mStreamInfo.getName(),
+                            mLog.trace("no data for stream {} with uploadHandle {}, waiting", mStreamInfo.getName(),
                                     mUploadHandle);
                             mMonitor.wait(TIMEOUT_IN_MS);
                         } catch (final InterruptedException e) {
@@ -140,7 +140,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
                 }
             }
 
-            mLog.debug("Streamed {} bytes for stream {} with uploadHandle {}", bytesRead, mStreamInfo.getName(),
+            mLog.trace("Streamed {} bytes for stream {} with uploadHandle {}", bytesRead, mStreamInfo.getName(),
                     mUploadHandle);
 
             if (-1 == bytesRead) {
@@ -172,7 +172,7 @@ public class NativeKinesisVideoProducerStream implements KinesisVideoProducerStr
             // Unblock the awaiting reading code block
             synchronized (mMonitor) {
                 mAvailableDataSize = availableSize;
-                mLog.debug("Data availability notification. Upload handle: {}, Size: {}, Duration {} ",
+                mLog.trace("Data availability notification. Upload handle: {}, Size: {}, Duration {} ",
                         mUploadHandle, availableSize, duration);
 
                 mDataAvailable = true;
