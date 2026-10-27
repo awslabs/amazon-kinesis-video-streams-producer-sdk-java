@@ -387,9 +387,9 @@ CleanUp:
     return streamHandle;
 }
 
-SyncMutex& KinesisVideoClientWrapper::getSyncLock()
+SyncMutex& KinesisVideoClientWrapper::getJavaToPicLock()
 {
-    return mSyncLock;
+    return mJavaToPicLock;
 }
 
 void KinesisVideoClientWrapper::putKinesisVideoFrame(jlong streamHandle, jobject kinesisVideoFrame)

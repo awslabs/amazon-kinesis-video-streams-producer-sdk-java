@@ -115,7 +115,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->stopKinesisVideoStreams();
         }
 
@@ -135,7 +135,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->stopKinesisVideoStream(streamHandle);
         }
 
@@ -155,7 +155,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->freeKinesisVideoStream(streamHandle);
         }
 
@@ -218,7 +218,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             streamHandle = pWrapper->createKinesisVideoStream(streamInfo);
         }
 
@@ -337,7 +337,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->describeStreamResult(streamHandle, httpStatusCode, streamDescription);
         }
 
@@ -354,7 +354,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->getStreamingEndpointResult(streamHandle, httpStatusCode, streamingEndpoint);
         }
 
@@ -371,7 +371,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->getStreamingTokenResult(streamHandle, httpStatusCode, (jbyteArray) streamingToken, tokenSize, tokenExpiration);
         }
 
@@ -388,7 +388,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->createStreamResult(streamHandle, httpStatusCode, streamArn);
         }
 
@@ -405,7 +405,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->putStreamResult(streamHandle, httpStatusCode, clientStreamHandle);
         }
 
@@ -422,7 +422,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->tagResourceResult(customData, httpStatusCode);
         }
 
@@ -458,7 +458,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->streamFormatChanged(streamHandle, codecPrivateData, trackId);
         }
 
@@ -475,7 +475,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->createDeviceResult(deviceHandle, httpStatusCode, deviceArn);
         }
 
@@ -492,7 +492,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->deviceCertToTokenResult(deviceHandle, httpStatusCode, (jbyteArray) token, tokenSize, tokenExpiration);
         }
 
@@ -509,7 +509,7 @@ CleanUp:
         StreamManagerLease lease(handle);
         KinesisVideoClientWrapper* pWrapper = lease.get();
         if (pWrapper != NULL) {
-            SyncMutex::Autolock l(pWrapper->getSyncLock(), __FUNCTION__);
+            SyncMutex::Autolock l(pWrapper->getJavaToPicLock(), __FUNCTION__);
             pWrapper->kinesisVideoStreamTerminated(streamHandle, uploadHandle, httpStatusCode);
         }
 
